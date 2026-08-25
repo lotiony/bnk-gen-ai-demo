@@ -37,6 +37,8 @@ const T_COL_W = 250;
 const T_INST_Y0 = 130;
 const T_INST_H = 92;
 const T_CAP = 5;
+/** 개체 지그재그 오프셋 — 원 반지름(≤22)보다 커야 선이 노드를 비껴간다. */
+const T_ZIG = 40;
 /** 개체 원 반지름 — 역할별(원본 instR: 앵커 22 / 강조 18 / 일반 14 / 후보 12). */
 const instR = (role: 'anchor' | 'focus' | 'plain' | 'cand') =>
   role === 'anchor' ? 22 : role === 'focus' ? 18 : role === 'plain' ? 14 : 12;
@@ -202,6 +204,8 @@ function Canvas({
     const colAt: Array<Pt & { hop: number; cls: string; repeat: boolean }> = [];
     const clsAt = new Map<string, Pt & { hop: number }>();
     const instAt = new Map<string, Pt>();
+    /** 개체 → 컬럼(hop). 지그재그로 놓으면 x 로는 컬럼을 역인덱싱할 수 없다. */
+    const instCol = new Map<string, number>();
     const hidden = new Map<number, number>();
     let maxRows = 1;
     cols.forEach((ids, ci) => {
@@ -214,7 +218,12 @@ function Canvas({
       }
       const shown = rows.slice(0, T_CAP);
       hidden.set(ci, Math.max(0, rows.length - shown.length));
-      shown.forEach((id, i) => instAt.set(id, { x, y: T_INST_Y0 + i * T_INST_H }));
+      // 같은 x 에 세로로 쌓으면 클래스에서 내려오는 선이 위쪽 개체를 관통한다.
+      // 좌우로 엇갈려 놓아 선끼리도, 선과 노드도 겹치지 않게 한다(climax 동일).
+      shown.forEach((id, i) => {
+        instAt.set(id, { x: x + (i % 2 ? T_ZIG : -T_ZIG), y: T_INST_Y0 + i * T_INST_H });
+        instCol.set(id, ci);
+      });
       maxRows = Math.max(maxRows, shown.length);
       const head = instById(ids[0]);
       if (head) {
@@ -238,9 +247,9 @@ function Canvas({
     // 전체 홉을 모르고 시작하는 게 서사에 맞다. 프레임은 지금까지 드러난
     // 컬럼만으로 잡고, 홉이 늘 때마다 카메라가 따라 줌아웃한다.
     const openCols = colAt.filter((c) => c.hop < litCount);
-    const openX = new Set(openCols.map((c) => c.x));
+    const openHop = new Set(openCols.map((c) => c.hop));
     openCols.forEach((p) => bump(p, CLASS_R + 20, CLASS_R + 30));
-    instAt.forEach((p) => openX.has(p.x) && bump(p, 78, 52));
+    instAt.forEach((p, id) => openHop.has(instCol.get(id) ?? -1) && bump(p, 78, 52));
     if (!Number.isFinite(minX)) {
       minX = 0; minY = 0; maxX = 600; maxY = 400;
     }
@@ -249,6 +258,7 @@ function Canvas({
       colAt,
       clsAt,
       instAt,
+      instCol,
       hidden,
       vb: { x: minX - M, y: minY - M - 26, w: maxX - minX + M * 2, h: maxY - minY + M * 2 + 40 },
     };
@@ -264,7 +274,24 @@ function Canvas({
     [trav, simP, off],
   );
   /** 개체 x 좌표가 속한 컬럼. 개체는 컬럼 x 에 정확히 정렬되므로 이걸로 역인덱싱한다. */
-  const colOfX = useCallback((x: number) => trav?.colAt.find((c) => Math.abs(c.x - x) < 2) ?? null, [trav]);
+  /** 개체가 속한 컬럼 — 지그재그 배치라 x 좌표로는 못 찾는다. */
+  const colOfInst = useCallback(
+    (id: string) => {
+      const hop = trav?.instCol.get(id);
+      return hop == null ? null : (trav?.colAt.find((c) => c.hop === hop) ?? null);
+    },
+    [trav],
+  );
+  /** 개체 반지름 — 노드 렌더와 엣지 클리핑이 같은 값을 써야 화살촉이 원 밖에 선다. */
+  const rOfInst = useCallback(
+    (id: string) => {
+      const on = litSet.has(id);
+      const isAnchor = anchorInst === id && on;
+      const foc = on || isAnchor || selectedInstance === id;
+      return instR(isAnchor ? 'anchor' : foc ? 'focus' : on ? 'plain' : 'cand');
+    },
+    [litSet, anchorInst, selectedInstance],
+  );
   /**
    * 아직 순회가 닿지 않은 hop 은 실체를 내주지 않는다.
    * 레이아웃은 전체 스텝으로 미리 잡아 카메라를 고정하되(빈 컬럼 틀은 남는다),
@@ -713,7 +740,7 @@ function Canvas({
             // 펼침선은 **컬럼 대표 클래스**에서 내려온다.
             // 개체의 소속 클래스로 잡으면, 그 클래스가 컬럼에 없을 때
             // CP 가 force 좌표(화면 밖)로 폴백해 선이 화면 밖에서 날아온다.
-            const hc = colOfX(IP0(id)?.x ?? p.x);
+            const hc = colOfInst(id);
             if (!hc || !reached(hc.hop)) return null;
             // 대표 클래스를 끌어 옮겼으면 선도 따라가야 한다. 컬럼 원좌표를
             // 그대로 쓰면 클래스만 떠나고 선이 제자리에 남는다.
@@ -721,9 +748,14 @@ function Canvas({
             const cp = hc.repeat ? hc : (CP(hc.cls) ?? hc);
             const on = litSet.has(id);
             const col = clsColor(inst.cls);
-            // 원본과 동일한 베지어 펼침선 — 클래스에서 아래로 내려와 개체로
-            const midY = (cp.y + CLASS_R + p.y) / 2;
-            const d = `M ${cp.x} ${cp.y + CLASS_R} C ${cp.x} ${midY}, ${p.x} ${midY}, ${p.x} ${p.y - instR(on ? 'focus' : 'cand') - 5}`;
+            /* 펼침선 — 클래스 아래에서 개체로 내려오는 베지어.
+               개체가 지그재그로 놓이므로 선끼리도, 선과 노드도 겹치지 않는다.
+               양 끝은 도형 경계에서 끊는다. */
+            const r = rOfInst(id);
+            const a2 = clipTo(p, cp, CLASS_R);
+            const b2 = clipTo(cp, p, r + 5);
+            const midY = (a2.y + b2.y) / 2;
+            const d = `M ${a2.x} ${a2.y} C ${a2.x} ${midY}, ${b2.x} ${midY}, ${b2.x} ${b2.y}`;
             // 개체는 클래스 자리에서 스프링으로 날아온다. 선은 도착지까지 한 번에
             // 그려지므로, 개체가 도착할 시간(≈0.3s)을 주지 않으면 선이 먼저 보인다.
             const delay = reduce ? 0 : tInst(IP0(id) ?? p) + 0.32;
@@ -732,11 +764,12 @@ function Canvas({
                 key={`ci-${id}`}
                 d={d}
                 fill="none"
-                stroke={on ? col : '#D3D7DC'}
-                strokeWidth={on ? 1.4 : 0.9}
+                stroke={on ? col : '#B9BFC6'}
+                strokeWidth={on ? 2 : 1.3}
+                strokeLinecap="round"
                 strokeDasharray={on ? undefined : '4 4'}
                 initial={reduce ? false : { pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: on ? 0.5 : 0.35 }}
+                animate={{ pathLength: 1, opacity: on ? 0.75 : 0.5 }}
                 transition={{ duration: reduce ? 0 : 0.35, delay, ease: 'easeOut' }}
               />
             );
@@ -749,7 +782,11 @@ function Canvas({
             const b = IP(e.to);
             if (!a || !b || !litSet.has(e.from) || !litSet.has(e.to)) return null;
             const same = Math.abs(a.x - b.x) < 4;
-            const g = edgeGeom(a, b, same ? 0.4 : i % 2 ? 0.1 : -0.1);
+            // 중심을 기준으로 잇되 보이는 구간은 개체 원 경계 사이.
+            // 안 자르면 화살촉이 원 한가운데 박힌다.
+            const sc = clipTo(b, a, rOfInst(e.from) + 2);
+            const tc = clipTo(a, b, rOfInst(e.to) + 7);
+            const g = edgeGeom(sc, tc, same ? 0.4 : i % 2 ? 0.1 : -0.1);
             const eCol = clsColor(instById(e.from)?.cls ?? '');
             const eDelay = reduce ? 0 : Math.max(tInst(a), tInst(b)) + 0.48;
             return (
@@ -924,7 +961,7 @@ function Canvas({
             const col = on ? clsColor(inst.cls) : '#8E979F';
             const lines = attrLines(inst, foc ? 2 : 1);
             const cp = CP(inst.cls) ?? p;
-            const hop = colOfX(IP0(id)?.x ?? p.x)?.hop;
+            const hop = colOfInst(id)?.hop;
             if (hop == null || !reached(hop)) return null;
             const fillA = isSel ? '3a' : isAnchor ? '30' : on ? '1c' : '12';
             return (
