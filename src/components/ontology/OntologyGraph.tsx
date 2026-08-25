@@ -248,16 +248,29 @@ function Canvas({
   const CP = useCallback((n: string): Pt | null => (trav ? (trav.clsAt.get(n) ?? simP(n)) : simP(n)), [trav, simP]);
   /** 개체 x 좌표가 속한 컬럼. 개체는 컬럼 x 에 정확히 정렬되므로 이걸로 역인덱싱한다. */
   const colOfX = useCallback((x: number) => trav?.colAt.find((c) => Math.abs(c.x - x) < 2) ?? null, [trav]);
+  /**
+   * 아직 순회가 닿지 않은 hop 은 실체를 내주지 않는다.
+   * 레이아웃은 전체 스텝으로 미리 잡아 카메라를 고정하되(빈 컬럼 틀은 남는다),
+   * 대표 클래스·개체·펼침선은 그 hop 에 도달해야 나온다 — 안 그러면
+   * 관계를 타고 찾아냈다는 서사보다 먼저 답의 모양이 드러난다.
+   */
+  const reached = useCallback((hop: number) => hop < litCount, [litCount]);
   /** 순회 등장 시각 — 컬럼 헤드(hop*0.1) → 개체 → 펼침선 → 순회 엣지 순. */
-  const tInst = useCallback(
-    (p: Pt) => {
-      const row = Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H));
-      return Math.min((colOfX(p.x)?.hop ?? 0) * 0.1 + row * 0.05, 0.6);
-    },
-    [colOfX],
-  );
+  const tInst = useCallback((p: Pt) => {
+    // 컬럼 등장 자체가 스텝 타이머로 늦춰진다. 여기에 hop 항까지 더하면
+    // 뒤쪽 hop 이 도달하고도 반 초씩 더 기다린다.
+    const row = Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H));
+    return Math.min(row * 0.05, 0.45);
+  }, []);
   const IP = useCallback((id: string): Pt | null => trav?.instAt.get(id) ?? null, [trav]);
-  const visible = useCallback((n: string) => !trav || trav.clsAt.has(n), [trav]);
+  const visible = useCallback(
+    (n: string) => {
+      if (!trav) return true;
+      const c = trav.clsAt.get(n);
+      return !!c && reached(c.hop);
+    },
+    [trav, reached],
+  );
 
   /* ── 카메라 ── */
   const fit = useMemo(() => (trav ? trav.vb : simViewBox(built.sim.nodes() as SimNode[])), [trav, built, litCount]);
@@ -519,12 +532,21 @@ function Canvas({
         </defs>
 
         {trav &&
-          trav.colAt.map((p) => (
-            <g key={`bg-${p.hop}`}>
-              <rect x={p.x - T_COL_W / 2 + 12} y={trav.vb.y + 14} width={T_COL_W - 24} height={trav.vb.h - 34} rx={8} fill={BRAND} fillOpacity={0.035} stroke={BRAND} strokeOpacity={0.12} />
-              <text x={p.x} y={trav.vb.y + 40} textAnchor="middle" fontSize={10} fontWeight={800} fill={BRAND}>hop {p.hop}</text>
-            </g>
-          ))}
+          trav.colAt.map((p) => {
+            // 틀은 처음부터 둔다 — 카메라가 흔들리지 않고, 앞으로 갈 곳이
+            // 보여야 '몇 홉짜리 추론인지'가 읽힌다. 도달 전에는 죽여 둔다.
+            const rc = reached(p.hop);
+            return (
+              <g key={`bg-${p.hop}`} opacity={rc ? 1 : 0.4}>
+                <rect x={p.x - T_COL_W / 2 + 12} y={trav.vb.y + 14} width={T_COL_W - 24} height={trav.vb.h - 34} rx={8}
+                  fill={BRAND} fillOpacity={rc ? 0.035 : 0.012} stroke={BRAND} strokeOpacity={rc ? 0.12 : 0.07}
+                  strokeDasharray={rc ? undefined : '5 5'} />
+                <text x={p.x} y={trav.vb.y + 40} textAnchor="middle" fontSize={10} fontWeight={800} fill={rc ? BRAND : '#B9BFC6'}>
+                  hop {p.hop}
+                </text>
+              </g>
+            );
+          })}
 
         {/* 관계 엣지 — 실행 전에는 전부 연결. 순회 중에는 양끝이 모두
              컬럼에 올라온 클래스일 때만 그린다. 한쪽이 컬럼 밖이면 그 노드는
@@ -572,7 +594,7 @@ function Canvas({
                 return (
                   <g opacity={op}>
                     <rect x={g.mx - w / 2} y={g.my - 9} width={w} height={18} rx={9}
-                      fill="#fff" fillOpacity={0.96} stroke={strong ? eCol : '#DFE3E7'} strokeWidth={1} />
+                      fill="#fff" stroke={strong ? eCol : '#DFE3E7'} strokeWidth={1} />
                     <text x={g.mx} y={g.my + 3.4} textAnchor="middle" fontSize={fs} fontWeight={hot ? 800 : 700} fill={strong ? eCol : '#7A828B'}>
                       {r.name}
                     </text>
@@ -636,7 +658,7 @@ function Canvas({
             // 개체의 소속 클래스로 잡으면, 그 클래스가 컬럼에 없을 때
             // CP 가 force 좌표(화면 밖)로 폴백해 선이 화면 밖에서 날아온다.
             const cp = colOfX(p.x);
-            if (!cp) return null;
+            if (!cp || !reached(cp.hop)) return null;
             const on = litSet.has(id);
             const col = clsColor(inst.cls);
             // 원본과 동일한 베지어 펼침선 — 클래스에서 아래로 내려와 개체로
@@ -681,8 +703,16 @@ function Canvas({
                     <animateMotion dur={`${1.7 + (i % 4) * 0.3}s`} begin={`${-(i % 5) * 0.33}s`} repeatCount="indefinite" path={g.d} />
                   </circle>
                 )}
-                <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={800} fill={DEEP}
-                  style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>{e.rel}</text>
+                {(() => {
+                  const fs = 9.5;
+                  const w = textW(e.rel, fs) + 16;
+                  return (
+                    <>
+                      <rect x={g.mx - w / 2} y={g.my - 9} width={w} height={18} rx={9} fill="#fff" stroke={eCol} strokeWidth={1} />
+                      <text x={g.mx} y={g.my + 3.4} textAnchor="middle" fontSize={fs} fontWeight={800} fill={eCol}>{e.rel}</text>
+                    </>
+                  );
+                })()}
               </motion.g>
             );
           })}
@@ -787,7 +817,7 @@ function Canvas({
              복제 헤드를 여기서 채운다. 없으면 그 컬럼만 헤드 없이 떠 보인다. */}
         {trav &&
           trav.colAt
-            .filter((c) => c.repeat)
+            .filter((c) => c.repeat && reached(c.hop))
             .map((c) => {
               const on = activeClasses.includes(c.cls);
               const hub = hubs.includes(c.cls);
@@ -804,7 +834,7 @@ function Canvas({
                   <motion.g
                     initial={reduce ? false : { scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 240, damping: 24, delay: Math.min(c.hop * 0.1, 0.55) }}
+                    transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 240, damping: 24 }}
                   >
                     <path d={hexPath(CLASS_R + 6)} fill="none" stroke={base} strokeWidth={1.6} opacity={0.16 + t * 0.12} />
                     <path d={hexPath(CLASS_R)} fill={shade(base, t)} stroke={base} strokeWidth={1.2 + t * 1.6} strokeDasharray="5 3" />
@@ -834,6 +864,7 @@ function Canvas({
             const lines = attrLines(inst, foc ? 2 : 1);
             const cp = CP(inst.cls) ?? p;
             const hop = colOfX(p.x)?.hop;
+            if (hop == null || !reached(hop)) return null;
             const fillA = isSel ? '3a' : isAnchor ? '30' : on ? '1c' : '12';
             return (
               <motion.g
@@ -888,7 +919,7 @@ function Canvas({
 
         {trav &&
           trav.colAt.map((p) => {
-            const n = trav.hidden.get(p.hop) ?? 0;
+            const n = reached(p.hop) ? (trav.hidden.get(p.hop) ?? 0) : 0;
             return n ? (
               <text key={`h-${p.hop}`} x={p.x} y={trav.vb.y + trav.vb.h - 24} textAnchor="middle" fontSize={10} fontWeight={700} fill="#B9BFC6">+{n}개</text>
             ) : null;
