@@ -239,7 +239,7 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
       {/* footer — owner + 공유 신청 */}
       <div className="px-3.5 py-2.5 mt-auto flex items-center gap-2">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <span className="w-5 h-5 rounded-full bg-gradient-to-br from-brand to-brand-dark text-ink text-[9px] font-extrabold inline-flex items-center justify-center border border-brand-dark flex-shrink-0">
+          <span className="w-5 h-5 rounded-full bg-brand-tint text-brand text-[9px] font-extrabold inline-flex items-center justify-center border border-brand-tint flex-shrink-0">
             {agent.ownerInitial}
           </span>
           <span className="text-[10.5px] font-bold text-ink-dark truncate">{agent.ownerName}</span>

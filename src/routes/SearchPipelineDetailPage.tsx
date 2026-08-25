@@ -454,7 +454,7 @@ function IndexRowCard({
             className="w-4 h-4 accent-brand-dark cursor-pointer"
           />
         </label>
-        <span className="w-9 h-9 rounded bg-gradient-to-br from-brand to-brand-dark border border-brand-dark inline-flex items-center justify-center text-[11px] font-extrabold text-ink flex-shrink-0">
+        <span className="w-9 h-9 rounded bg-gradient-to-br from-brand to-brand-dark border border-brand-dark inline-flex items-center justify-center text-[11px] font-extrabold text-white flex-shrink-0">
           IDX
         </span>
         <div className="flex-1 min-w-0">

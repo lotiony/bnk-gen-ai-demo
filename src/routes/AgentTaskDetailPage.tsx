@@ -324,7 +324,7 @@ function OpsTab({ task, hasRuns }: { task: AgentTask; hasRuns: boolean }) {
               <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
                 <div className="w-full flex items-end" style={{ height: '110px' }}>
                   <div
-                    className="w-full rounded-t bg-brand-dark/80"
+                    className="w-full rounded-t bg-brand"
                     style={{ height: `${(v / maxV) * 100}%` }}
                     title={`${v}건`}
                   />
