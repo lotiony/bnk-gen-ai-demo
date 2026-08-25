@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-surface text-ink-dark font-sans text-[13px] leading-[1.5] antialiased;
+  }
+  a {
+    @apply text-inherit no-underline;
+  }
+  button {
+    font-family: inherit;
+    @apply cursor-pointer;
+  }
+}
+
+/* KB design helpers */
+@layer components {
+  .card {
+    @apply bg-white border border-line-soft rounded-md;
+  }
+  .pill {
+    @apply inline-flex items-center text-2xs font-bold tracking-[0.2px] px-2 py-[2px] rounded-full;
+  }
+  .stat-divider {
+    @apply w-px h-6 bg-line-soft;
+  }
+}
+
+/* Indeterminate progress — 진행 중인 느낌만 표현 (수치 없음) */
+@keyframes parse-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.animate-parse-progress {
+  animation: parse-progress 1.4s ease-in-out infinite;
+}
+
