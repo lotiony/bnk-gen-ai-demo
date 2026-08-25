@@ -677,7 +677,22 @@ function Canvas({
                     animate={{ opacity: 1 }}
                     transition={{ duration: reduce ? 0 : 0.26, delay: reduce ? 0 : tSat(n.host!) }}
                   >
-                    <line x1={hp.x} y1={hp.y} x2={p.x} y2={p.y} stroke={PROP_COLOR} strokeOpacity={0.32} strokeWidth={1.1} />
+                    {(() => {
+                      // 관계선과 같은 원칙 — 중심을 기준으로 잇되 보이는 구간은
+                      // 두 도형의 경계 사이. 순회 중에는 위성이 호스트 위로
+                      // 겹쳐 붙어 거리가 0 이므로 클리핑을 건너뛴다.
+                      const gap = Math.hypot(p.x - hp.x, p.y - hp.y);
+                      if (gap < CLASS_R + PROP_R + 2) return null;
+                      const a = clipTo(p, hp, CLASS_R);
+                      const b2 = clipTo(hp, p, PROP_R);
+                      // climax 는 다크 배경이라 1.1px·0.3 이면 읽혔지만 화이트에서는
+                      // 회색 실선이 그 굵기로는 사라진다.
+                      const hostFoc = !trav && (hoverCls === n.host || selectedClass === n.host);
+                      return (
+                        <line x1={a.x} y1={a.y} x2={b2.x} y2={b2.y} stroke={PROP_COLOR}
+                          strokeOpacity={hostFoc ? 0.85 : 0.55} strokeWidth={hostFoc ? 2 : 1.5} strokeLinecap="round" />
+                      );
+                    })()}
                     <circle cx={p.x} cy={p.y} r={PROP_R} fill={PROP_COLOR + '22'} stroke={PROP_COLOR} strokeOpacity={0.65} strokeWidth={1.2} />
                     <text x={p.x} y={p.y + PROP_R + 11} textAnchor="middle" fontSize={8.5} fontWeight={700} fill="#7A828B" opacity={0.9}>
                       {dispLabel(n.label)}
