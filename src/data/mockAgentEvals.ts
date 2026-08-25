@@ -112,7 +112,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       avgCostKrw: 12.3,
       deltaVsPrev: 1.7,
       status: 'pass',
-      judge: { kind: 'llm', name: 'azure/gpt-5.5-judge' },
+      judge: { kind: 'llm', name: 'onprem/qwen3-32b-judge' },
     },
     {
       id: 'eval-9f2b',
@@ -128,7 +128,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       avgCostKrw: 11.9,
       deltaVsPrev: 1.1,
       status: 'pass',
-      judge: { kind: 'llm', name: 'azure/gpt-5.5-judge' },
+      judge: { kind: 'llm', name: 'onprem/qwen3-32b-judge' },
     },
     {
       id: 'eval-9e84',
@@ -143,7 +143,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       avgLatencyMs: 1910,
       avgCostKrw: 12.0,
       status: 'pass',
-      judge: { kind: 'llm', name: 'azure/gpt-5.5-judge' },
+      judge: { kind: 'llm', name: 'onprem/qwen3-32b-judge' },
     },
     {
       id: 'eval-9e85',
@@ -159,7 +159,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       avgCostKrw: 11.8,
       deltaVsPrev: 1.7,
       status: 'pass',
-      judge: { kind: 'llm', name: 'azure/gpt-5.5-judge' },
+      judge: { kind: 'llm', name: 'onprem/qwen3-32b-judge' },
     },
     {
       id: 'eval-9d11',
@@ -175,7 +175,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       avgCostKrw: 11.8,
       deltaVsPrev: 5.8,
       status: 'pass',
-      judge: { kind: 'llm', name: 'aws/claude-sonnet-4.6' },
+      judge: { kind: 'llm', name: 'onprem/llama-3.3-70b' },
     },
     {
       id: 'eval-9b01',
@@ -190,7 +190,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       avgLatencyMs: 2310,
       avgCostKrw: 11.2,
       status: 'partial',
-      judge: { kind: 'llm', name: 'openai/gpt-4-turbo' },
+      judge: { kind: 'llm', name: 'onprem/gpt-oss-120b' },
     },
   ],
 };

@@ -206,7 +206,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
 
   const runTest = () => {
     if (!api) return;
-    // 실제로는 Azure AI Search 호출. 여기서는 응답 요약만 표시.
+    // 실제로는 검색엔진 호출. 여기서는 응답 요약만 표시.
     setTestResult({ latencyMs: 240 + (testQuery.length % 7) * 18, count: api.search.topK });
   };
 
@@ -649,7 +649,7 @@ function IssueApiModal({
         </div>
       </div>
 
-      {/* Azure AI Search 검색 설정 */}
+      {/* 검색엔진 검색 설정 */}
       <div className="mb-1">
         <div className="text-xs font-extrabold text-ink mb-2">검색 설정</div>
 

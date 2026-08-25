@@ -20,7 +20,7 @@ export const pbAgentProject: Project = {
   pii: true,
   credit: true,
   callsMonthly: { value: '12K', deltaPct: 8.2 },
-  costMonthly: { value: '₩0.6M', budget: '₩1.2M', deltaPct: 5.4, csp: '₩0.42M', onprem: '₩0.18M' },
+  costMonthly: { value: '₩0.6M', budget: '₩1.2M', deltaPct: 5.4, ptu: '₩0.42M', variable: '₩0.18M' },
   slo30d: { value: 99.42, target: 99.5, p95Resp: '2.1s', availability: '99.96%' },
   safety7d: { count: 14, deltaCount: 3, guardrailBlocks: 14, piiMasked: 218 },
   recentActivity: '2026-05-12 14:22 (정오너)',
@@ -42,7 +42,7 @@ export const pbAgentProject: Project = {
   models: [
     {
       id: 'gpt-oss-120b',
-      name: 'openai/gpt-oss-120b',
+      name: 'onprem/gpt-oss-120b',
       category: 'onprem',
       statusKey: 'ok',
       statusLabel: '정상',
@@ -64,8 +64,8 @@ export const pbAgentProject: Project = {
     },
     {
       id: 'gpt-5_5',
-      name: 'azure/gpt-5.5',
-      category: 'csp',
+      name: 'onprem/qwen3-32b',
+      category: 'onprem',
       statusKey: 'ok',
       statusLabel: '정상',
       usage: [

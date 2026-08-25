@@ -473,13 +473,13 @@ export default function KnowledgeDataTaskPage() {
               <span className="text-ink font-extrabold">PB 에이전트 프로젝트</span>
             </span>
             <span
-              title="이 과제의 클라우드는 Azure로 설정되어 있습니다"
+              title="이 과제의 인프라는 공동존 On-Premise 로 설정되어 있습니다"
               className="inline-flex items-center gap-1.5 py-[3px] px-2 border border-info-border rounded-xl bg-info-bg text-[11px] font-bold"
             >
-              <span className="text-[10px] uppercase tracking-[0.3px] text-info font-bold">클라우드</span>
+              <span className="text-[10px] uppercase tracking-[0.3px] text-info font-bold">인프라</span>
               <span className="inline-flex items-center gap-1 text-info font-extrabold">
-                <span aria-hidden className="text-[12px] leading-none">☁</span>
-                Microsoft Azure
+                <span aria-hidden className="text-[12px] leading-none">🏢</span>
+                공동존 On-Prem
               </span>
             </span>
           </div>

@@ -29,7 +29,7 @@ export default function SearchPipelineTaskPage() {
   // C
   const [retrieval, setRetrieval] = useState<Set<string>>(() => new Set(['hybrid', 'rerank']));
   const [embedModel, setEmbedModel] = useState('on-prem/e5-large-ko-1024d');
-  const [rerankModel, setRerankModel] = useState('azure/cohere-rerank-3');
+  const [rerankModel, setRerankModel] = useState('onprem/bge-reranker-v2-m3');
   const [topK, setTopK] = useState(10);
   const [tenancy, setTenancy] = useState<'single' | 'multi'>('multi');
   // D
@@ -374,15 +374,15 @@ export default function SearchPipelineTaskPage() {
                 <Select value={embedModel} onChange={(e) => setEmbedModel(e.target.value)}>
                   <option value="on-prem/e5-large-ko-1024d">on-prem/e5-large-ko-1024d</option>
                   <option value="on-prem/bge-m3-1024d">on-prem/bge-m3-1024d</option>
-                  <option value="azure/text-embedding-3-large">azure/text-embedding-3-large</option>
+                  <option value="onprem/bge-m3-ko">onprem/bge-m3-ko</option>
                 </Select>
               </FormField>
               <FormField label="Rerank 모델" info="선택 시 cross-encoder 단계 추가">
                 <Select value={rerankModel} onChange={(e) => setRerankModel(e.target.value)}>
                   <option value="">선택 안 함</option>
                   <option value="on-prem/bge-reranker-large">on-prem/bge-reranker-large</option>
-                  <option value="azure/cohere-rerank-3">azure/cohere-rerank-3 (CSP)</option>
-                  <option value="aws/cohere-rerank-3.5">aws/cohere-rerank-3.5 (CSP)</option>
+                  <option value="onprem/bge-reranker-v2-m3">onprem/bge-reranker-v2-m3 (CSP)</option>
+                  <option value="onprem/bge-reranker-v2-m3">onprem/bge-reranker-v2-m3 (CSP)</option>
                 </Select>
               </FormField>
             </Row>

@@ -201,8 +201,8 @@ export default function ApprovalDetailPage() {
                 k="모델 사용 (호스트)"
                 v={
                   <>
-                    <ChipReadonly primary>on-prem · openai/gpt-oss-120b</ChipReadonly>
-                    <ChipReadonly primary>Azure · azure/gpt-5.5</ChipReadonly>
+                    <ChipReadonly primary>on-prem · onprem/gpt-oss-120b</ChipReadonly>
+                    <ChipReadonly primary>공동존 · onprem/qwen3-32b</ChipReadonly>
                   </>
                 }
               />
@@ -225,9 +225,9 @@ export default function ApprovalDetailPage() {
                   플랫폼 관리자 전용
                 </span>
               </div>
-              <PoolRow name="csp-pool-1" sub="azure/gpt-5.5 · 주력" cap="200 PTU" pct={78} add={12} tone="bad" />
-              <PoolRow name="csp-pool-2" sub="aws/claude-sonnet-4.6 · Fallback" cap="50 PTU" pct={45} add={4} />
-              <PoolRow name="onprem-pool-A" sub="openai/gpt-oss-120b · 주력" cap="8 GPU" pct={62} add={9} />
+              <PoolRow name="llm-pool-1" sub="onprem/qwen3-32b · 주력" cap="200 PTU" pct={78} add={12} tone="bad" />
+              <PoolRow name="llm-pool-2" sub="onprem/llama-3.3-70b · Fallback" cap="50 PTU" pct={45} add={4} />
+              <PoolRow name="onprem-pool-A" sub="onprem/gpt-oss-120b · 주력" cap="8 GPU" pct={62} add={9} />
               <PoolRow name="onprem-pool-B" sub="google/gemma-4-31B · Fallback" cap="8 GPU" pct={30} add={3} />
 
               <div className="flex items-center gap-3 mt-3 text-[10.5px] text-ink-mid">
@@ -243,7 +243,7 @@ export default function ApprovalDetailPage() {
               </div>
 
               <div className="mt-3 bg-bad-bg border border-bad-border rounded p-2.5 text-[11.5px] text-bad font-bold">
-                ⚠ csp-pool-1 (azure/gpt-5.5) — 이 과제 추가 시 점유율 90% 도달, 풀 증설 검토 필요
+                ⚠ llm-pool-1 (onprem/qwen3-32b) — 이 과제 추가 시 점유율 90% 도달, 풀 증설 검토 필요
               </div>
             </div>
             )}

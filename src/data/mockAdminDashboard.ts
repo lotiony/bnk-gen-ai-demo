@@ -115,7 +115,7 @@ export const ADMIN_PROJECT_ROWS: ProjectUsageRow[] = [
     tpmUtilPct: 67.8,
     pendingApprovals: 2,
     lastActivity: '2026-05-24 14:23',
-    primaryModel: 'azure/gpt-5.5',
+    primaryModel: 'onprem/qwen3-32b',
     monthTokenInput: 3_840_000,
     monthTokenOutput: 1_080_000,
   },
@@ -147,7 +147,7 @@ export const ADMIN_PROJECT_ROWS: ProjectUsageRow[] = [
     tpmUtilPct: 93.1,
     pendingApprovals: 3,
     lastActivity: '2026-05-24 14:48',
-    primaryModel: 'openai/gpt-oss-120b',
+    primaryModel: 'onprem/gpt-oss-120b',
     monthTokenInput: 612_000_000,
     monthTokenOutput: 184_000_000,
   },
@@ -179,7 +179,7 @@ export const ADMIN_PROJECT_ROWS: ProjectUsageRow[] = [
     tpmUtilPct: 51.2,
     pendingApprovals: 1,
     lastActivity: '2026-05-24 11:02',
-    primaryModel: 'azure/gpt-5.5',
+    primaryModel: 'onprem/qwen3-32b',
     monthTokenInput: 28_500_000,
     monthTokenOutput: 7_900_000,
   },
@@ -243,7 +243,7 @@ export const ADMIN_PROJECT_ROWS: ProjectUsageRow[] = [
     tpmUtilPct: 0,
     pendingApprovals: 1,
     lastActivity: '2026-05-22 09:18',
-    primaryModel: 'azure/gpt-5.5',
+    primaryModel: 'onprem/qwen3-32b',
     monthTokenInput: 0,
     monthTokenOutput: 0,
   },
@@ -251,8 +251,8 @@ export const ADMIN_PROJECT_ROWS: ProjectUsageRow[] = [
 
 /** 모델별 PTU 단가 (월 단위, KRW). */
 export const MODEL_PTU_UNIT_PRICE: Record<string, number> = {
-  'openai/gpt-oss-120b': 1_000_000,
-  'azure/gpt-5.5': 800_000,
+  'onprem/gpt-oss-120b': 1_000_000,
+  'onprem/qwen3-32b': 800_000,
   'onprem/sLLM-13b': 400_000,
 };
 
@@ -383,13 +383,13 @@ function summarize(series: number[]) {
 
 export function getModelPtuUsage(): ModelPtuUsage[] {
   // 시드를 살짝 다르게 줘서 모델별 곡선이 구분되도록.
-  const a = ptuSeries(11, 62, 22, 8); // azure/gpt-5.5 — 평균 사용
-  const b = ptuSeries(29, 76, 18, 6); // openai/gpt-oss-120b — 가장 압박
+  const a = ptuSeries(11, 62, 22, 8); // onprem/qwen3-32b — 평균 사용
+  const b = ptuSeries(29, 76, 18, 6); // onprem/gpt-oss-120b — 가장 압박
   const c = ptuSeries(47, 48, 14, 4); // onprem/sLLM-13b — 여유
 
   return [
     {
-      model: 'openai/gpt-oss-120b',
+      model: 'onprem/gpt-oss-120b',
       allocatedPtus: 240,
       dailyUtilizationPct: b,
       ...summarize(b),
@@ -398,7 +398,7 @@ export function getModelPtuUsage(): ModelPtuUsage[] {
       currentUtilizationPct: summarize(b).current,
     },
     {
-      model: 'azure/gpt-5.5',
+      model: 'onprem/qwen3-32b',
       allocatedPtus: 160,
       dailyUtilizationPct: a,
       ...summarize(a),
@@ -540,10 +540,10 @@ export function getCostBreakdownByCategory(): CostCategory[] {
  * 모델 PTU 단가 + 평균 토큰 길이를 1회 호출 비용으로 정규화한 mock 값.
  */
 export const MODEL_COST_PER_CALL: Record<string, number> = {
-  'openai/gpt-oss-120b': 280,
-  'azure/gpt-5.5': 220,
+  'onprem/gpt-oss-120b': 280,
+  'onprem/qwen3-32b': 220,
   'onprem/sLLM-13b': 95,
-  'aws/claude-sonnet-4.6': 450,
+  'onprem/llama-3.3-70b': 450,
   'google/gemma-4-31B-it-assistant': 110,
 };
 
@@ -661,7 +661,7 @@ export const ACTIVITY_FEED: ActivityItem[] = [
   {
     id: 'ACT-1023',
     kind: 'ptu_change',
-    title: 'openai/gpt-oss-120b PTU 220 → 240 증설',
+    title: 'onprem/gpt-oss-120b PTU 220 → 240 증설',
     who: '김플랫 · 결재 ▶ 2단계 완료',
     at: '2026-05-24 11:42',
   },
@@ -705,7 +705,7 @@ export const PTU_CHANGE_EVENTS: PtuChangeEvent[] = [
   {
     id: 'PTU-EV-014',
     at: '2026-05-24',
-    model: 'openai/gpt-oss-120b',
+    model: 'onprem/gpt-oss-120b',
     from: 220,
     to: 240,
     reason: '피크 사용률 94% 도달 — 사용 현황 탭 알람 기반 증설',
@@ -715,7 +715,7 @@ export const PTU_CHANGE_EVENTS: PtuChangeEvent[] = [
   {
     id: 'PTU-EV-013',
     at: '2026-05-18',
-    model: 'azure/gpt-5.5',
+    model: 'onprem/qwen3-32b',
     from: 140,
     to: 160,
     reason: '여신심사 에이전트 트래픽 증가 대응',
@@ -735,7 +735,7 @@ export const PTU_CHANGE_EVENTS: PtuChangeEvent[] = [
   {
     id: 'PTU-EV-011',
     at: '2026-05-02',
-    model: 'azure/gpt-5.5',
+    model: 'onprem/qwen3-32b',
     from: 160,
     to: 140,
     reason: 'PB 프로젝트 호출 안정화 — 평균 효율 38% → 감설',
@@ -851,7 +851,7 @@ export const AUDIT_LOG: AuditLogItem[] = [
     at: '2026-05-24 11:42',
     actor: '김플랫',
     action: 'PTU 증설 결재 승인',
-    target: 'openai/gpt-oss-120b 220→240',
+    target: 'onprem/gpt-oss-120b 220→240',
   },
   {
     id: 'AUD-2026-05-24-0039',

@@ -202,7 +202,7 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
                           : 'bg-bad-bg text-bad border-bad-border',
                       )}
                     >
-                      {m.source === 'on-prem' ? 'on-prem' : 'CSP'}
+                      on-prem
                     </span>
                     <span className="text-ink-mid">·</span>
                     <span className="text-ink-dark">{m.dimension}d</span>

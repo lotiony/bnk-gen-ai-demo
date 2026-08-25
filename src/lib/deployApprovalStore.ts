@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { ApprovalItem } from '@/types';
 
-/* ---------------- Azure AI Search 검색 옵션 (공유 타입) ---------------- */
+/* ---------------- 검색엔진 검색 옵션 (공유 타입) ---------------- */
 
 export type QueryType = 'keyword' | 'vector' | 'hybrid';
 export type VectorAlgo = 'hnsw' | 'knn';

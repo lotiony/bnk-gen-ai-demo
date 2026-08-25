@@ -150,7 +150,7 @@ function VSCodeMock() {
             <CodeLine n={3} text="" />
             <CodeLine n={4} text={<><Kw>def</Kw> <Fn>test_pb_eval_golden_set</Fn>():</>} />
             <CodeLine n={5} text={<>{'    '}<Cm># 골든셋 42 케이스 평가 (PB 자산진단 v0.4.2)</Cm></>} />
-            <CodeLine n={6} text={<>{'    '}advisor = <Fn>PBAdvisor</Fn>(model=<St>"azure/gpt-5.5"</St>)</>} />
+            <CodeLine n={6} text={<>{'    '}advisor = <Fn>PBAdvisor</Fn>(model=<St>"onprem/qwen3-32b"</St>)</>} />
             <CodeLine n={7} text={<>{'    '}result = <Fn>evaluate_golden_set</Fn>(advisor, <St>"eval/golden_set.jsonl"</St>)</>} />
             <CodeLine n={8} text="" />
             <CodeLine n={9} text={<>{'    '}<Kw>assert</Kw> result.pass_rate &gt;= <Num>0.95</Num></>} />

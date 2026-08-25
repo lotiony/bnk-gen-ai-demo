@@ -25,7 +25,7 @@ export default function AgentTaskRegisterPage() {
   const [systemPrompt, setSystemPrompt] = useState(
     '당신은 보이스피싱 통화를 1차 분류하는 어시스턴트입니다. 통화 내용에서 의심 단서(긴급성·송금 요청·기관 사칭)를 식별하여 risk_score(0~100)와 근거를 JSON으로 반환합니다.',
   );
-  const [mainModel, setMainModel] = useState('openai/gpt-oss-120b');
+  const [mainModel, setMainModel] = useState('onprem/gpt-oss-120b');
   const [fallbackModel, setFallbackModel] = useState('google/gemma-4-31B-it-assistant');
   const [tools, setTools] = useState<Set<string>>(new Set(['rag_search', 'function_call']));
   const [linkedKnw, setLinkedKnw] = useState<Set<string>>(new Set(['KNW-201']));
@@ -164,7 +164,7 @@ export default function AgentTaskRegisterPage() {
             <Row>
               <FormField label="주력 모델 (on-prem)" required>
                 <Select value={mainModel} onChange={(e) => setMainModel(e.target.value)}>
-                  <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
+                  <option value="onprem/gpt-oss-120b">onprem/gpt-oss-120b</option>
                   <option value="google/gemma-4-31B-it-assistant">google/gemma-4-31B-it-assistant</option>
                   <option value="kakao/kanana-flag-32.5B-it">kakao/kanana-flag-32.5B-it</option>
                   <option value="meta/llama-3-70b">meta/llama-3-70b</option>

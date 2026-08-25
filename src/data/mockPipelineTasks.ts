@@ -130,7 +130,7 @@ export interface PipelineTask {
   indexes: PipelineIndexRef[];
   /** 임베딩 모델. */
   embedModel: string;
-  /** Rerank 모델 (선택). CSP 모델이면 비용 결재가 묶임. */
+  /** Rerank 모델 (선택). 추가 GPU 자원이 필요하면 비용 결재가 묶임. */
   rerankModel?: string;
   /** 기본 Top-K. */
   topK: number;
@@ -284,7 +284,7 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
       },
     ],
     embedModel: 'on-prem/e5-large-ko-1024d',
-    rerankModel: 'azure/cohere-rerank-3',
+    rerankModel: 'onprem/bge-reranker-v2-m3',
     topK: 10,
     chunkWindow: 3,
     golden: {

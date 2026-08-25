@@ -170,13 +170,13 @@ function buildLiveSnapshot(agentId: string): AgentTrafficSnapshot {
 
   const models: ModelTokenUsage[] = [
     {
-      name: 'azure/gpt-5.5',
+      name: 'onprem/qwen3-32b',
       inputTokens24h: 4_820_000,
       outputTokens24h: 1_315_000,
       callShare: 68.2,
     },
     {
-      name: 'openai/gpt-oss-120b',
+      name: 'onprem/gpt-oss-120b',
       inputTokens24h: 1_960_000,
       outputTokens24h: 540_000,
       callShare: 27.4,
@@ -239,7 +239,7 @@ function buildLiveSnapshot(agentId: string): AgentTrafficSnapshot {
     models,
     tokenQuotaUsedPct: 47.8,
     tpmUtilization: tpmNow,
-    tpmHotModel: 'azure/gpt-5.5',
+    tpmHotModel: 'onprem/qwen3-32b',
 
     rpsSeries,
     p95Series,

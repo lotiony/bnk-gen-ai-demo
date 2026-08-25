@@ -7,11 +7,11 @@ export interface EmbedModelDef {
   id: EmbedModelId;
   name: string;
   short: string;
-  /** on-prem 또는 CSP. */
-  source: 'on-prem' | 'csp';
+  /** 구동 위치 — 전부 공동존 On-Prem. */
+  source: 'on-prem';
   dimension: number;
   version: string;
-  /** 1,000 토큰당 비용 (원). CSP 모델만 의미 있음. */
+  /** 1,000 토큰당 환산 비용 (원). */
   costPerKWon: number;
   desc: string;
 }
@@ -41,11 +41,11 @@ export const EMBED_MODELS: EmbedModelDef[] = [
     id: 'text-embedding-3-large',
     name: 'OpenAI text-embedding-3-large',
     short: 'text-embedding-3-large',
-    source: 'csp',
+    source: 'on-prem',
     dimension: 3072,
     version: '2024-01',
     costPerKWon: 0.18,
-    desc: 'CSP · 영문 강점, 다국어 가능 · 비용 결재 필요',
+    desc: '영문 강점, 다국어 가능 · GPU 자원 결재 필요',
   },
 ];
 

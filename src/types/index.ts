@@ -36,7 +36,7 @@ export interface Task {
   ownerId: string;
 }
 
-export type ModelCategory = 'onprem' | 'csp' | 'voice';
+export type ModelCategory = 'onprem' | 'voice';
 export type ModelStatus = 'ok' | 'warn' | 'bad' | 'maint';
 
 export interface ModelUsageBar {
@@ -80,7 +80,7 @@ export interface Project {
   pii: boolean;
   credit: boolean;
   callsMonthly: { value: string; deltaPct: number };
-  costMonthly: { value: string; budget: string; deltaPct: number; csp: string; onprem: string };
+  costMonthly: { value: string; budget: string; deltaPct: number; ptu: string; variable: string };
   slo30d: { value: number; target: number; p95Resp: string; availability: string };
   safety7d: { count: number; deltaCount: number; guardrailBlocks: number; piiMasked: number };
   recentActivity: string;

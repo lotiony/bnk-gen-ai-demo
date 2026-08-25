@@ -10,7 +10,7 @@ export interface AgentTask {
   stage: AgentDeployStage;
   /** 빌더 종류. 카드 메타로 노출. */
   builder: AgentBuilder;
-  /** 주력 모델. 예: openai/gpt-oss-120b */
+  /** 주력 모델. 예: onprem/gpt-oss-120b */
   mainModel: string;
   /** Fallback 모델 (선택). */
   fallbackModel?: string;
@@ -45,8 +45,8 @@ export const MOCK_AGENT_TASKS: AgentTask[] = [
     state: '운영 중',
     stage: '서빙계',
     builder: 'pro-code',
-    mainModel: 'azure/gpt-5.5',
-    fallbackModel: 'openai/gpt-oss-120b',
+    mainModel: 'onprem/qwen3-32b',
+    fallbackModel: 'onprem/gpt-oss-120b',
     linkedKnowledge: ['KNW-198'],
     tools: ['rag_search', 'function_call', 'db_query'],
     ownerName: '박서연',

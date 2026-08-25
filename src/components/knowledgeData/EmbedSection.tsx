@@ -258,7 +258,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
                     : 'bg-bad-bg text-bad border-bad-border',
                 )}
               >
-                {model.source === 'on-prem' ? 'on-prem' : 'CSP'}
+                on-prem
               </span>
               <span className="inline-flex items-center py-[2px] px-2 rounded-full border border-line-soft bg-surface-soft text-ink-dark font-bold">
                 {model.dimension.toLocaleString('ko-KR')}차원
@@ -280,7 +280,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
             >
               {EMBED_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.short} ({m.source === 'on-prem' ? 'on-prem' : 'CSP'} · {m.dimension}d)
+                  {m.short} (on-prem · {m.dimension}d)
                 </option>
               ))}
             </select>

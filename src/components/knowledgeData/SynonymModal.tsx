@@ -16,7 +16,7 @@ interface Props {
 /** 규칙이 명시 매핑('=>')인지 동등인지. */
 const isExplicit = (r: string) => r.includes('=>');
 
-/** 동의어 맵 관리 모달 — Azure AI Search Synonym Map(쿼리 확장). 키워드/하이브리드에만 적용. */
+/** 동의어 맵 관리 모달 — 검색엔진 Synonym Map(쿼리 확장). 키워드/하이브리드에만 적용. */
 export default function SynonymModal({ open, onClose, indexName, kind, rules, onChange }: Props) {
   const [draft, setDraft] = useState('');
   const applies = kind !== 'vector';
@@ -37,7 +37,7 @@ export default function SynonymModal({ open, onClose, indexName, kind, rules, on
       title="동의어 맵"
       subtitle={
         <>
-          <b className="text-ink">{indexName}</b> · 쿼리 시점 확장(재빌드 불필요) · Azure AI Search Synonym Map
+          <b className="text-ink">{indexName}</b> · 쿼리 시점 확장(재빌드 불필요) · 검색엔진 Synonym Map
         </>
       }
       footer={

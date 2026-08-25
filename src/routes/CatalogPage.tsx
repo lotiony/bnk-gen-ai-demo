@@ -12,7 +12,6 @@ import {
 const MY_TENANT: Tenant = '부산은행';
 
 type BuilderKindFilter = 'all' | 'low-code' | 'pro-code';
-type HostFilter = 'all' | 'on-prem' | 'csp';
 
 const STATE_TONE: Record<string, 'ok' | 'info' | 'warn' | 'neutral'> = {
   '운영 중': 'ok',
@@ -26,27 +25,19 @@ function builderKind(b: AgentBuilder): 'low-code' | 'pro-code' {
   return b === 'pro-code' ? 'pro-code' : 'low-code';
 }
 
-/** azure/aws prefix는 CSP, 그 외는 on-prem 화이트리스트 모델. */
-function modelHost(modelName: string): 'on-prem' | 'csp' {
-  const prefix = modelName.split('/')[0]?.toLowerCase();
-  return prefix === 'azure' || prefix === 'aws' || prefix === 'gcp' ? 'csp' : 'on-prem';
-}
-
 /**
  * 공통 카탈로그 — 에이전트.
  * 모든 계열사·과제의 에이전트가 한 곳에 모이는 조회·공유 신청 화면.
- * 격자 뷰. 카드 메타는 대고객/대직원·low-code/pro-code·on-prem/csp 3축으로 단순화.
+ * 격자 뷰. 카드 메타는 대고객/대직원 · low-code/pro-code 2축으로 단순화.
  */
 export default function CatalogPage() {
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<BuilderKindFilter>('all');
-  const [host, setHost] = useState<HostFilter>('all');
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return MOCK_CATALOG_AGENTS.filter((a) => {
       if (kind !== 'all' && builderKind(a.builder) !== kind) return false;
-      if (host !== 'all' && modelHost(a.mainModel) !== host) return false;
       if (ql) {
         // 카드 표시 필드 + ID 기준으로 매칭
         const hay = `${a.id} ${a.name} ${a.mainModel} ${a.ownerName} ${a.description} ${a.projectName}`.toLowerCase();
@@ -54,15 +45,13 @@ export default function CatalogPage() {
       }
       return true;
     });
-  }, [q, kind, host]);
+  }, [q, kind]);
 
   // 필터 칩 카운트
   const counts = useMemo(() => {
     const lowCode = MOCK_CATALOG_AGENTS.filter((a) => builderKind(a.builder) === 'low-code').length;
     const proCode = MOCK_CATALOG_AGENTS.filter((a) => builderKind(a.builder) === 'pro-code').length;
-    const onPrem = MOCK_CATALOG_AGENTS.filter((a) => modelHost(a.mainModel) === 'on-prem').length;
-    const csp = MOCK_CATALOG_AGENTS.filter((a) => modelHost(a.mainModel) === 'csp').length;
-    return { lowCode, proCode, onPrem, csp };
+    return { lowCode, proCode };
   }, []);
 
   return (
@@ -105,18 +94,6 @@ export default function CatalogPage() {
               pro-code <span className="text-ink-mid">{counts.proCode}</span>
             </Chip>
           </FilterGroup>
-          <span className="w-px h-5 bg-line-soft" />
-          <FilterGroup label="모델 호스팅">
-            <Chip on={host === 'all'} onClick={() => setHost('all')}>
-              전체
-            </Chip>
-            <Chip on={host === 'on-prem'} onClick={() => setHost('on-prem')} tone="ok">
-              on-prem <span className="text-ink-mid">{counts.onPrem}</span>
-            </Chip>
-            <Chip on={host === 'csp'} onClick={() => setHost('csp')}>
-              CSP <span className="text-ink-mid">{counts.csp}</span>
-            </Chip>
-          </FilterGroup>
         </div>
       </div>
 
@@ -150,7 +127,6 @@ export default function CatalogPage() {
 function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
   const sameTenant = agent.tenant === MY_TENANT;
   const kind = builderKind(agent.builder);
-  const host = modelHost(agent.mainModel);
 
   const handleShareRequest = () => {
     if (!sameTenant) return;
@@ -209,16 +185,6 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
           )}
         >
           {kind}
-        </span>
-        <span
-          className={cn(
-            'pill border font-extrabold text-[10px]',
-            host === 'on-prem'
-              ? 'bg-ok-bg text-ok border-ok-border'
-              : 'bg-bad-bg text-bad border-bad-border',
-          )}
-        >
-          {host === 'on-prem' ? 'on-prem' : 'CSP'}
         </span>
       </div>
 

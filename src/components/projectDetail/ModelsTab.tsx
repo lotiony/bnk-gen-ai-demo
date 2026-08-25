@@ -6,14 +6,12 @@ interface Props {
 }
 
 const CAT_LABEL: Record<ModelCategory, string> = {
-  onprem: 'on-prem',
-  csp: 'CSP · Azure',
+  onprem: '언어 모델',
   voice: '음성',
 };
 
 const CAT_CHIP: Record<ModelCategory, string> = {
   onprem: 'bg-ok-bg text-ok border-ok-border',
-  csp: 'bg-info-bg text-info border-info-border',
   voice: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
 };
 
@@ -28,17 +26,12 @@ const STATUS_CHIP: Record<ModelStatus, { cls: string; dot: string }> = {
 export default function ModelsTab({ models }: Props) {
   const groups: { label: string; note?: string; items: ModelEntry[] }[] = [
     {
-      label: 'on-prem',
+      label: '언어 모델',
       items: models.filter((m) => m.category === 'onprem'),
     },
     {
       label: '음성',
       items: models.filter((m) => m.category === 'voice'),
-    },
-    {
-      label: 'CSP',
-      note: '혁신금융서비스 지정 필요',
-      items: models.filter((m) => m.category === 'csp'),
     },
   ];
 

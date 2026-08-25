@@ -1,20 +1,23 @@
 /**
- * GPU 인프라 모니터링 mock — 4개 위치(on-prem cluster1·cluster2 + CSP azure·aws).
+ * GPU 인프라 모니터링 mock — 공동존 내 4개 클러스터.
  *
- * 단위:
- *  · on-prem — 물리 노드(서버) 단위. 노드 한 대에 GPU 8장 (NVIDIA HGX 보드 기준).
- *  · CSP    — VM 인스턴스 단위. 인스턴스 타입에 GPU 수가 고정 (예: p5.48xlarge=H100×8).
+ * RFP 인프라 요건: 공동존 상면 On-Premise BareMetal K8s,
+ * **개발·운영 클러스터 분리**. 외부 클라우드 자원은 사업 범위 밖이므로
+ * 위치 축을 운영계(prod) / 개발계(dev) 로 나눈다.
+ *
+ * 단위: 물리 노드(서버). 노드 한 대에 GPU 8장 (NVIDIA HGX 보드 기준).
  *
  * 노출 메트릭:
- *  · 위치(클러스터/리전)별 노드/인스턴스 수와 GPU 종류 분포
- *  · 각 노드의 인스턴스 유형 / GPU 종류 × 수 / 평균 사용률 / 평균 온도 / 상태
- *  · 모델 × 위치 배포 매트릭스 (replica, GPU 수, TTFT, TPS, RPS)
- *  · 위치별 24시간 GPU 사용률 추이
+ *  · 클러스터별 노드 수와 GPU 종류 분포
+ *  · 각 노드의 서버 모델 / GPU 종류 × 수 / 평균 사용률 / 평균 온도 / 상태
+ *  · 모델 × 클러스터 배포 매트릭스 (replica, GPU 수, TTFT, TPS, RPS)
+ *  · 클러스터별 24시간 GPU 사용률 추이
  *  · 인프라 이벤트(장애·재시작·유지보수·스케일)
  */
 
-export type LocationId = 'onprem-cluster1' | 'onprem-cluster2' | 'csp-azure' | 'csp-aws';
-export type LocationKind = 'onprem' | 'csp';
+export type LocationId = 'prod-cluster1' | 'prod-cluster2' | 'dev-cluster1' | 'dev-cluster2';
+/** 운영계 / 개발계 — RFP 요건상 클러스터가 분리되어 있다. */
+export type LocationKind = 'prod' | 'dev';
 
 export interface LocationMeta {
   id: LocationId;
@@ -26,32 +29,32 @@ export interface LocationMeta {
 
 export const LOCATIONS: LocationMeta[] = [
   {
-    id: 'onprem-cluster1',
-    label: 'on-prem · cluster1',
-    kind: 'onprem',
-    region: '여의도 IDC',
+    id: 'prod-cluster1',
+    label: '운영 · cluster1',
+    kind: 'prod',
+    region: '공동존 · 부산 문현',
     hourlyRateAvgKrw: 6_800,
   },
   {
-    id: 'onprem-cluster2',
-    label: 'on-prem · cluster2',
-    kind: 'onprem',
-    region: '분당 IDC',
+    id: 'prod-cluster2',
+    label: '운영 · cluster2',
+    kind: 'prod',
+    region: '공동존 · 부산 문현',
     hourlyRateAvgKrw: 5_200,
   },
   {
-    id: 'csp-azure',
-    label: 'CSP · Azure',
-    kind: 'csp',
-    region: 'koreacentral',
-    hourlyRateAvgKrw: 12_400,
+    id: 'dev-cluster1',
+    label: '개발 · cluster1',
+    kind: 'dev',
+    region: '공동존 · 부산 문현',
+    hourlyRateAvgKrw: 4_100,
   },
   {
-    id: 'csp-aws',
-    label: 'CSP · AWS',
-    kind: 'csp',
-    region: 'ap-northeast-2',
-    hourlyRateAvgKrw: 14_200,
+    id: 'dev-cluster2',
+    label: '개발 · cluster2',
+    kind: 'dev',
+    region: '공동존 · 부산 문현',
+    hourlyRateAvgKrw: 3_600,
   },
 ];
 
@@ -79,20 +82,20 @@ export interface GpuCard {
   eccErrors?: number;
 }
 
-/** 노드(on-prem) 또는 인스턴스(CSP) 단위. */
+/** 물리 노드 단위. */
 export interface GpuNode {
   id: string;
   location: LocationId;
-  /** on-prem 서버 모델명 또는 CSP VM 인스턴스 타입. */
+  /** 서버 모델명. */
   instanceType: string;
   gpuModel: 'H100' | 'A100' | 'L40S';
-  /** 한 노드/인스턴스의 GPU 수 (보통 8). */
+  /** 한 노드의 GPU 수 (보통 8). */
   gpuCount: number;
   /** GPU 한 장당 메모리(GB). */
   memoryGbPerGpu: number;
   /** 노드 전체 평균 사용률(활성 GPU 기준, %). */
   utilizationPct: number;
-  /** 평균 온도(℃) — CSP는 0(미공개). */
+  /** 평균 온도(℃). */
   temperatureC: number;
   status: GpuStatus;
   /** degraded일 때, 장애 GPU 수. */
@@ -121,7 +124,7 @@ function makeGpus(opts: {
   activeMask: boolean[]; // 길이 8, true=active
   faultIndex?: number;
   seed: number;
-  showTemp: boolean; // CSP는 false
+  showTemp: boolean;
 }): GpuCard[] {
   const memTotalMiB = opts.memTotalGB * 1024;
   let s = opts.seed;
@@ -207,13 +210,13 @@ export const GPU_NODES: GpuNode[] = [
   // on-prem cluster1 — HGX 서버 3대 = 24 GPU
   buildNode({
     id: 'c1-node-h-01',
-    location: 'onprem-cluster1',
+    location: 'prod-cluster1',
     instanceType: 'NVIDIA HGX H100',
     gpuModel: 'H100',
     gpuCount: 8,
     memoryGbPerGpu: 80,
     status: 'active',
-    hostedModels: ['openai/gpt-oss-120b'],
+    hostedModels: ['onprem/gpt-oss-120b'],
     driverVersion: '535.129.03',
     cudaVersion: '12.2',
     smiTimestamp: 'Mon May 24 14:08:32 2026',
@@ -223,7 +226,7 @@ export const GPU_NODES: GpuNode[] = [
       powerCapW: 700,
       utilBase: 78,
       utilSpread: 14,
-      hostedModel: 'openai/gpt-oss-120b',
+      hostedModel: 'onprem/gpt-oss-120b',
       activeMask: all8,
       seed: 2001,
       showTemp: true,
@@ -231,13 +234,13 @@ export const GPU_NODES: GpuNode[] = [
   }),
   buildNode({
     id: 'c1-node-h-02',
-    location: 'onprem-cluster1',
+    location: 'prod-cluster1',
     instanceType: 'NVIDIA HGX H100',
     gpuModel: 'H100',
     gpuCount: 8,
     memoryGbPerGpu: 80,
     status: 'active',
-    hostedModels: ['openai/gpt-oss-120b'],
+    hostedModels: ['onprem/gpt-oss-120b'],
     driverVersion: '535.129.03',
     cudaVersion: '12.2',
     smiTimestamp: 'Mon May 24 14:08:32 2026',
@@ -247,7 +250,7 @@ export const GPU_NODES: GpuNode[] = [
       powerCapW: 700,
       utilBase: 72,
       utilSpread: 16,
-      hostedModel: 'openai/gpt-oss-120b',
+      hostedModel: 'onprem/gpt-oss-120b',
       activeMask: all8,
       seed: 2002,
       showTemp: true,
@@ -255,7 +258,7 @@ export const GPU_NODES: GpuNode[] = [
   }),
   buildNode({
     id: 'c1-node-a-01',
-    location: 'onprem-cluster1',
+    location: 'prod-cluster1',
     instanceType: 'NVIDIA HGX A100',
     gpuModel: 'A100',
     gpuCount: 8,
@@ -280,7 +283,7 @@ export const GPU_NODES: GpuNode[] = [
   // on-prem cluster2 — HGX 서버 2대 = 16 GPU (A100 8 + L40S 8). 1장 fault.
   buildNode({
     id: 'c2-node-a-01',
-    location: 'onprem-cluster2',
+    location: 'prod-cluster2',
     instanceType: 'NVIDIA HGX A100',
     gpuModel: 'A100',
     gpuCount: 8,
@@ -305,7 +308,7 @@ export const GPU_NODES: GpuNode[] = [
   }),
   buildNode({
     id: 'c2-node-l-01',
-    location: 'onprem-cluster2',
+    location: 'prod-cluster2',
     instanceType: 'Supermicro 4U L40S',
     gpuModel: 'L40S',
     gpuCount: 8,
@@ -327,16 +330,16 @@ export const GPU_NODES: GpuNode[] = [
       showTemp: true,
     }),
   }),
-  // CSP Azure — 1 인스턴스 = 8 GPU (모두 활성, 온도 미공개)
+  // 개발 클러스터1 — 1 노드 = 8 GPU
   buildNode({
-    id: 'az-vm-01',
-    location: 'csp-azure',
-    instanceType: 'Standard_ND96amsr_A100_v4',
+    id: 'dev-node-01',
+    location: 'dev-cluster1',
+    instanceType: 'NVIDIA HGX A100',
     gpuModel: 'A100',
     gpuCount: 8,
     memoryGbPerGpu: 80,
     status: 'active',
-    hostedModels: ['azure/gpt-5.5'],
+    hostedModels: ['onprem/qwen3-32b'],
     driverVersion: '535.104.05',
     cudaVersion: '12.2',
     smiTimestamp: 'Mon May 24 14:08:32 2026',
@@ -346,22 +349,22 @@ export const GPU_NODES: GpuNode[] = [
       powerCapW: 400,
       utilBase: 67,
       utilSpread: 14,
-      hostedModel: 'azure/gpt-5.5',
+      hostedModel: 'onprem/qwen3-32b',
       activeMask: all8,
       seed: 2006,
       showTemp: false,
     }),
   }),
-  // CSP AWS — 1 인스턴스 = 8 GPU (4장만 활성, 4장 idle 백업/실험용)
+  // 개발 클러스터2 — 1 노드 = 8 GPU (4장만 활성, 4장 idle 백업/실험용)
   buildNode({
-    id: 'aws-ec2-01',
-    location: 'csp-aws',
-    instanceType: 'p5.48xlarge',
+    id: 'dev-node-02',
+    location: 'dev-cluster2',
+    instanceType: 'NVIDIA HGX H100',
     gpuModel: 'H100',
     gpuCount: 8,
     memoryGbPerGpu: 80,
     status: 'active',
-    hostedModels: ['openai/gpt-oss-120b'],
+    hostedModels: ['onprem/gpt-oss-120b'],
     driverVersion: '535.104.05',
     cudaVersion: '12.2',
     smiTimestamp: 'Mon May 24 14:08:32 2026',
@@ -371,7 +374,7 @@ export const GPU_NODES: GpuNode[] = [
       powerCapW: 700,
       utilBase: 76,
       utilSpread: 12,
-      hostedModel: 'openai/gpt-oss-120b',
+      hostedModel: 'onprem/gpt-oss-120b',
       activeMask: half8,
       seed: 2007,
       showTemp: false,
@@ -453,8 +456,8 @@ export interface ModelDeployment {
 
 export const MODEL_DEPLOYMENTS: ModelDeployment[] = [
   {
-    model: 'openai/gpt-oss-120b',
-    location: 'onprem-cluster1',
+    model: 'onprem/gpt-oss-120b',
+    location: 'prod-cluster1',
     replicas: 8,
     gpuCount: 16,
     gpuModel: 'H100',
@@ -464,8 +467,8 @@ export const MODEL_DEPLOYMENTS: ModelDeployment[] = [
     health: 'healthy',
   },
   {
-    model: 'openai/gpt-oss-120b',
-    location: 'csp-aws',
+    model: 'onprem/gpt-oss-120b',
+    location: 'dev-cluster2',
     replicas: 4,
     gpuCount: 8,
     gpuModel: 'H100',
@@ -475,8 +478,8 @@ export const MODEL_DEPLOYMENTS: ModelDeployment[] = [
     health: 'healthy',
   },
   {
-    model: 'azure/gpt-5.5',
-    location: 'csp-azure',
+    model: 'onprem/qwen3-32b',
+    location: 'dev-cluster1',
     replicas: 4,
     gpuCount: 8,
     gpuModel: 'A100',
@@ -487,7 +490,7 @@ export const MODEL_DEPLOYMENTS: ModelDeployment[] = [
   },
   {
     model: 'onprem/sLLM-13b',
-    location: 'onprem-cluster1',
+    location: 'prod-cluster1',
     replicas: 4,
     gpuCount: 8,
     gpuModel: 'A100',
@@ -498,7 +501,7 @@ export const MODEL_DEPLOYMENTS: ModelDeployment[] = [
   },
   {
     model: 'onprem/sLLM-13b',
-    location: 'onprem-cluster2',
+    location: 'prod-cluster2',
     replicas: 4,
     gpuCount: 8,
     gpuModel: 'A100',
@@ -509,7 +512,7 @@ export const MODEL_DEPLOYMENTS: ModelDeployment[] = [
   },
   {
     model: 'onprem/sLLM-7b',
-    location: 'onprem-cluster2',
+    location: 'prod-cluster2',
     replicas: 4,
     gpuCount: 8,
     gpuModel: 'L40S',
@@ -524,10 +527,10 @@ export const MODEL_DEPLOYMENTS: ModelDeployment[] = [
 export function getLocationUtilSeries(): Record<LocationId, number[]> {
   const out = {} as Record<LocationId, number[]>;
   const config: Record<LocationId, { base: number; amp: number; seed: number }> = {
-    'onprem-cluster1': { base: 72, amp: 14, seed: 71 },
-    'onprem-cluster2': { base: 56, amp: 18, seed: 73 },
-    'csp-azure': { base: 64, amp: 16, seed: 79 },
-    'csp-aws': { base: 38, amp: 22, seed: 83 },
+    'prod-cluster1': { base: 72, amp: 14, seed: 71 },
+    'prod-cluster2': { base: 56, amp: 18, seed: 73 },
+    'dev-cluster1': { base: 64, amp: 16, seed: 79 },
+    'dev-cluster2': { base: 38, amp: 22, seed: 83 },
   };
   for (const k of Object.keys(config) as LocationId[]) {
     const { base, amp, seed } = config[k];
@@ -560,7 +563,7 @@ export const INFRA_EVENTS: InfraEvent[] = [
     id: 'EV-INFRA-1042',
     at: '2026-05-24 13:22',
     kind: 'fault',
-    location: 'onprem-cluster2',
+    location: 'prod-cluster2',
     target: 'c2-node-a-01 · GPU#3',
     description: 'GPU 메모리 ECC 오류 — 노드 degraded, 운영팀 점검 중',
   },
@@ -568,8 +571,8 @@ export const INFRA_EVENTS: InfraEvent[] = [
     id: 'EV-INFRA-1041',
     at: '2026-05-24 09:08',
     kind: 'autoscale',
-    location: 'onprem-cluster1',
-    target: 'openai/gpt-oss-120b',
+    location: 'prod-cluster1',
+    target: 'onprem/gpt-oss-120b',
     description: 'replica 6 → 8 자동 확장 (P95 임계 도달)',
     resolvedAt: '2026-05-24 09:14',
   },
@@ -577,8 +580,8 @@ export const INFRA_EVENTS: InfraEvent[] = [
     id: 'EV-INFRA-1040',
     at: '2026-05-23 18:42',
     kind: 'restart',
-    location: 'csp-aws',
-    target: 'aws-ec2-01',
+    location: 'dev-cluster2',
+    target: 'dev-node-02',
     description: '드라이버 호환성 이슈로 인스턴스 재시작',
     resolvedAt: '2026-05-23 18:51',
   },
@@ -586,7 +589,7 @@ export const INFRA_EVENTS: InfraEvent[] = [
     id: 'EV-INFRA-1039',
     at: '2026-05-23 02:00',
     kind: 'maintenance',
-    location: 'onprem-cluster1',
+    location: 'prod-cluster1',
     target: 'c1-node-h-02',
     description: '예정 점검 — 펌웨어 업데이트',
     resolvedAt: '2026-05-23 03:18',
@@ -595,8 +598,8 @@ export const INFRA_EVENTS: InfraEvent[] = [
     id: 'EV-INFRA-1038',
     at: '2026-05-22 11:08',
     kind: 'autoscale',
-    location: 'csp-azure',
-    target: 'azure/gpt-5.5',
+    location: 'dev-cluster1',
+    target: 'onprem/qwen3-32b',
     description: 'PTU 한도 도달 — 자동 throttle 적용 (12분간)',
     resolvedAt: '2026-05-22 11:20',
   },

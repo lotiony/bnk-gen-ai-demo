@@ -2008,26 +2008,26 @@ function PiiActionPill({ action }: { action: PiiAction }) {
 
 
 /* =====================================================================
- * 5) GPU·인프라 탭 — 4 위치(onprem cluster1·cluster2 + CSP azure·aws)
+ * 5) GPU·인프라 탭 — 공동존 4개 클러스터(운영 2 + 개발 2)
  * ===================================================================== */
 
 const LOCATION_COLORS: Record<LocationId, { stroke: string; chip: string; dot: string }> = {
-  'onprem-cluster1': {
+  'prod-cluster1': {
     stroke: '#1F5BB8',
     chip: 'bg-info-bg text-info border-info-border',
     dot: 'bg-info',
   },
-  'onprem-cluster2': {
+  'prod-cluster2': {
     stroke: '#6E3BBD',
     chip: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
     dot: 'bg-accent-purple',
   },
-  'csp-azure': {
+  'dev-cluster1': {
     stroke: '#1B8A4D',
     chip: 'bg-ok-bg text-ok border-ok-border',
     dot: 'bg-ok',
   },
-  'csp-aws': {
+  'dev-cluster2': {
     stroke: '#C9760F',
     chip: 'bg-warn-bg text-warn border-warn-border',
     dot: 'bg-warn',
@@ -2039,10 +2039,10 @@ function GpuInfraTab() {
   const utilSeries = useMemo(() => getLocationUtilSeries(), []);
   const totalGpus = summaries.reduce((a, s) => a + s.totalGpus, 0);
   const totalNodes = summaries.reduce((a, s) => a + s.nodeCount, 0);
-  const onpremGpus = summaries.filter((s) => s.kind === 'onprem').reduce((a, s) => a + s.totalGpus, 0);
-  const onpremNodes = summaries.filter((s) => s.kind === 'onprem').reduce((a, s) => a + s.nodeCount, 0);
-  const cspGpus = summaries.filter((s) => s.kind === 'csp').reduce((a, s) => a + s.totalGpus, 0);
-  const cspNodes = summaries.filter((s) => s.kind === 'csp').reduce((a, s) => a + s.nodeCount, 0);
+  const prodGpus = summaries.filter((s) => s.kind === 'prod').reduce((a, s) => a + s.totalGpus, 0);
+  const prodNodes = summaries.filter((s) => s.kind === 'prod').reduce((a, s) => a + s.nodeCount, 0);
+  const devGpus = summaries.filter((s) => s.kind === 'dev').reduce((a, s) => a + s.totalGpus, 0);
+  const devNodes = summaries.filter((s) => s.kind === 'dev').reduce((a, s) => a + s.nodeCount, 0);
   const activeGpus = summaries.reduce((a, s) => a + s.activeGpus, 0);
   const faultGpus = summaries.reduce((a, s) => a + s.faultGpus, 0);
   const maintGpus = summaries.reduce((a, s) => a + s.maintenanceGpus, 0);
@@ -2080,17 +2080,17 @@ function GpuInfraTab() {
           tone={faultGpus > 0 ? 'bad' : 'ok'}
         />
         <KpiCard
-          label="on-prem GPU"
-          value={`${onpremGpus}`}
+          label="운영계 GPU"
+          value={`${prodGpus}`}
           unit="개"
-          sub={`${onpremNodes}개 노드 · cluster1 + cluster2`}
+          sub={`${prodNodes}개 노드 · cluster1 + cluster2`}
           tone="ok"
         />
         <KpiCard
-          label="CSP GPU"
-          value={`${cspGpus}`}
+          label="개발계 GPU"
+          value={`${devGpus}`}
           unit="개"
-          sub={`${cspNodes}개 인스턴스 · azure + aws`}
+          sub={`${devNodes}개 노드 · cluster1 + cluster2`}
           tone="ok"
         />
         <KpiCard
@@ -2133,7 +2133,7 @@ function GpuInfraTab() {
         />
         <DonutCard
           title="위치 분포"
-          subtitle="on-prem vs CSP"
+          subtitle="운영계 vs 개발계"
           slices={summaries.map((s) => ({
             label: s.label,
             value: s.totalGpus,
@@ -2185,7 +2185,7 @@ function GpuInfraTab() {
           <div>
             <h2 className="text-[15px] font-extrabold text-ink">노드 · 인스턴스</h2>
             <div className="text-[10.5px] text-ink-mid mt-0.5">
-              on-prem 노드(GPU 8장/대) + CSP 인스턴스 · {filteredNodes.length}대 / 전체{' '}
+              물리 노드 (GPU 8장/대) · {filteredNodes.length}대 / 전체{' '}
               {GPU_NODES.length}대
             </div>
           </div>
@@ -2253,7 +2253,7 @@ function LocationCard({ summary, onClick }: { summary: LocationSummary; onClick:
     >
       <div className="flex items-baseline justify-between mb-1.5">
         <span className={cn('pill border', color.chip)}>
-          {summary.kind === 'onprem' ? 'on-prem' : 'CSP'}
+          {summary.kind === 'prod' ? '운영계' : '개발계'}
         </span>
         <span className="text-[10px] text-ink-light font-semibold">{summary.region}</span>
       </div>
@@ -2525,7 +2525,7 @@ function GpuRow({
         <td className="py-2.5 px-2">
           <div className="font-mono text-[11.5px] text-ink-dark font-extrabold">{node.id}</div>
           <div className="text-[10px] text-ink-mid font-semibold mt-0.5">
-            {loc?.kind === 'onprem' ? '물리 노드' : 'VM 인스턴스'}
+            물리 노드
           </div>
         </td>
         <td className="py-2.5 px-2">

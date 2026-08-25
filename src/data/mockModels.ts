@@ -1,19 +1,19 @@
 export type ModelKind = 'llm' | 'embed' | 'rerank' | 'vision';
-export type ModelHost = 'on-prem' | 'csp';
+export type ModelHost = 'on-prem';
 export type ModelModality = 'text' | 'multimodal' | 'embed';
 
 export interface CatalogModel {
   id: string;
-  /** vendor/model 풀네임 (예: openai/gpt-oss-120b). */
+  /** vendor/model 풀네임 (예: onprem/gpt-oss-120b). */
   name: string;
   kind: ModelKind;
   host: ModelHost;
-  /** azure / aws / on-prem 등. */
+  /** 서빙 스택 (예: vLLM · Triton). */
   provider: string;
   modality: ModelModality;
   /** 컨텍스트 윈도우 (토큰). */
   contextK?: number;
-  /** 1M 토큰당 단가 (input·output 평균, 원). on-prem은 GPU 분배 단가. */
+  /** 1M 토큰당 환산 단가 (GPU 분배 기준, 원). */
   pricePerMTokKrw?: number;
   /** on-prem 분배 단가 (시간당). */
   gpuHourKrw?: number;
@@ -30,7 +30,7 @@ export interface CatalogModel {
 export const MOCK_MODELS: CatalogModel[] = [
   {
     id: 'mdl-001',
-    name: 'openai/gpt-oss-120b',
+    name: 'onprem/gpt-oss-120b',
     kind: 'llm',
     host: 'on-prem',
     provider: 'on-prem · A100×8',
@@ -58,31 +58,31 @@ export const MOCK_MODELS: CatalogModel[] = [
   },
   {
     id: 'mdl-003',
-    name: 'azure/gpt-5.5',
+    name: 'onprem/qwen3-32b',
     kind: 'llm',
-    host: 'csp',
-    provider: 'Azure OpenAI',
+    host: 'on-prem',
+    provider: 'vLLM · 공동존',
     modality: 'multimodal',
     contextK: 400,
     pricePerMTokKrw: 14500,
     usedByCount: 2,
     whitelistedAt: '2026-03-08',
     trustGrade: 5,
-    recommendedFor: '복잡 추론 · 멀티모달 (혁신금융서비스 지정 필요)',
+    recommendedFor: '복잡 추론 · 멀티모달',
   },
   {
     id: 'mdl-004',
-    name: 'aws/claude-sonnet-4.6',
+    name: 'onprem/llama-3.3-70b',
     kind: 'llm',
-    host: 'csp',
-    provider: 'AWS Bedrock',
+    host: 'on-prem',
+    provider: 'vLLM · 공동존',
     modality: 'multimodal',
     contextK: 1000,
     pricePerMTokKrw: 12800,
     usedByCount: 1,
     whitelistedAt: '2026-04-15',
     trustGrade: 5,
-    recommendedFor: '장문 분석 · 도구 사용 (혁신금융서비스 지정 필요)',
+    recommendedFor: '장문 분석 · 도구 사용',
   },
   {
     id: 'mdl-005',
@@ -112,10 +112,10 @@ export const MOCK_MODELS: CatalogModel[] = [
   },
   {
     id: 'mdl-007',
-    name: 'azure/cohere-rerank-3',
+    name: 'onprem/bge-reranker-v2-m3',
     kind: 'rerank',
-    host: 'csp',
-    provider: 'Azure Cohere',
+    host: 'on-prem',
+    provider: 'Triton · 공동존',
     modality: 'text',
     pricePerMTokKrw: 4200,
     usedByCount: 1,

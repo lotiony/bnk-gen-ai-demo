@@ -25,9 +25,9 @@ const HOSTS = ['on-prem', 'Azure', 'AWS', 'GCP'] as const;
 
 /** 호스트별 선택 가능 모델 (데모 목록). */
 const HOST_MODELS: Record<string, string[]> = {
-  'on-prem': ['openai/gpt-oss-120b', 'meta/llama-3-70b', 'kakao/kanana-flag-32.5B-it'],
-  Azure: ['azure/gpt-5.5', 'azure/gpt-4.1', 'azure/gpt-4o'],
-  AWS: ['aws/claude-sonnet-4.6', 'aws/claude-haiku-4.5', 'aws/nova-pro'],
+  'on-prem': ['onprem/gpt-oss-120b', 'meta/llama-3-70b', 'kakao/kanana-flag-32.5B-it'],
+  Azure: ['onprem/qwen3-32b', 'onprem/qwen3-32b', 'onprem/qwen3-32b'],
+  AWS: ['onprem/llama-3.3-70b', 'onprem/sLLM-13b', 'onprem/llama-3.3-70b'],
   GCP: ['google/gemini-3-pro', 'google/gemini-3-flash'],
 };
 

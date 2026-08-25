@@ -44,9 +44,9 @@ export interface ModelTask {
   id: string;
   /** 신청 모델의 카탈로그 id. */
   modelId: string;
-  /** 모델 풀네임 — 예: openai/gpt-oss-120b. */
+  /** 모델 풀네임 — 예: onprem/gpt-oss-120b. */
   modelName: string;
-  /** on-prem / csp · azure · aws 등. */
+  /** 서빙 위치. */
   modelHost: string;
   /** llm / embed / rerank / vision. */
   modelKind: 'llm' | 'embed' | 'rerank' | 'vision';
@@ -63,7 +63,7 @@ export interface ModelTask {
   approvedAt?: string;
   /** 신청 사유 (1~2문장). */
   reason: string;
-  /** 혁신금융서비스 지정 인용 여부 (CSP 모델에 필수). */
+  /** 혁신금융서비스 지정 인용 여부. */
   innovDesignationRequired: boolean;
   /** 신청자. */
   ownerName: string;
@@ -84,10 +84,10 @@ export const MOCK_MODEL_TASKS: ModelTask[] = [
   {
     id: 'MDL-301',
     modelId: 'mdl-001',
-    modelName: 'openai/gpt-oss-120b',
+    modelName: 'onprem/gpt-oss-120b',
     modelHost: 'on-prem · A100×8',
     modelKind: 'llm',
-    name: 'openai/gpt-oss-120b 사용 신청',
+    name: 'onprem/gpt-oss-120b 사용 신청',
     state: '사용 중',
     env: '학습계+서빙계',
     ptu: [
@@ -148,10 +148,10 @@ export const MOCK_MODEL_TASKS: ModelTask[] = [
   {
     id: 'MDL-308',
     modelId: 'mdl-003',
-    modelName: 'azure/gpt-5.5',
-    modelHost: 'CSP · Azure OpenAI',
+    modelName: 'onprem/qwen3-32b',
+    modelHost: 'On-Prem · 공동존',
     modelKind: 'llm',
-    name: 'azure/gpt-5.5 사용 신청 — 멀티모달 PB 진단',
+    name: 'onprem/qwen3-32b 사용 신청 — 멀티모달 PB 진단',
     state: '사용 중',
     env: '서빙계',
     ptu: [

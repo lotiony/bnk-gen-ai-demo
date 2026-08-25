@@ -376,7 +376,7 @@ function ModelTaskCard({ task, projectId }: { task: ModelTask; projectId: string
   const tone = MODEL_TASK_STATE_TONE[task.state];
   const hostShort =
     task.modelHost.startsWith('on-prem') ? 'on-prem' :
-    task.modelHost.startsWith('CSP') ? task.modelHost.replace('CSP · ', '') : task.modelHost;
+    task.modelHost;
   const costLabel =
     task.estimatedMonthCost >= 100_000_000
       ? `₩${(task.estimatedMonthCost / 100_000_000).toFixed(2)}억`
