@@ -16,6 +16,7 @@ import { ToolModal, VSCodeMock, JenkinsMock, ArgocdMock } from '@/components/dev
 export type CategoryId =
   | 'knowledge'
   | 'database'
+  | 'ontology'
   | 'component'
   | 'tool'
   | 'agent'
@@ -34,6 +35,7 @@ type Category = {
 const CATEGORIES: Category[] = [
   { id: 'knowledge', icon: '📁', title: 'Knowledge', desc: '문서·지식 데이터' },
   { id: 'database', icon: '🗄', title: 'Database', desc: 'DB 커넥터·테이블' },
+  { id: 'ontology', icon: '🕸', title: 'Ontology', desc: '온톨로지 설계 · 데이터 매핑 · Graph RAG 질의' },
   { id: 'component', icon: '🔗', title: 'Component', desc: '커스텀 파서 · 청커 · 파이프라인' },
   { id: 'tool', icon: '🧰', title: 'Tool', desc: '모델·API 커넥터' },
   { id: 'agent', icon: '🤖', title: 'Agent', desc: '에이전트 빌드·배포' },
@@ -44,6 +46,7 @@ const CATEGORIES: Category[] = [
 const ICON_TONE: Record<CategoryId, string> = {
   knowledge: 'bg-info-bg text-info',
   database: 'bg-accent-purple-bg text-accent-purple',
+  ontology: 'bg-brand-tint text-brand',
   component: 'bg-accent-brown-bg text-accent-brown',
   tool: 'bg-warn-bg text-warn',
   agent: 'bg-brand-tint text-ink',
@@ -59,6 +62,8 @@ function countOf(id: CategoryId): number {
       return MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === '지식 데이터').length;
     case 'database':
       return MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === 'DB 커넥터').length;
+    case 'ontology':
+      return 1;
     case 'component':
       return CUSTOM_COMPONENTS.length;
     case 'tool':
@@ -196,6 +201,7 @@ export default function TasksTab() {
                 ))}
               </>
             )}
+            {active === 'ontology' && <OntologyTaskCard projectId={pid} />}
             {active === 'component' &&
               CUSTOM_COMPONENTS.map((c) => <ComponentCard key={c.id} comp={c} projectId={pid} />)}
             {active === 'agent' &&
@@ -238,6 +244,26 @@ function AgentTaskCard({ task, projectId }: { task: AgentTask; projectId: string
 
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         <span className="pill bg-info-bg text-info border border-info-border">{task.state}</span>
+      </div>
+    </Link>
+  );
+}
+
+/** 온톨로지 과제 카드 — 과제당 온톨로지 1개. */
+function OntologyTaskCard({ projectId }: { projectId: string }) {
+  return (
+    <Link
+      to={`/projects/${projectId}/tasks/ontology`}
+      className="block border border-line-soft rounded px-4 py-3 hover:border-brand-dark transition-colors"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[10.5px] font-mono text-ink-mid">ONT-101</span>
+        <span className="pill bg-brand-tint text-brand border border-brand-tint">여신심사 + 전결권</span>
+        <span className="ml-auto pill bg-ok-bg text-ok border border-ok-border">● 구축 완료</span>
+      </div>
+      <div className="text-[13.5px] font-extrabold text-ink mt-1">여신 온톨로지</div>
+      <div className="text-[11px] text-ink-mid font-semibold mt-0.5">
+        정형DB 가상 뷰(zero-copy) + 여신업무규정·전결규정 문서 실체화
       </div>
     </Link>
   );

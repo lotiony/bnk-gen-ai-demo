@@ -27,11 +27,12 @@ const CORE = '#B8791F';
 const HIER = '#7C8695';
 
 const T_COL_W = 250;
-const T_INST_Y0 = 120;
-const T_INST_H = 84;
+const T_INST_Y0 = 130;
+const T_INST_H = 92;
 const T_CAP = 5;
-const INST_W = 116;
-const INST_H = 38;
+/** 개체 원 반지름 — 역할별(원본 instR: 앵커 22 / 강조 18 / 일반 14 / 후보 12). */
+const instR = (role: 'anchor' | 'focus' | 'plain' | 'cand') =>
+  role === 'anchor' ? 22 : role === 'focus' ? 18 : role === 'plain' ? 14 : 12;
 
 type Pt = { x: number; y: number };
 
@@ -118,6 +119,14 @@ function Canvas({
   const deg = useMemo(() => degreeMap(classes, relations), [classes, relations]);
   const maxDeg = Math.max(1, ...Object.values(deg));
   const hubs = useMemo(() => [...Object.entries(deg)].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n), [deg]);
+  /** 클래스 색 — 개체가 그대로 물려받는다(원본 instColor = clsColor(n.type)). */
+  const clsColor = useCallback((n: string) => (hubs.includes(n) ? CORE : HIER), [hubs]);
+  /** 노드에 얹을 속성값 2줄 — 식별번호류는 뺀다(원본과 동일 규칙). */
+  const attrLines = useCallback((inst: Instance, n: number) =>
+    Object.entries(inst.props)
+      .filter(([k]) => !/번호$|코드$|ID/.test(k))
+      .slice(0, n)
+      .map(([k, v]) => `${k} ${v}`.slice(0, 22)), []);
 
   /* ── d3-force (설계·Query 공유) ── */
   const built = useMemo(() => buildSim(classes, relations), [classes, relations]);
@@ -173,7 +182,7 @@ function Canvas({
       maxY = Math.max(maxY, p.y + halfH);
     };
     clsAt.forEach((p) => bump(p, CLASS_R + 20, CLASS_R + 30));
-    instAt.forEach((p) => bump(p, INST_W / 2 + 16, INST_H / 2 + 16));
+    instAt.forEach((p) => bump(p, 78, 52));
     if (!Number.isFinite(minX)) {
       minX = 0; minY = 0; maxX = 600; maxY = 400;
     }
@@ -382,25 +391,23 @@ function Canvas({
             </g>
           ))}
 
-        {/* 관계 엣지 — 실행 전에도 전부 연결 */}
+        {/* 관계 엣지 — 실행 전에는 전부 연결. 순회 중에는 양끝이 모두
+             컬럼에 올라온 클래스일 때만 그린다. 한쪽이 컬럼 밖이면 그 노드는
+             force 좌표(화면 밖)에 있어 화살표만 허공으로 뻗는다. */}
         {relations.map((r, i) => {
+          const bothIn = visible(r.domain) && visible(r.range);
+          if (trav && !bothIn) return null;
           const a = CP(r.domain);
           const b = CP(r.range);
           if (!a || !b) return null;
-          const shown = visible(r.domain) && visible(r.range);
           const on = relSet.has(r.uri);
           const g = edgeGeom(a, b, i % 2 ? 0.09 : -0.09);
-          const op = on ? 1 : trav ? (shown ? 0.18 : 0.04) : 0.55;
+          const op = on ? 0.9 : trav ? 0.16 : 0.55;
           return (
             <g key={r.uri} style={{ pointerEvents: 'none' }}>
-              {on && <path d={g.d} fill="none" stroke={BRAND} strokeOpacity={0.15} strokeWidth={8} strokeLinecap="round" />}
-              <path d={g.d} fill="none" stroke={on ? BRAND : '#C2C7CD'} strokeWidth={on ? 2.2 : 1.1} opacity={op} markerEnd={on ? 'url(#ar)' : 'url(#ard)'} />
-              {on && !reduce && [0, 1].map((k) => (
-                <circle key={k} r={3} fill={BRAND} style={{ filter: `drop-shadow(0 0 5px ${BRAND}) drop-shadow(0 0 10px ${BRAND})` }}>
-                  <animateMotion dur="1.9s" begin={`${k * 0.95 + (i % 5) * 0.28}s`} repeatCount="indefinite" path={g.d} />
-                </circle>
-              ))}
-              {(on || !trav) && (
+              <path d={g.d} fill="none" stroke={on ? BRAND : '#C2C7CD'} strokeWidth={on ? 1.6 : 1.1} opacity={op}
+                strokeDasharray={trav ? '5 5' : undefined} markerEnd={on ? 'url(#ar)' : 'url(#ard)'} />
+              {!trav && (
                 <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill={on ? DEEP : '#98A0A8'} opacity={op}
                   style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>
                   {r.name}
@@ -437,8 +444,12 @@ function Canvas({
             const p = IP(id);
             if (!cp || !p) return null;
             const on = litSet.has(id);
-            return <line key={`ci-${id}`} x1={cp.x} y1={cp.y + CLASS_R} x2={p.x} y2={p.y - INST_H / 2}
-              stroke={on ? BRAND : '#D3D7DC'} strokeWidth={on ? 1.5 : 0.9} strokeDasharray={on ? undefined : '4 4'} opacity={on ? 0.6 : 0.4} />;
+            const col = clsColor(inst.cls);
+            // 원본과 동일한 베지어 펼침선 — 클래스에서 아래로 내려와 개체로
+            const midY = (cp.y + CLASS_R + p.y) / 2;
+            const d = `M ${cp.x} ${cp.y + CLASS_R} C ${cp.x} ${midY}, ${p.x} ${midY}, ${p.x} ${p.y - instR(on ? 'focus' : 'cand') - 5}`;
+            return <path key={`ci-${id}`} d={d} fill="none" stroke={on ? col : '#D3D7DC'} strokeWidth={on ? 1.4 : 0.9}
+              strokeDasharray={on ? undefined : '4 4'} opacity={on ? 0.5 : 0.35} />;
           })}
 
         {/* 개체 간 순회 엣지 */}
@@ -449,13 +460,14 @@ function Canvas({
             if (!a || !b || !litSet.has(e.from) || !litSet.has(e.to)) return null;
             const same = Math.abs(a.x - b.x) < 4;
             const g = edgeGeom(a, b, same ? 0.4 : i % 2 ? 0.1 : -0.1);
+            const eCol = clsColor(instById(e.from)?.cls ?? '');
             return (
               <g key={`te${i}`} style={{ pointerEvents: 'none' }}>
-                <path d={g.d} fill="none" stroke={BRAND} strokeOpacity={0.13} strokeWidth={7} strokeLinecap="round" />
-                <motion.path d={g.d} fill="none" stroke={BRAND} strokeWidth={2} markerEnd="url(#ar)"
+                <path d={g.d} fill="none" stroke={eCol} strokeOpacity={0.16} strokeWidth={6} strokeLinecap="round" />
+                <motion.path d={g.d} fill="none" stroke={eCol} strokeWidth={1.9} markerEnd="url(#ar)"
                   initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.5, ease: 'easeOut' }} />
                 {!reduce && (
-                  <circle r={2.8} fill={BRAND} style={{ filter: `drop-shadow(0 0 5px ${BRAND}) drop-shadow(0 0 9px ${BRAND})` }}>
+                  <circle r={2.8} fill={eCol} style={{ filter: `drop-shadow(0 0 5px ${eCol}) drop-shadow(0 0 9px ${eCol})` }}>
                     <animateMotion dur={`${1.7 + (i % 4) * 0.3}s`} begin={`${-(i % 5) * 0.33}s`} repeatCount="indefinite" path={g.d} />
                   </circle>
                 )}
@@ -501,35 +513,71 @@ function Canvas({
           );
         })}
 
-        {/* 개체 노드 */}
+        {/* 개체 노드 — 원본과 동일: 원형 · 클래스 색 상속 · 속성값 2줄 ·
+             소속 클래스 위치에서 튀어나오는 등장 · hop 뱃지 · 앵커 '시작' 뱃지 */}
         {trav &&
           [...trav.instAt.keys()].map((id) => {
             const p = IP(id)!;
             const inst = instById(id);
             if (!inst) return null;
             const on = litSet.has(id);
-            const anchor = anchorInst === id && on;
-            const sel = selectedInstance === id;
+            const isAnchor = anchorInst === id && on;
+            const isSel = selectedInstance === id;
+            const foc = on || isAnchor || isSel;
+            const role = isAnchor ? 'anchor' : foc ? 'focus' : on ? 'plain' : 'cand';
+            const r = instR(role);
+            const col = on ? clsColor(inst.cls) : '#8E979F';
+            const lines = attrLines(inst, foc ? 2 : 1);
+            const cp = CP(inst.cls) ?? p;
+            const hop = [...trav.clsAt.values()].find((c) => Math.abs(c.x - p.x) < 2)?.hop;
+            const fillA = isSel ? '3a' : isAnchor ? '30' : on ? '1c' : '12';
             return (
-              <motion.g key={id} animate={{ x: p.x, y: p.y, opacity: on ? 1 : 0.42 }} transition={spring}
-                onClick={(e) => { e.stopPropagation(); onSelectInstance?.(inst); }} style={{ cursor: 'pointer' }}>
+              <motion.g
+                key={id}
+                initial={reduce ? false : { x: cp.x, y: cp.y, scale: 0, opacity: 0 }}
+                animate={{ x: p.x, y: p.y, scale: 1, opacity: foc ? 1 : 0.5 }}
+                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26, delay: Math.min((hop ?? 0) * 0.1, 0.6) }}
+                onClick={(e) => { e.stopPropagation(); onSelectInstance?.(inst); }}
+                style={{ cursor: 'pointer' }}
+              >
                 <title>{`${inst.label} · ${inst.origin}`}</title>
-                {anchor && !reduce && (
-                  <motion.rect x={-INST_W / 2 - 5} y={-INST_H / 2 - 5} width={INST_W + 10} height={INST_H + 10} rx={7} fill="none" stroke={BRAND} strokeWidth={1.6}
-                    animate={{ opacity: [0.7, 0, 0.7], scale: [1, 1.14, 1] }} transition={{ duration: 1.7, repeat: Infinity }} />
+                {isAnchor && !reduce && (
+                  <circle r={r} fill="none" stroke={col} strokeWidth={1.5}>
+                    <animate attributeName="r" values={`${r};${r + 13}`} dur="1.6s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.6;0" dur="1.6s" repeatCount="indefinite" />
+                  </circle>
                 )}
-                {sel && <rect x={-INST_W / 2 - 4} y={-INST_H / 2 - 4} width={INST_W + 8} height={INST_H + 8} rx={6} fill="none" stroke={BRAND} strokeWidth={1.3} strokeDasharray="3 3" />}
-                <rect x={-INST_W / 2} y={-INST_H / 2} width={INST_W} height={INST_H} rx={6} fill={on ? '#fff' : '#FAFBFC'}
-                  stroke={on ? BRAND : '#CDD2D8'} strokeWidth={on ? 1.8 : 1} strokeDasharray={on ? undefined : '4 3'}
-                  style={on ? { filter: `drop-shadow(0 1px 5px ${BRAND}33)` } : undefined} />
-                {on && <rect x={-INST_W / 2} y={-INST_H / 2} width={4} height={INST_H} rx={2} fill={BRAND} />}
-                <text y={-2} textAnchor="middle" fontSize={10} fontWeight={800} fill={on ? '#212121' : '#9AA1A9'} style={{ pointerEvents: 'none' }}>
-                  {inst.label.length > 14 ? inst.label.slice(0, 13) + '…' : inst.label}
+                <circle r={r + 5} fill="none" stroke={col} strokeOpacity={foc ? 0.3 : 0.12} strokeWidth={1} />
+                <circle
+                  r={r}
+                  fill={col + fillA}
+                  stroke={col}
+                  strokeWidth={isSel ? 2.6 : isAnchor ? 2.2 : on ? 1.5 : 1.2}
+                  strokeDasharray={on ? undefined : '4 4'}
+                  style={on ? { filter: `drop-shadow(0 0 ${isSel || isAnchor ? 12 : 7}px ${col}${isSel || isAnchor ? 'aa' : '55'})` } : undefined}
+                />
+                <text y={r + 13} textAnchor="middle" fontSize={11} fontWeight={foc ? 800 : 500} fill={foc ? '#212121' : '#8E979F'} style={{ pointerEvents: 'none' }}>
+                  {inst.label.slice(0, 14)}
                 </text>
-                <text y={10} textAnchor="middle" fontSize={7.5} fontWeight={700} fill={on ? DEEP : '#B9BFC6'} style={{ pointerEvents: 'none' }}>
-                  {inst.cls}
-                  <tspan fill="#B9BFC6" fontWeight={600}>{on ? ' · 확정' : ' · 후보'}</tspan>
-                </text>
+                {lines.map((t, li) => (
+                  <text key={li} y={r + 25 + li * 11} textAnchor="middle" fontSize={8.5} fontWeight={600} fill={foc ? '#6B7480' : '#B4BBC2'} style={{ pointerEvents: 'none' }}>
+                    {t}
+                  </text>
+                ))}
+                {on && hop != null && (
+                  <g style={{ pointerEvents: 'none' }}>
+                    <circle cx={-r * 0.72 - 5} cy={-r * 0.72 - 5} r={8} fill="#fff" stroke={col} strokeWidth={1.2} />
+                    <text x={-r * 0.72 - 5} y={-r * 0.72 - 1.5} textAnchor="middle" fontSize={8.5} fontWeight={800} fill={col}>
+                      {hop}
+                    </text>
+                  </g>
+                )}
+                {isAnchor && (
+                  <g style={{ pointerEvents: 'none' }}>
+                    <rect x={6} y={-r - 20} width={38} height={16} rx={8} fill={BRAND} />
+                    <text x={25} y={-r - 8.5} textAnchor="middle" fontSize={9} fontWeight={800} fill="#fff">시작</text>
+                  </g>
+                )}
               </motion.g>
             );
           })}

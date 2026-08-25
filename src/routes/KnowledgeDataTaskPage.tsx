@@ -16,9 +16,8 @@ import ParseResultModal, { type ReparseOpts } from '@/components/knowledgeData/P
 import { FILE_ROWS, FOLDER_ROWS, FOLDER_FILES, type FileRow } from '@/components/knowledgeData/storageData';
 import { buildInitialRun, buildHistoryMock, generateBlocks, type FileRunStatus } from '@/components/knowledgeData/parseRunData';
 import { buildIndexListMock, type IndexVersion, type IndexWithVersions } from '@/components/knowledgeData/embedData';
-import OntologySection from '@/components/ontology/OntologySection';
 
-type TabId = 'storage' | 'manifest' | 'index' | 'eval' | 'deploy' | 'ontology';
+type TabId = 'storage' | 'manifest' | 'index' | 'eval' | 'deploy';
 
 /** 확장자별 아이콘 색상. */
 const EXT_TONE: Record<string, string> = {
@@ -506,9 +505,6 @@ export default function KnowledgeDataTaskPage() {
         </TabButton>
         <TabButton active={tab === 'eval'} onClick={() => setTab('eval')}>
           평가
-        </TabButton>
-        <TabButton active={tab === 'ontology'} onClick={() => setTab('ontology')}>
-          온톨로지
         </TabButton>
         <TabButton active={tab === 'deploy'} onClick={() => setTab('deploy')}>
           배포
@@ -1223,8 +1219,6 @@ export default function KnowledgeDataTaskPage() {
       {tab === 'eval' && <EvalSection />}
 
       {/* 배포 tab — 학습계(dev) / 서빙계(prod) 환경 토글 */}
-      {tab === 'ontology' && <OntologySection />}
-
       {tab === 'deploy' && <DeploySection indexes={indexes} />}
 
       {/* Footer actions */}

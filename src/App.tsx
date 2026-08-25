@@ -19,6 +19,7 @@ import AgentTaskRegisterPage from './routes/AgentTaskRegisterPage';
 import AgentTaskDetailPage from './routes/AgentTaskDetailPage';
 import DevenvTaskDetailPage from './routes/DevenvTaskDetailPage';
 import ModelTaskDetailPage from './routes/ModelTaskDetailPage';
+import OntologyTaskPage from './routes/OntologyTaskPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './routes/AdminDashboardPage';
 import AdminMembersPage from './routes/AdminMembersPage';
@@ -90,6 +91,7 @@ export default function App() {
           path="/projects/:projectId/tasks/model/:modelTaskId"
           element={<ModelTaskDetailPage />}
         />
+        <Route path="/projects/:projectId/tasks/ontology" element={<OntologyTaskPage />} />
         <Route path="/catalog" element={<CatalogPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
