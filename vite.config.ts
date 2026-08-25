@@ -17,6 +17,11 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react(), viteSingleFile()],
   base: './',
+  build: {
+    // 폰트(woff2)까지 base64 data URI 로 인라인해 단일 HTML 을 유지한다.
+    // 기본값(4KB)이면 woff2 가 dist/assets/ 로 분리돼 single-file 이 깨진다.
+    assetsInlineLimit: 100 * 1024 * 1024,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

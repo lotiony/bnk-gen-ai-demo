@@ -5,6 +5,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          'Pretendard Variable',
           'Pretendard',
           '"Apple SD Gothic Neo"',
           '"Noto Sans KR"',

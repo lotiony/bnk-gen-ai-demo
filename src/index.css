@@ -1,3 +1,20 @@
+/**
+ * Pretendard Variable — 번들 인라인.
+ *
+ * 발표 노트북(Windows/Edge 가능성)과 개발 맥의 렌더를 픽셀 단위로 일치시키기 위해
+ * 시스템 폰트 폴백에 의존하지 않고 woff2를 빌드에 인라인한다(vite assetsInlineLimit).
+ * Variable 이므로 400~900 전 weight를 파일 하나로 커버한다.
+ * 외부 요청은 발생하지 않는다 — 오프라인 자립 요건 유지.
+ */
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2')
+    format('woff2-variations');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
