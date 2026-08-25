@@ -12,6 +12,8 @@
  */
 
 /** 스텝 종류 — 좌측 그래프 연출과 우측 배지를 함께 가른다. */
+import type { TravEdge, TravNode } from './ontologyInstances';
+
 export type StepKind =
   | 'plan' // 계획 수립 (LLM)
   | 'anchor' // 결정론 앵커링 (그래프)
@@ -34,6 +36,8 @@ export interface QueryStep {
   lightClasses?: string[];
   /** 이 스텝에서 점등할 관계 URI. */
   lightRelations?: string[];
+  /** 이 스텝에서 점등할 개체 id — A-Box 순회. */
+  lightInstances?: string[];
 }
 
 export interface AnswerFact {
@@ -60,6 +64,10 @@ export interface QueryScenario {
   conclusion: string[];
   /** 확정되지 않은 부분 — 솔직하게 남긴다. */
   caveat: string;
+  /** 개체 순회 경로 — 그래프에 실제 개체를 펼친다. */
+  travEdges: TravEdge[];
+  /** 앵커 개체 id. */
+  anchorInst: string;
 }
 
 /* ══════════════════════════ 시나리오 ══════════════════════════ */
@@ -82,17 +90,20 @@ const S1: QueryScenario = {
       text: "질문의 개체 '대성정밀'을 그래프에서 특정하고 관계·담보 명세까지 펼쳤어요(결정론 앵커링).",
       basis: '질문 개체를 그래프 라벨로 직접 특정한 뒤 관계를 타고 확장(결정론)',
       lightClasses: ['고객'],
+      lightInstances: ['cust-8842'],
     },
     {
       kind: 'sql',
       text:
         '대성정밀에 연결된 신용등급과 여신신청 개체를 조회합니다. ' +
-        '등급이 규정 적용 구간을 가르므로 먼저 확정해야 합니다.',
+        '등급이 규정 적용 구간을 가르므로 먼저 확정해야 합니다. ' +
+        '직전 등급(BBB+)은 평가일자가 앞서므로 후보에서 제외됩니다.',
       query: 'search(대성정밀의 신용등급, 여신신청 금액과 자금용도)',
-      resultBadge: 'SQL 투사/조인 · 1건',
+      resultBadge: 'SQL 투사/조인 · 2건',
       basis: '집계·조인은 소스 DB에 SQL로 투사 (트리플스토어 아님)',
       lightClasses: ['고객', '신용등급', '여신신청'],
       lightRelations: ['bnk:PyeongGa_GoGaek_SinYongDeungGeup', 'bnk:SinCheong_GoGaek_YeoSinSinCheong'],
+      lightInstances: ['grade-bbb', 'app-0311'],
     },
     {
       kind: 'traverse',
@@ -104,6 +115,7 @@ const S1: QueryScenario = {
       basis: '그래프에서 이 SPARQL을 실행한 결과',
       lightClasses: ['고객', '여신약정', '담보', '부동산담보'],
       lightRelations: ['bnk:BoYu_GoGaek_YeoSinYakJeong', 'bnk:JeGong_YeoSinYakJeong_DamBo'],
+      lightInstances: ['ln-0117', 'ln-0233', 'col-5521', 're-5521'],
     },
     {
       kind: 'compute',
@@ -112,7 +124,9 @@ const S1: QueryScenario = {
         '8.4억 × 0.55 − 1.2억 = 3.42억. 신청금액 5억 대비 부족분 1.58억이 신용공여 구간입니다.',
       resultBadge: '규칙 계산 · 확정',
       basis: '값은 DB, 계산은 규정 산식 — LLM 추론 아님',
-      lightClasses: ['담보', '부동산담보'],
+      lightClasses: ['담보', '부동산담보', '조항'],
+      lightRelations: ['bnk:JunGeo_DamBo_JoHang'],
+      lightInstances: ['cl-9'],
     },
     {
       kind: 'doc',
@@ -123,7 +137,8 @@ const S1: QueryScenario = {
       resultBadge: '문서 조항 · 2건',
       basis: '문서에서 실체화된 조항 개체 — 원문 링크 보유',
       lightClasses: ['심사', '조항', '규정'],
-      lightRelations: ['bnk:GeunGeo_SimSa_JoHang', 'bnk:PoHam_GyuJeong_JoHang'],
+      lightRelations: ['bnk:GeunGeo_SimSa_JoHang', 'bnk:PoHam_GyuJeong_JoHang', 'bnk:DamDang_SimSaYeok_SimSa'],
+      lightInstances: ['rv-0455', 'cl-12', 'reg-cr', 'ofc-lee'],
     },
     {
       kind: 'traverse',
@@ -132,12 +147,14 @@ const S1: QueryScenario = {
       query: 'search(여신 5억 신용공여 건의 전결권 → 직책 → 조직)',
       resultBadge: '그래프 순회 · 3 hop',
       basis: '전결규정 별표1에서 실체화된 금액 구간을 그래프로 매칭',
-      lightClasses: ['여신신청', '전결권', '직책', '조직'],
+      lightClasses: ['여신신청', '전결권', '직책', '조직', '조항'],
       lightRelations: [
         'bnk:JeokYong_YeoSinSinCheong_JeonGyeolGwon',
         'bnk:GwiSok_JeonGyeolGwon_JikChaek',
         'bnk:SoSok_JikChaek_JoJik',
+        'bnk:GyuJeong_JoHang_JeonGyeolGwon',
       ],
+      lightInstances: ['cl-au5', 'au-c', 'pos-head', 'org-cr'],
     },
   ],
   facts: [
@@ -169,8 +186,26 @@ const S1: QueryScenario = {
     '선행 확인: 최근 3년 연속 영업흑자 요건 (제12조 단서)',
   ],
   caveat:
-    '영업흑자 요건 충족 여부는 재무제표 개체가 아직 실체화되지 않아 이 그래프만으로는 확정되지 않습니다. ' +
-    '재무 데이터 매핑 후 재조회하면 확정 판정이 가능합니다.',
+    '영업흑자 요건은 FY2023 영업이익 5.1억 · FY2024 7.8억 · FY2025 9.4억으로 3개년 연속 흑자가 확인되나, ' +
+    '재무제표 개체의 감사보고서 원본 대조가 아직 매핑되지 않아 규정상 "확인"으로 확정하지는 못합니다.',
+  anchorInst: 'cust-8842',
+  travEdges: [
+    { from: 'cust-8842', to: 'grade-bbb', rel: '평가' },
+    { from: 'cust-8842', to: 'app-0311', rel: '신청' },
+    { from: 'cust-8842', to: 'ln-0117', rel: '보유' },
+    { from: 'cust-8842', to: 'ln-0233', rel: '보유' },
+    { from: 'ln-0117', to: 'col-5521', rel: '제공' },
+    { from: 'col-5521', to: 're-5521', rel: '상세' },
+    { from: 'col-5521', to: 'cl-9', rel: '준거' },
+    { from: 'app-0311', to: 'rv-0455', rel: '심사대상' },
+    { from: 'ofc-lee', to: 'rv-0455', rel: '담당' },
+    { from: 'rv-0455', to: 'cl-12', rel: '근거' },
+    { from: 'reg-cr', to: 'cl-12', rel: '포함' },
+    { from: 'app-0311', to: 'au-c', rel: '적용' },
+    { from: 'cl-au5', to: 'au-c', rel: '규정' },
+    { from: 'au-c', to: 'pos-head', rel: '귀속' },
+    { from: 'pos-head', to: 'org-cr', rel: '소속' },
+  ],
 };
 
 const S2: QueryScenario = {
@@ -187,6 +222,7 @@ const S2: QueryScenario = {
       text: "'전결권' 클래스를 앵커로 잡고 금액 구간 속성을 펼쳤어요(결정론 앵커링).",
       basis: '질문의 금액 조건을 전결권 개체의 금액하한·금액상한 속성으로 직접 매칭',
       lightClasses: ['전결권'],
+      lightInstances: ['au-b'],
     },
     {
       kind: 'doc',
@@ -196,6 +232,7 @@ const S2: QueryScenario = {
       basis: '표 인식으로 실체화된 금액 구간 — 규칙 매칭(계산)',
       lightClasses: ['전결권', '조항', '규정'],
       lightRelations: ['bnk:GyuJeong_JoHang_JeonGyeolGwon', 'bnk:PoHam_GyuJeong_JoHang'],
+      lightInstances: ['cl-au5', 'reg-au'],
     },
     {
       kind: 'traverse',
@@ -203,8 +240,9 @@ const S2: QueryScenario = {
       query: 'search(전결권 → 직책 → 조직)',
       resultBadge: '그래프 순회 · 2 hop',
       basis: '그래프에서 이 SPARQL을 실행한 결과',
-      lightClasses: ['전결권', '직책', '조직'],
-      lightRelations: ['bnk:GwiSok_JeonGyeolGwon_JikChaek', 'bnk:SoSok_JikChaek_JoJik'],
+      lightClasses: ['전결권', '직책', '조직', '여신협의회'],
+      lightRelations: ['bnk:GwiSok_JeonGyeolGwon_JikChaek', 'bnk:SoSok_JikChaek_JoJik', 'bnk:BuUi_JeonGyeolGwon_YeoSinHyeobUiHoe'],
+      lightInstances: ['pos-branch', 'org-br', 'au-c', 'pos-head'],
     },
   ],
   facts: [
@@ -228,6 +266,16 @@ const S2: QueryScenario = {
   caveat:
     '동일인 합산 기준(기존 여신 포함 여부)은 질문에 명시되지 않았습니다. ' +
     '합산 시 구간이 달라질 수 있어 실제 신청 건에서는 고객 개체를 함께 앵커링해야 합니다.',
+  anchorInst: 'au-b',
+  travEdges: [
+    { from: 'reg-au', to: 'cl-au5', rel: '포함' },
+    { from: 'cl-au5', to: 'au-b', rel: '규정' },
+    { from: 'cl-au5', to: 'au-c', rel: '규정' },
+    { from: 'au-b', to: 'pos-branch', rel: '귀속' },
+    { from: 'au-c', to: 'pos-head', rel: '귀속' },
+    { from: 'pos-branch', to: 'org-br', rel: '소속' },
+    { from: 'pos-head', to: 'org-cr', rel: '소속' },
+  ],
 };
 
 const S3: QueryScenario = {
@@ -244,6 +292,7 @@ const S3: QueryScenario = {
       text: "'책무' 클래스에서 여신 심사 관련 책무 개체를 특정했어요(결정론 앵커링).",
       basis: '책무구조도에서 실체화된 책무 개체를 라벨로 직접 특정',
       lightClasses: ['책무'],
+      lightInstances: ['cm-004'],
     },
     {
       kind: 'traverse',
@@ -251,8 +300,9 @@ const S3: QueryScenario = {
       query: 'search(여신심사 책무 → 배분 직책, 근거 조항)',
       resultBadge: '그래프 순회 · 2 hop',
       basis: '그래프에서 이 SPARQL을 실행한 결과',
-      lightClasses: ['책무', '직책', '조항', '조직'],
-      lightRelations: ['bnk:BaeBun_ChaekMu_JikChaek', 'bnk:GeunGeo_ChaekMu_JoHang', 'bnk:SoSok_JikChaek_JoJik'],
+      lightClasses: ['책무', '직책', '조항', '조직', '규정'],
+      lightRelations: ['bnk:BaeBun_ChaekMu_JikChaek', 'bnk:GeunGeo_ChaekMu_JoHang', 'bnk:SoSok_JikChaek_JoJik', 'bnk:PoHam_GyuJeong_JoHang'],
+      lightInstances: ['pos-head', 'cl-3', 'org-cr', 'reg-cr'],
     },
   ],
   facts: [
@@ -276,6 +326,13 @@ const S3: QueryScenario = {
   caveat:
     '개별 부실 건의 귀책은 심사 시점의 기준 적용 여부에 따라 달라집니다. ' +
     '해당 심사 개체를 앵커로 다시 질의하면 적용된 조항까지 확정할 수 있습니다.',
+  anchorInst: 'cm-004',
+  travEdges: [
+    { from: 'cm-004', to: 'pos-head', rel: '배분' },
+    { from: 'cm-004', to: 'cl-3', rel: '근거' },
+    { from: 'reg-cr', to: 'cl-3', rel: '포함' },
+    { from: 'pos-head', to: 'org-cr', rel: '소속' },
+  ],
 };
 
 export const SCENARIOS: QueryScenario[] = [S1, S2, S3];

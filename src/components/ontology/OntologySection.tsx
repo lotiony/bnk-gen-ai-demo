@@ -19,15 +19,9 @@ import {
   HUB_CLASSES,
   classByName,
 } from '@/data/ontology';
-import {
-  COVERAGE,
-  MAPPING_ROWS,
-  INSTANCE_COUNT,
-  SOURCE_LABEL,
-  SOURCE_TONE,
-  type MappingKind,
-} from '@/data/ontologyMapping';
+import { COVERAGE, MAPPING_ROWS, SOURCE_LABEL, SOURCE_TONE, type MappingKind } from '@/data/ontologyMapping';
 import { SCENARIOS, EXTRA_QUESTIONS, type QueryScenario, type StepKind } from '@/data/ontologyQueries';
+import { INSTANCE_COUNT as ABOX_COUNT, instById, type Instance } from '@/data/ontologyInstances';
 
 type SubTab = 'graph' | 'mapping' | 'query';
 
@@ -91,7 +85,7 @@ function BuildStages() {
     { n: `${CLASS_COUNT}`, unit: '클래스', sub: `${ATTR_COUNT} 속성`, label: '온톨로지 생성' },
     { n: `${RELATION_COUNT}`, unit: '관계', sub: '구조 점검', label: '관계 정의' },
     { n: `${MAPPING_ROWS.filter((r) => r.status !== 'none').length}`, unit: '매핑', sub: 'DB·문서 매핑', label: '데이터 연결' },
-    { n: `${INSTANCE_COUNT}`, unit: '인스턴스', sub: '실체화', label: 'A-Box 생성' },
+    { n: `${ABOX_COUNT}`, unit: '인스턴스', sub: '실체화', label: 'A-Box 생성' },
   ];
   return (
     <div className="px-5 py-4 border-b border-line-soft">
@@ -142,7 +136,7 @@ function GraphDesign() {
 
       <div className="grid grid-cols-[1fr_260px] gap-3">
         <div className="border border-line-soft rounded bg-surface-soft h-[560px] overflow-hidden">
-          <OntologyGraph showAttrs={showAttrs} onSelect={setSelected} selected={selected} />
+          <OntologyGraph showAttrs={showAttrs} onSelectClass={setSelected} selectedClass={selected} />
         </div>
 
         <div className="border border-line-soft rounded p-3.5 bg-white overflow-y-auto h-[560px]">
@@ -363,20 +357,14 @@ function QueryView() {
   const activeRelations = [...new Set(lit.flatMap((s) => s.lightRelations ?? []))];
   const done = shown >= scenario.steps.length;
 
-  // hop = 그 클래스가 처음 점등된 스텝 순서. 순회 모드의 컬럼이 된다.
-  const hopOf = useMemo(() => {
-    const m: Record<string, number> = {};
-    let hop = 0;
-    for (const st of lit) {
-      const fresh = (st.lightClasses ?? []).filter((c) => !(c in m));
-      if (!fresh.length) continue;
-      fresh.forEach((c) => (m[c] = hop));
-      hop += 1;
-    }
-    return m;
-  }, [shown, scenario]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const anchorClass = scenario.steps.find((st) => st.kind === 'anchor')?.lightClasses?.[0] ?? null;
+  // 스텝별 점등 개체 — 각 스텝이 hop 컬럼 하나가 된다 (빈 스텝은 컬럼을 만들지 않음)
+  const instanceSteps = useMemo(
+    () => lit.map((s) => s.lightInstances ?? []).filter((a) => a.length),
+    [shown, scenario], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const activeInstances = useMemo(() => instanceSteps.flat(), [instanceSteps]);
+  const [picked, setPicked] = useState<Instance | null>(null);
+  useEffect(() => setPicked(null), [scenario]);
 
   return (
     <div className="p-5">
@@ -422,7 +410,7 @@ function QueryView() {
             <span>온톨로지 순회 — 앵커부터 관계를 타고 hop 순서로 펼쳐집니다</span>
             {shown > 0 && (
               <span className="pill bg-brand-tint text-brand border border-brand-tint">
-                {Object.keys(hopOf).length} 클래스 · {activeRelations.length} 관계 · {Math.max(0, ...Object.values(hopOf)) + (shown ? 1 : 0)} hop
+                {activeClasses.length} 클래스 · {activeInstances.length} 개체 · {activeRelations.length} 관계
               </span>
             )}
             {running && (
@@ -437,14 +425,47 @@ function QueryView() {
               </span>
             )}
           </div>
-          <div className="border border-line-soft rounded bg-surface-soft h-[600px] overflow-hidden">
+          <div className="relative border border-line-soft rounded bg-surface-soft h-[600px] overflow-hidden">
+            {picked && (
+              <div className="og-answer absolute left-2 top-2 z-10 w-[260px] bg-white border border-brand rounded shadow-lg p-3">
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-extrabold text-ink truncate">{picked.label}</div>
+                    <div className="text-[10px] font-semibold text-brand mt-0.5">{picked.cls}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPicked(null)}
+                    className="text-ink-light hover:text-ink text-[13px] leading-none"
+                    title="닫기"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mt-2 border-t border-line-soft pt-2 space-y-1 max-h-[300px] overflow-y-auto">
+                  {Object.entries(picked.props).map(([k, v]) => (
+                    <div key={k} className="flex items-start gap-2 text-[10.5px]">
+                      <span className="text-ink-mid font-semibold w-[74px] flex-shrink-0">{k}</span>
+                      <span className="text-ink-dark font-extrabold min-w-0 break-words">{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 border-t border-line-soft pt-1.5">
+                  <div className="text-[9.5px] text-ink-mid font-semibold">출처</div>
+                  <div className="text-[10px] font-mono text-ink-dark break-all">{picked.origin}</div>
+                </div>
+              </div>
+            )}
             <OntologyGraph
               activeClasses={activeClasses}
               activeRelations={activeRelations}
-              hopOf={hopOf}
-              anchor={anchorClass}
+              instanceSteps={instanceSteps}
+              travEdges={scenario.travEdges}
+              anchorInst={scenario.anchorInst}
               running={running}
               showAttrs={false}
+              onSelectInstance={setPicked}
+              selectedInstance={picked?.id ?? null}
             />
           </div>
         </div>
