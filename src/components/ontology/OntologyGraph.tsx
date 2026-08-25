@@ -206,6 +206,14 @@ function Canvas({
   const CP = useCallback((n: string): Pt | null => (trav ? (trav.clsAt.get(n) ?? simP(n)) : simP(n)), [trav, simP]);
   /** 개체 x 좌표가 속한 컬럼. 개체는 컬럼 x 에 정확히 정렬되므로 이걸로 역인덱싱한다. */
   const colOfX = useCallback((x: number) => trav?.colAt.find((c) => Math.abs(c.x - x) < 2) ?? null, [trav]);
+  /** 순회 등장 시각 — 컬럼 헤드(hop*0.1) → 개체 → 펼침선 → 순회 엣지 순. */
+  const tInst = useCallback(
+    (p: Pt) => {
+      const row = Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H));
+      return Math.min((colOfX(p.x)?.hop ?? 0) * 0.1 + row * 0.05, 0.6);
+    },
+    [colOfX],
+  );
   const IP = useCallback((id: string): Pt | null => trav?.instAt.get(id) ?? null, [trav]);
   const visible = useCallback((n: string) => !trav || trav.clsAt.has(n), [trav]);
 
@@ -353,10 +361,24 @@ function Canvas({
   };
 
   const spring = reduce ? { duration: 0 } : ({ type: 'spring', stiffness: 170, damping: 26 } as const);
+
+  /* ── 등장 타임라인 ──
+     클래스 → 그 클래스의 속성 → 양끝이 다 나온 관계선. 순서가 이렇게
+     이어져야 "허공에 선만 먼저 뜬" 구간이 안 생긴다. 관계선은 원래 등장
+     애니메이션이 아예 없어서 첫 프레임부터 그려지고 있었다.
+
+     각 애니메이션의 목표값은 상수(opacity 1 / scale 1)로 고정한다.
+     목표가 바뀌면 framer 가 지연을 붙인 채로 다시 재생하기 때문에,
+     점등·드래그 같은 이후 상태 변화는 지연 없이 즉시 반영되어야 한다. */
+  const clsIdx = useMemo(() => new Map(classes.map((c, i) => [c.name, i])), [classes]);
+  const tCls = useCallback((i: number) => Math.min(i * 0.03, 0.9), []);
+  const tSat = useCallback((host: string) => tCls(clsIdx.get(host) ?? 0) + 0.14, [tCls, clsIdx]);
+  const tEdge = useCallback((d: string, r: string) => Math.max(tSat(d), tSat(r)) + 0.12, [tSat]);
+
   const pop = (i: number) => ({
     initial: reduce ? false : { scale: 0 },
     animate: { scale: 1 },
-    transition: reduce ? { duration: 0 } : ({ type: 'spring', stiffness: 320, damping: 24, delay: Math.min(i * 0.018, 0.45) } as const),
+    transition: reduce ? { duration: 0 } : ({ type: 'spring', stiffness: 320, damping: 24, delay: tCls(i) } as const),
   });
 
   return (
@@ -413,7 +435,13 @@ function Canvas({
           const g = edgeGeom(a, b, i % 2 ? 0.09 : -0.09);
           const op = on ? 0.9 : trav ? 0.16 : 0.55;
           return (
-            <g key={r.uri} style={{ pointerEvents: 'none' }}>
+            <motion.g
+              key={r.uri}
+              style={{ pointerEvents: 'none' }}
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: reduce ? 0 : 0.3, delay: reduce ? 0 : tEdge(r.domain, r.range) }}
+            >
               <path d={g.d} fill="none" stroke={on ? BRAND : '#C2C7CD'} strokeWidth={on ? 1.6 : 1.1} opacity={op}
                 strokeDasharray={trav ? '5 5' : undefined} markerEnd={on ? 'url(#ar)' : 'url(#ard)'} />
               {!trav && (
@@ -422,7 +450,7 @@ function Canvas({
                   {r.name}
                 </text>
               )}
-            </g>
+            </motion.g>
           );
         })}
 
@@ -432,7 +460,7 @@ function Canvas({
              레이어 전체만 순회 진입 시 페이드아웃한다. */}
         {showAttrs && (
           <motion.g
-            initial={reduce ? false : { opacity: 0 }}
+            initial={false}
             animate={{ opacity: trav ? 0.1 : 1 }}
             transition={{ duration: reduce ? 0 : 0.5 }}
             style={{ pointerEvents: 'none' }}
@@ -445,13 +473,18 @@ function Canvas({
                 if (!hp) return null;
                 const p = trav ? hp : { x: n.x ?? 0, y: n.y ?? 0 };
                 return (
-                  <g key={n.id}>
+                  <motion.g
+                    key={n.id}
+                    initial={reduce ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: reduce ? 0 : 0.26, delay: reduce ? 0 : tSat(n.host!) }}
+                  >
                     <line x1={hp.x} y1={hp.y} x2={p.x} y2={p.y} stroke={PROP_COLOR} strokeOpacity={0.32} strokeWidth={1.1} />
                     <circle cx={p.x} cy={p.y} r={PROP_R} fill={PROP_COLOR + '22'} stroke={PROP_COLOR} strokeOpacity={0.65} strokeWidth={1.2} />
                     <text x={p.x} y={p.y + PROP_R + 11} textAnchor="middle" fontSize={8.5} fontWeight={700} fill="#7A828B" opacity={0.9}>
                       {dispLabel(n.label)}
                     </text>
-                  </g>
+                  </motion.g>
                 );
               })}
           </motion.g>
@@ -473,9 +506,8 @@ function Canvas({
             // 원본과 동일한 베지어 펼침선 — 클래스에서 아래로 내려와 개체로
             const midY = (cp.y + CLASS_R + p.y) / 2;
             const d = `M ${cp.x} ${cp.y + CLASS_R} C ${cp.x} ${midY}, ${p.x} ${midY}, ${p.x} ${p.y - instR(on ? 'focus' : 'cand') - 5}`;
-            const hop0 = cp.hop;
-            const row = Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H));
-            const delay = reduce ? 0 : Math.min(hop0 * 0.1 + row * 0.04, 0.55);
+            // 개체보다 먼저 그리면 허공에서 선이 내려오는 게 보인다 — 개체 뒤로.
+            const delay = reduce ? 0 : tInst(p) + 0.09;
             return (
               <motion.path
                 key={`ci-${id}`}
@@ -500,11 +532,14 @@ function Canvas({
             const same = Math.abs(a.x - b.x) < 4;
             const g = edgeGeom(a, b, same ? 0.4 : i % 2 ? 0.1 : -0.1);
             const eCol = clsColor(instById(e.from)?.cls ?? '');
+            const eDelay = reduce ? 0 : Math.max(tInst(a), tInst(b)) + 0.18;
             return (
-              <g key={`te${i}`} style={{ pointerEvents: 'none' }}>
+              <motion.g key={`te${i}`} style={{ pointerEvents: 'none' }}
+                initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ duration: reduce ? 0 : 0.2, delay: eDelay }}>
                 <path d={g.d} fill="none" stroke={eCol} strokeOpacity={0.16} strokeWidth={6} strokeLinecap="round" />
                 <motion.path d={g.d} fill="none" stroke={eCol} strokeWidth={1.9} markerEnd="url(#ar)"
-                  initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.5, ease: 'easeOut' }} />
+                  initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.5, delay: eDelay, ease: 'easeOut' }} />
                 {!reduce && (
                   <circle r={2.8} fill={eCol} style={{ filter: `drop-shadow(0 0 5px ${eCol}) drop-shadow(0 0 9px ${eCol})` }}>
                     <animateMotion dur={`${1.7 + (i % 4) * 0.3}s`} begin={`${-(i % 5) * 0.33}s`} repeatCount="indefinite" path={g.d} />
@@ -512,7 +547,7 @@ function Canvas({
                 )}
                 <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={800} fill={DEEP}
                   style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>{e.rel}</text>
-              </g>
+              </motion.g>
             );
           })}
 
@@ -611,7 +646,7 @@ function Canvas({
                 key={id}
                 initial={reduce ? false : { x: cp.x, y: cp.y, scale: 0, opacity: 0 }}
                 animate={{ x: p.x, y: p.y, scale: 1, opacity: foc ? 1 : 0.5 }}
-                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26, delay: Math.min((hop ?? 0) * 0.1 + Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H)) * 0.05, 0.6) }}
+                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26, delay: tInst(p) }}
                 onClick={(e) => { e.stopPropagation(); onSelectInstance?.(inst); }}
                 style={{ cursor: 'pointer' }}
               >

@@ -8,6 +8,7 @@
  * Query 가 시연의 클라이맥스다(핸드오프 화면 4).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import OntologyGraph from './OntologyGraph';
 import OntologyEditor from './OntologyEditor';
@@ -22,22 +23,25 @@ import {
   HUB_CLASSES,
   classByName,
 } from '@/data/ontology';
-import { COVERAGE, MAPPING_ROWS, SOURCE_LABEL, SOURCE_TONE, type MappingKind } from '@/data/ontologyMapping';
+import { COVERAGE, MAPPING_ROWS, SOURCE_LABEL, SOURCE_TONE, type MappingKind, type MappingSource } from '@/data/ontologyMapping';
 import { SCENARIOS, EXTRA_QUESTIONS, type QueryScenario, type StepKind } from '@/data/ontologyQueries';
 import { INSTANCE_COUNT as ABOX_COUNT, instById, type Instance } from '@/data/ontologyInstances';
 
-type SubTab = 'graph' | 'mapping' | 'automap' | 'materialize' | 'diag' | 'query';
+type SubTab = 'overview' | 'graph' | 'mapping' | 'automap' | 'materialize' | 'diag' | 'query';
 
 export default function OntologySection() {
   const [sub, setSub] = useState<SubTab>('query');
 
   return (
     <div className="card">
-      {/* 구축 단계 — 파이프라인 요약 */}
-      <BuildStages />
+      {/* 구축 단계 — 파이프라인 요약. 카드를 누르면 해당 화면으로 간다. */}
+      <BuildStages onGo={setSub} />
 
       {/* 하위 탭 */}
       <div className="px-5 pt-1 border-b border-line-soft flex items-center gap-1">
+        <SubTabBtn on={sub === 'overview'} onClick={() => setSub('overview')}>
+          개요
+        </SubTabBtn>
         <SubTabBtn on={sub === 'graph'} onClick={() => setSub('graph')}>
           그래프 설계
         </SubTabBtn>
@@ -58,6 +62,7 @@ export default function OntologySection() {
         </SubTabBtn>
       </div>
 
+      {sub === 'overview' && <OverviewPane onGo={setSub} />}
       {sub === 'graph' && <GraphDesign />}
       {sub === 'mapping' && <MappingView />}
       {sub === 'automap' && <AutoMapPane />}
@@ -95,36 +100,253 @@ function SubTabBtn({
 
 /* ══════════════════════ 구축 단계 ══════════════════════ */
 
-function BuildStages() {
+/** 단계 아이콘 — 이모지 대신 단색 글리프. 발표 화면에서 톤이 흐트러지지 않는다. */
+function StageIcon({ kind }: { kind: 'onto' | 'rel' | 'map' | 'inst' }) {
+  const c = 'currentColor';
+  return (
+    <svg width="18" height="18" viewBox="-11 -11 22 22" fill="none" className="text-brand flex-shrink-0">
+      {kind === 'onto' && <path d="M0,-8.5 L7.4,-4.25 L7.4,4.25 L0,8.5 L-7.4,4.25 L-7.4,-4.25 Z" fill={c} fillOpacity={0.16} stroke={c} strokeWidth={1.5} />}
+      {kind === 'rel' && (
+        <g stroke={c} strokeWidth={1.4}>
+          <path d="M-6,-5 L5,1 M-6,-5 L-2,7 M5,1 L-2,7" />
+          <circle cx={-6} cy={-5} r={2.6} fill={c} fillOpacity={0.2} />
+          <circle cx={5} cy={1} r={2.6} fill={c} fillOpacity={0.2} />
+          <circle cx={-2} cy={7} r={2.6} fill={c} fillOpacity={0.2} />
+        </g>
+      )}
+      {kind === 'map' && (
+        <g stroke={c} strokeWidth={1.6} strokeLinecap="round">
+          <path d="M-1.5,-3.5 L-5,0 a3.6,3.6 0 0 0 5,5 L1.5,3" />
+          <path d="M1.5,3.5 L5,0 a3.6,3.6 0 0 0 -5,-5 L-1.5,-3" />
+        </g>
+      )}
+      {kind === 'inst' && (
+        <g stroke={c} strokeWidth={1.4} strokeLinejoin="round">
+          <path d="M0,-8 L7.5,-4 L7.5,4 L0,8 L-7.5,4 L-7.5,-4 Z" fill={c} fillOpacity={0.14} />
+          <path d="M-7.5,-4 L0,0 L7.5,-4 M0,0 L0,8" />
+        </g>
+      )}
+    </svg>
+  );
+}
+
+function BuildStages({ onGo }: { onGo: (t: SubTab) => void }) {
   const { classes, relations } = useOntology();
   const attrs = classes.reduce((a, c) => a + c.attrs.length, 0);
   const stages = [
-    { n: `${classes.length}`, unit: '클래스', sub: `${attrs} 속성`, label: '온톨로지 생성' },
-    { n: `${relations.length}`, unit: '관계', sub: '구조 점검', label: '관계 정의' },
-    { n: `${MAPPING_ROWS.filter((r) => r.status !== 'none').length}`, unit: '매핑', sub: 'DB·문서 매핑', label: '데이터 연결' },
-    { n: `${ABOX_COUNT}`, unit: '인스턴스', sub: '실체화', label: 'A-Box 생성' },
+    { icon: 'onto' as const, n: `${classes.length}`, unit: '클래스', extra: `${attrs} 속성`, sub: '온톨로지 생성', go: 'graph' as SubTab },
+    { icon: 'rel' as const, n: `${relations.length}`, unit: '관계', sub: '구조 점검', go: 'graph' as SubTab },
+    { icon: 'map' as const, n: `${MAPPING_ROWS.filter((r) => r.status !== 'none').length}`, unit: '매핑', sub: 'DB·문서 매핑', go: 'mapping' as SubTab },
+    { icon: 'inst' as const, n: `${ABOX_COUNT}`, unit: '인스턴스', sub: '실체화', go: 'materialize' as SubTab },
   ];
   return (
     <div className="px-5 py-4 border-b border-line-soft">
       <div className="flex items-center gap-1.5 mb-2.5">
         <span className="text-[11px] font-extrabold text-ink">구축 단계</span>
-        <span className="text-[10.5px] text-ink-mid font-semibold">
+        <span className="text-[10.5px] text-ink-light font-semibold">클릭하면 해당 화면으로 이동</span>
+        <span className="text-[10.5px] text-ink-mid font-semibold ml-1.5 pl-1.5 border-l border-line-soft">
           여신심사 + 전결권 도메인 · 정형DB는 가상 뷰(zero-copy), 규정은 문서 실체화
         </span>
       </div>
       <div className="flex items-stretch gap-2">
         {stages.map((s, i) => (
-          <div key={s.label} className="flex items-center gap-2 flex-1">
-            <div className="flex-1 border border-brand-tint bg-brand-bg rounded px-3 py-2.5">
-              <div className="flex items-baseline gap-1">
-                <span className="text-[19px] font-extrabold text-ink tabular-nums">{s.n}</span>
-                <span className="text-[10.5px] font-bold text-ink-mid">{s.unit}</span>
-              </div>
-              <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">{s.sub}</div>
-            </div>
-            {i < stages.length - 1 && <span className="text-ink-light text-[13px]">→</span>}
+          <div key={s.sub} className="flex items-center gap-2 flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => onGo(s.go)}
+              className="flex-1 min-w-0 flex items-center gap-2.5 border border-brand-tint bg-brand-bg rounded px-3 py-2.5 text-left transition-colors hover:border-brand hover:bg-brand-tint"
+            >
+              <StageIcon kind={s.icon} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline gap-1 flex-wrap">
+                  <span className="text-[19px] font-extrabold text-ink tabular-nums leading-none">{s.n}</span>
+                  <span className="text-[10.5px] font-bold text-ink-mid">{s.unit}</span>
+                  {s.extra && (
+                    <>
+                      <span className="text-[10.5px] text-ink-light">·</span>
+                      <span className="text-[13px] font-extrabold text-ink-dark tabular-nums leading-none">{s.extra.split(' ')[0]}</span>
+                      <span className="text-[10.5px] font-bold text-ink-mid">속성</span>
+                    </>
+                  )}
+                </span>
+                <span className="block text-[10.5px] text-ink-mid font-semibold mt-1">{s.sub}</span>
+              </span>
+              {/* 완료 배지 — 4단계 모두 산출물이 있는 상태다 */}
+              <svg width="17" height="17" viewBox="0 0 17 17" className="flex-shrink-0 text-ok">
+                <circle cx="8.5" cy="8.5" r="8.5" fill="currentColor" />
+                <path d="M4.7 8.7 L7.3 11.2 L12.2 5.9" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {i < stages.length - 1 && <span className="text-ink-light text-[13px] flex-shrink-0">→</span>}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════ 개요 ══════════════════════ */
+// RFP: RAG-008 온톨로지 연계(권고·가점) · EDA-001 물리적 데이터 이동 없이
+// 매핑 커버리지를 있는 그대로 보여준다. 100%가 아닌 것이 핵심 —
+// 미매핑分을 감추면 데모가 곧 확약이 되는 RFP Ⅳ.6.7 리스크로 돌아온다.
+
+const SRC_HEX: Record<MappingSource, string> = {
+  auto: '#1B8A4D',
+  manual: '#1F5BB8',
+  document: '#6E3BBD',
+  none: '#E0E0E1',
+};
+/** 도넛 안에서는 '문서 실체화'가 길어 잘린다 — 짧은 표기를 따로 둔다. */
+const SRC_SHORT: Record<MappingSource, string> = { auto: '자동', manual: '수동', document: '문서', none: '미매핑' };
+
+function Donut({ pct }: { pct: number }) {
+  const R = 40;
+  const C = 2 * Math.PI * R;
+  return (
+    <div className="relative w-[108px] h-[108px] flex-shrink-0">
+      <svg viewBox="-54 -54 108 108" className="w-full h-full -rotate-90">
+        <circle r={R} fill="none" stroke="#EFEFEF" strokeWidth={11} />
+        <motion.circle
+          r={R}
+          fill="none"
+          stroke="#CB2C10"
+          strokeWidth={11}
+          strokeLinecap="round"
+          strokeDasharray={C}
+          initial={{ strokeDashoffset: C }}
+          animate={{ strokeDashoffset: C * (1 - pct) }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-[21px] font-extrabold text-ink tabular-nums">{Math.round(pct * 100)}%</span>
+      </div>
+    </div>
+  );
+}
+
+function OverviewPane({ onGo }: { onGo: (t: SubTab) => void }) {
+  const totalMapped = COVERAGE.reduce((a, c) => a + c.mapped, 0);
+  const totalAll = COVERAGE.reduce((a, c) => a + c.total, 0);
+  // 커버리지가 가장 낮은 축을 데이터에서 뽑는다. 문장에 박아두면
+  // mock 을 손볼 때마다 화면이 거짓말을 하게 된다.
+  const worst = [...COVERAGE].sort((a, b) => a.mapped / a.total - b.mapped / b.total)[0];
+  const worstNone = worst.breakdown.find((b) => b.status === 'none')?.count ?? 0;
+
+  return (
+    <div className="p-5 space-y-4">
+      {/* 매핑 현황 */}
+      <div>
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className="text-[12.5px] font-extrabold text-ink">매핑 현황</span>
+          <span className="text-[10.5px] text-ink-mid font-semibold">
+            전체 {totalAll}개 중 <b className="text-brand">{totalMapped}개</b> 매핑 · 미매핑分은 감추지 않고 그대로 노출한다
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {COVERAGE.map((c) => (
+            <div key={c.label} className="border border-line-soft rounded bg-white p-4">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[13px] font-extrabold text-ink">{c.label}</span>
+                <span className="text-[10px] font-bold text-ink-light tracking-wide">{c.sub}</span>
+              </div>
+              <div className="flex items-center gap-3.5 mt-3">
+                <Donut pct={c.total ? c.mapped / c.total : 0} />
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[24px] font-extrabold text-ink tabular-nums leading-none">{c.mapped}</span>
+                    <span className="text-[15px] font-extrabold text-ink-light tabular-nums leading-none">/ {c.total}</span>
+                  </div>
+                  <div className="text-[10.5px] text-ink-mid font-semibold mt-1.5 leading-relaxed">
+                    전체 {c.total}개 중
+                    <br />
+                    {c.mapped}개 매핑됨
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3.5 pt-3 border-t border-line-soft space-y-2">
+                {c.breakdown.map((b) => (
+                  <div key={b.status} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: SRC_HEX[b.status] }} />
+                    <span className="text-[10.5px] font-bold text-ink-dark w-[30px] flex-shrink-0">{SRC_SHORT[b.status]}</span>
+                    <span className="flex-1 h-[7px] rounded-full bg-surface overflow-hidden">
+                      <motion.span
+                        className="block h-full rounded-full"
+                        style={{ background: SRC_HEX[b.status] }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${c.total ? (b.count / c.total) * 100 : 0}%` }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                      />
+                    </span>
+                    <span className="text-[11px] font-extrabold text-ink tabular-nums w-[26px] text-right flex-shrink-0">{b.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 매핑 승인 구성 */}
+      <div className="border border-line-soft rounded bg-white p-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[12.5px] font-extrabold text-ink">매핑 승인 구성</span>
+          <div className="flex items-center gap-3">
+            {(['auto', 'manual', 'document', 'none'] as MappingSource[]).map((k) => (
+              <span key={k} className="inline-flex items-center gap-1.5 text-[10.5px] font-bold text-ink-mid">
+                <span className="w-2 h-2 rounded-sm" style={{ background: SRC_HEX[k], border: k === 'none' ? '1px solid #C9C9CA' : undefined }} />
+                {SOURCE_LABEL[k]}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2.5">
+          {COVERAGE.map((c) => (
+            <div key={c.label} className="flex items-center gap-2.5">
+              <span className="text-[11px] font-extrabold text-ink-dark w-[38px] flex-shrink-0">{c.label}</span>
+              <span className="flex-1 flex h-[22px] rounded overflow-hidden bg-surface">
+                {c.breakdown.map((b) =>
+                  b.count ? (
+                    <motion.span
+                      key={b.status}
+                      className="flex items-center justify-center text-[10px] font-extrabold tabular-nums"
+                      style={{ background: SRC_HEX[b.status], color: b.status === 'none' ? '#999999' : '#fff' }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(b.count / c.total) * 100}%` }}
+                      transition={{ duration: 0.7, ease: 'easeOut' }}
+                      title={`${SOURCE_LABEL[b.status]} ${b.count}개`}
+                    >
+                      {b.count / c.total > 0.05 ? b.count : ''}
+                    </motion.span>
+                  ) : null,
+                )}
+              </span>
+              <span className="text-[10.5px] font-semibold text-ink-mid tabular-nums w-[78px] text-right flex-shrink-0 whitespace-nowrap">
+                {c.mapped} / {c.total} 매핑
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 pt-3 border-t border-line-soft flex items-center gap-2">
+          <span className="text-[10.5px] text-ink-mid font-semibold flex-1">
+            커버리지가 가장 낮은 축은 <b className="text-ink-dark">{worst.label}({worst.sub})</b>로, 미매핑 {worstNone}건이 남아 있다 —
+            Auto-Map 이 임계값 아래로 판단해 자동 승인하지 않은 항목이며 수동 승인 대상이다.
+          </span>
+          <button
+            type="button"
+            onClick={() => onGo('automap')}
+            className="h-7 px-2.5 flex-shrink-0 border border-line rounded text-[11px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
+          >
+            Auto-Map 보기 →
+          </button>
+          <button
+            type="button"
+            onClick={() => onGo('diag')}
+            className="h-7 px-2.5 flex-shrink-0 border border-line rounded text-[11px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
+          >
+            진단 보기 →
+          </button>
+        </div>
       </div>
     </div>
   );
