@@ -20,15 +20,28 @@ const ATTACHMENTS = [
   '혁신금융서비스 지정 서류',
 ];
 
-/** 모델 사용 호스트 4종. */
-const HOSTS = ['on-prem', 'Azure', 'AWS', 'GCP'] as const;
+/**
+ * 모델 구동 위치.
+ *
+ * 공동존 On-Premise 가 본 사업의 유일한 구동 환경이다.
+ * 'Public LLM' 은 RFP 권고 항목(ONM-007 — 향후 망분리 규제 완화 대비)을
+ * 화면으로 보이기 위한 비활성 선택지로, 고르면 혁신금융서비스 지정 서류가
+ * 필수 첨부로 붙는 통제 구조를 함께 보여준다.
+ */
+const HOSTS = ['공동존 On-Prem', 'Public LLM'] as const;
+
+/** 향후 규제 완화 시에만 선택 가능한 호스트. */
+const FUTURE_HOSTS: readonly string[] = ['Public LLM'];
 
 /** 호스트별 선택 가능 모델 (데모 목록). */
 const HOST_MODELS: Record<string, string[]> = {
-  'on-prem': ['onprem/gpt-oss-120b', 'meta/llama-3-70b', 'kakao/kanana-flag-32.5B-it'],
-  Azure: ['onprem/qwen3-32b', 'onprem/qwen3-32b', 'onprem/qwen3-32b'],
-  AWS: ['onprem/llama-3.3-70b', 'onprem/sLLM-13b', 'onprem/llama-3.3-70b'],
-  GCP: ['google/gemini-3-pro', 'google/gemini-3-flash'],
+  '공동존 On-Prem': [
+    'onprem/gpt-oss-120b',
+    'onprem/qwen3-32b',
+    'onprem/llama-3.3-70b',
+    'onprem/sLLM-13b',
+  ],
+  'Public LLM': ['— 규제 완화 시 화이트리스트 등재 후 선택'],
 };
 
 /**
@@ -340,16 +353,19 @@ export default function ProjectRegisterPage() {
 
           {/* F. 모델 + 비용 추정 */}
           <SectionCard letter="F" name="사용 가능 모델 + 비용 추정" tag="MVP">
-            <FormField label="모델 사용 (호스트)" required>
+            <FormField label="모델 구동 위치" required hint="공동존 On-Premise 전용. Public LLM 은 향후 망분리 규제 완화 시 활성(RFP ONM-007)."> 
               <div className="flex flex-wrap gap-2">
-                {HOSTS.map((h) => (
-                  <CheckboxChip
-                    key={h}
-                    label={h}
-                    checked={hosts.includes(h)}
-                    onToggle={() => toggleHost(h)}
-                  />
-                ))}
+                {HOSTS.map((h) => {
+                  const future = FUTURE_HOSTS.includes(h);
+                  return (
+                    <CheckboxChip
+                      key={h}
+                      label={future ? `${h} (향후)` : h}
+                      checked={hosts.includes(h)}
+                      onToggle={() => !future && toggleHost(h)}
+                    />
+                  );
+                })}
               </div>
               {hosts.length > 0 && (
                 <div className="mt-2.5 space-y-2">
@@ -442,7 +458,7 @@ export default function ProjectRegisterPage() {
           {/* J. 문서 첨부 */}
           <SectionCard letter="J" name="문서 첨부 일괄" tag="MVP" defaultOpen>
             <p className="text-[11.5px] text-ink-mid mb-3">
-              입력한 내용(개인정보·CSP 모델 등)에 따라 필수 첨부 항목이 자동 표시됩니다.
+              입력한 내용(개인정보·Public LLM 사용 등)에 따라 필수 첨부 항목이 자동 표시됩니다.
             </p>
             {ATTACHMENTS.map((name, i) => (
               <div

@@ -105,7 +105,9 @@ export default function SearchPipelineTaskPage() {
       ),
     [selectedIdx],
   );
-  const usesCSP = rerankModel.startsWith('azure/') || rerankModel.startsWith('aws/');
+  // Public LLM(외부) rerank 선택 여부. 공동존 On-Prem 모델은 해당 없음.
+  // RFP ONM-007 권고 — 향후 망분리 완화 시를 가정한 통제 흐름을 보인다.
+  const usesPublicLLM = rerankModel.startsWith('public/');
 
   // 필수 충족 판정
   const filledScenarios = scenarios.filter((s) => s.name.trim()).length;
@@ -116,7 +118,7 @@ export default function SearchPipelineTaskPage() {
     filledScenarios >= 3 &&
     goldenCount >= goldenMin &&
     (!usesExternalIdx || agreeAttached) &&
-    (!usesCSP || innovDocAttached);
+    (!usesPublicLLM || innovDocAttached);
 
   const submit = () => {
     if (!requiredFilled || submitting) return;
@@ -380,19 +382,19 @@ export default function SearchPipelineTaskPage() {
               <FormField label="Rerank 모델" info="선택 시 cross-encoder 단계 추가">
                 <Select value={rerankModel} onChange={(e) => setRerankModel(e.target.value)}>
                   <option value="">선택 안 함</option>
-                  <option value="on-prem/bge-reranker-large">on-prem/bge-reranker-large</option>
-                  <option value="onprem/bge-reranker-v2-m3">onprem/bge-reranker-v2-m3 (CSP)</option>
-                  <option value="onprem/bge-reranker-v2-m3">onprem/bge-reranker-v2-m3 (CSP)</option>
+                  <option value="onprem/bge-reranker-large">onprem/bge-reranker-large</option>
+                  <option value="onprem/bge-reranker-v2-m3">onprem/bge-reranker-v2-m3</option>
+                  <option value="public/cohere-rerank-3">public/cohere-rerank-3 (향후 · 규제 완화 시)</option>
                 </Select>
               </FormField>
             </Row>
 
-            {usesCSP && (
+            {usesPublicLLM && (
               <div className="mb-3 bg-info-bg border border-info-border rounded p-2.5 text-[11.5px] text-info flex items-start gap-2">
                 <span className="font-extrabold">ℹ</span>
                 <div>
-                  <b>CSP 모델 선택</b> · F.비용 영역에 비용 결재 자동 묶임 · H.첨부의 혁신금융서비스 지정 서류
-                  필수로 전환됨
+                  <b>Public LLM 선택</b> · 향후 망분리 규제 완화 시 경로 · F.비용 영역에 비용 결재 자동 묶임 ·
+                  H.첨부의 혁신금융서비스 지정 서류 필수로 전환됨
                 </div>
               </div>
             )}
@@ -589,9 +591,9 @@ export default function SearchPipelineTaskPage() {
             summary="임베딩 · rerank · 서빙 자원"
             tag="MVP"
           >
-            {usesCSP && (
+            {usesPublicLLM && (
               <div className="mb-3 bg-info-bg border border-info-border rounded p-2.5 text-[11.5px] text-info">
-                <b>CSP 모델 포함</b> · 본 과제 결재선에 비용 결재 자동 묶임 · 혁신금융서비스 지정 서류 첨부 필수
+                <b>Public LLM 포함</b> · 본 과제 결재선에 비용 결재 자동 묶임 · 혁신금융서비스 지정 서류 첨부 필수
               </div>
             )}
 
@@ -621,10 +623,10 @@ export default function SearchPipelineTaskPage() {
                   calls="9.6M"
                   cost="₩ 0"
                 />
-                {usesCSP && (
+                {usesPublicLLM && (
                   <CostRow
-                    badgeTone="csp"
-                    badge="CSP"
+                    badgeTone="public"
+                    badge="PUBLIC"
                     name={rerankModel}
                     unit="₩ 0.4 / 콜"
                     calls="9.6M"
@@ -647,7 +649,7 @@ export default function SearchPipelineTaskPage() {
                     월간 합계 (학습계 + 서빙계)
                   </td>
                   <td className="py-2 px-3 text-right font-extrabold text-ink text-[12px] tabular-nums">
-                    ₩ {(usesCSP ? 5090000 : 1250000).toLocaleString()}
+                    ₩ {(usesPublicLLM ? 5090000 : 1250000).toLocaleString()}
                   </td>
                 </tr>
               </tfoot>
@@ -709,9 +711,9 @@ export default function SearchPipelineTaskPage() {
                 auto
               />
               <AttachRow
-                required={usesCSP}
+                required={usesPublicLLM}
                 name="혁신금융서비스 지정 서류"
-                cond="F에서 CSP 모델 사용 시 필수"
+                cond="F에서 Public LLM 사용 시 필수"
                 attached={innovDocAttached}
                 onAttach={() => setInnovDocAttached((v) => !v)}
               />
@@ -747,13 +749,13 @@ export default function SearchPipelineTaskPage() {
                 ok={goldenCount >= goldenMin}
                 val={`${goldenCount}/${goldenMin}건`}
               />
-              <CheckRow label="F. 비용" ok val={usesCSP ? 'CSP 포함' : 'on-prem'} />
+              <CheckRow label="F. 비용" ok val={usesPublicLLM ? 'Public LLM 포함' : '공동존 On-Prem'} />
               <CheckRow label="G. 거버넌스 (자동)" ok val={`민감도 ${maxSens || 1}`} />
               <CheckRow
                 label="H. 첨부"
-                ok={(!usesExternalIdx || agreeAttached) && (!usesCSP || innovDocAttached)}
+                ok={(!usesExternalIdx || agreeAttached) && (!usesPublicLLM || innovDocAttached)}
                 val={
-                  (!usesExternalIdx || agreeAttached) && (!usesCSP || innovDocAttached)
+                  (!usesExternalIdx || agreeAttached) && (!usesPublicLLM || innovDocAttached)
                     ? '충족'
                     : '미흡'
                 }
@@ -791,13 +793,13 @@ export default function SearchPipelineTaskPage() {
 
           <SidebarCard title="월간 비용 요약">
             <div className="space-y-1.5 text-[11.5px]">
-              <SumRow label="on-prem 임베딩" value="₩ 0" />
-              {usesCSP && (
-                <SumRow label="CSP rerank" value="₩ 3.84M" tone="purple" />
+              <SumRow label="공동존 임베딩" value="₩ 0" />
+              {usesPublicLLM && (
+                <SumRow label="Public rerank" value="₩ 3.84M" tone="purple" />
               )}
               <SumRow label="인프라" value="₩ 1.25M" />
               <div className="border-t border-line-soft pt-1.5 mt-1.5">
-                <SumRow label="합계" value={`₩ ${(usesCSP ? 5.09 : 1.25).toFixed(2)}M`} bold />
+                <SumRow label="합계" value={`₩ ${(usesPublicLLM ? 5.09 : 1.25).toFixed(2)}M`} bold />
               </div>
             </div>
           </SidebarCard>
@@ -965,7 +967,7 @@ function CostRow({
   last,
 }: {
   badge: string;
-  badgeTone: 'on-prem' | 'csp' | 'infra';
+  badgeTone: 'on-prem' | 'public' | 'infra';
   name: string;
   unit: string;
   calls: string;
@@ -974,7 +976,7 @@ function CostRow({
 }) {
   const badgeClass = {
     'on-prem': 'bg-ok-bg text-ok border-ok-border',
-    csp: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
+    public: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
     infra: 'bg-surface-soft text-ink-mid border-line-soft',
   }[badgeTone];
   return (

@@ -165,7 +165,7 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
         <div className="text-xs font-bold text-ink-dark mb-2 flex items-center gap-1.5">
           <span>임베딩 모델</span>
           <span className="text-[10.5px] text-ink-mid font-medium">
-            {model.short} · {model.dimension.toLocaleString('ko-KR')}차원 · {model.source === 'on-prem' ? 'on-prem' : 'CSP'}
+            {model.short} · {model.dimension.toLocaleString('ko-KR')}차원 · on-prem
           </span>
         </div>
         <div className="flex flex-wrap gap-1.5">

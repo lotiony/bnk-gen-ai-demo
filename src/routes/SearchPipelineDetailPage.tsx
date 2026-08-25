@@ -48,7 +48,7 @@ export default function SearchPipelineDetailPage() {
 
   const stateTone = STATE_TONE[task.state] ?? STATE_TONE['기획'];
   const maxSens = Math.max(...task.indexes.map((i) => i.sens));
-  const usesCSP = (task.rerankModel ?? '').startsWith('azure/') || (task.rerankModel ?? '').startsWith('aws/');
+  const usesPublicLLM = (task.rerankModel ?? '').startsWith('public/');
   const passedAll = task.metrics.every((m) => m.passed === true);
 
   return (
@@ -130,7 +130,7 @@ export default function SearchPipelineDetailPage() {
         </TabBtn>
       </nav>
 
-      {tab === 'overview' && <OverviewTab task={task} maxSens={maxSens} usesCSP={usesCSP} />}
+      {tab === 'overview' && <OverviewTab task={task} maxSens={maxSens} usesPublicLLM={usesPublicLLM} />}
       {tab === 'indexes' && <IndexesTab task={task} />}
       {tab === 'dev' && <DevTab task={task} />}
       {tab === 'eval' && <EvalTab task={task} passedAll={passedAll} />}
@@ -143,11 +143,11 @@ export default function SearchPipelineDetailPage() {
 function OverviewTab({
   task,
   maxSens,
-  usesCSP,
+  usesPublicLLM,
 }: {
   task: PipelineTask;
   maxSens: number;
-  usesCSP: boolean;
+  usesPublicLLM: boolean;
 }) {
   const goldenPct = Math.round((task.golden.count / task.golden.min) * 100);
   return (
@@ -202,7 +202,7 @@ function OverviewTab({
           <Kv
             label="Rerank 모델"
             value={task.rerankModel ?? '미사용'}
-            tone={usesCSP ? 'warn' : undefined}
+            tone={usesPublicLLM ? 'warn' : undefined}
           />
           <Kv label="Top-K" value={String(task.topK)} />
           <Kv label="청크 윈도우" value={`±${task.chunkWindow}`} />
@@ -228,9 +228,9 @@ function OverviewTab({
                 <b>마스킹</b> · 응답 청크 PII 마스킹 자동 + SSO 인증 강제
               </AutoLine>
             )}
-            {usesCSP && (
+            {usesPublicLLM && (
               <AutoLine>
-                <b>비용 결재</b> · CSP rerank 사용 → 혁신금융서비스 지정 서류 첨부 필수
+                <b>비용 결재</b> · Public LLM rerank 사용 → 혁신금융서비스 지정 서류 첨부 필수
               </AutoLine>
             )}
             <AutoLine>

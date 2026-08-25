@@ -722,7 +722,7 @@ function IssueApiModal({
             <span className="flex-1">
               <span className="block text-[12px] font-extrabold text-ink flex items-center">
                 시맨틱 랭커
-                <InfoTip text="1차 검색 결과를 딥러닝 기반으로 다시 정렬(L2 reranking)해 관련도를 높입니다. Azure의 semantic ranker 기능." />
+                <InfoTip text="1차 검색 결과를 딥러닝 기반으로 다시 정렬(L2 reranking)해 관련도를 높입니다. 검색엔진의 semantic ranker 기능." />
               </span>
               <span className="block text-[10.5px] text-ink-mid mt-0.5 leading-snug">L2 재순위(semantic ranker)</span>
             </span>

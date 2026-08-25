@@ -17,12 +17,32 @@ const TASK_TYPES = [
 ] as const;
 type TaskType = (typeof TASK_TYPES)[number]['id'];
 
-/** 클라우드 선택지 — 검색 엔진 등 세부 설정은 인덱스 빌드 시 정한다. */
-const CLOUDS = {
-  Azure: { label: 'Microsoft Azure', logo: '☁', engine: 'Azure AI Search' },
-  AWS: { label: 'Amazon Web Services', logo: '🟧', engine: 'Amazon OpenSearch Service' },
+/**
+ * 인프라 선택지.
+ *
+ * 본 사업은 공동존 상면 On-Premise 전용이므로 실제 선택지는 하나다.
+ * Public LLM 은 RFP 권고 항목(ONM-007 — 향후 망분리 규제 완화 대비
+ * Public/Hybrid Cloud 전환 용이성)을 화면으로 보이기 위해 비활성 상태로
+ * 노출한다. 선택 시 비용 결재 + 혁신금융서비스 지정 서류가 자동으로
+ * 결재선에 묶이는 통제 구조까지 함께 보여준다.
+ */
+const INFRAS = {
+  onprem: {
+    label: '공동존 On-Premise',
+    logo: '🏢',
+    engine: 'OpenSearch · 공동존 검색엔진',
+    available: true,
+    note: '부산 문현 공동존 · BareMetal K8s',
+  },
+  hybrid: {
+    label: 'Public LLM 하이브리드',
+    logo: '🌐',
+    engine: '향후 망분리 규제 완화 시 활성',
+    available: false,
+    note: '선택 시 비용 결재 + 혁신금융서비스 지정 서류 자동 첨부',
+  },
 } as const;
-type CloudId = keyof typeof CLOUDS;
+type InfraId = keyof typeof INFRAS;
 
 /**
  * 새 Knowledge 과제 등록 — 지식 과제 생성은 결재(기안) 대상이다.
@@ -37,8 +57,8 @@ export default function KnowledgeTaskRegisterPage() {
   const drafterDept = persona?.dept ?? '';
 
   const [taskType, setTaskType] = useState<TaskType>('지식 데이터');
-  const [cloud, setCloud] = useState<CloudId>('Azure');
-  const cloudCfg = CLOUDS[cloud];
+  const [infra, setInfra] = useState<InfraId>('onprem');
+  const infraCfg = INFRAS[infra];
 
   const [name, setName] = useState('');
 
@@ -133,26 +153,46 @@ export default function KnowledgeTaskRegisterPage() {
             </div>
           </SectionCard>
 
-          {/* C. 인프라 · 클라우드 */}
-          <SectionCard letter="C" name="인프라 · 클라우드" summary={cloudCfg.label} tag="필수" defaultOpen>
-            <FormField label="클라우드" required hint="세부 리전·검색 엔진·임베딩 모델은 인덱스 빌드 단계에서 설정합니다.">
+          {/* C. 인프라 */}
+          <SectionCard letter="C" name="인프라" summary={infraCfg.label} tag="필수" defaultOpen>
+            <FormField
+              label="구동 인프라"
+              required
+              hint="본 사업은 공동존 상면 On-Premise 전용입니다. 세부 검색 엔진·임베딩 모델은 인덱스 빌드 단계에서 설정합니다."
+            >
               <div className="grid grid-cols-2 gap-2.5">
-                {(Object.keys(CLOUDS) as CloudId[]).map((c) => {
-                  const cfg = CLOUDS[c];
-                  const on = cloud === c;
+                {(Object.keys(INFRAS) as InfraId[]).map((c) => {
+                  const cfg = INFRAS[c];
+                  const on = infra === c;
                   return (
                     <button
                       key={c}
                       type="button"
-                      onClick={() => setCloud(c)}
+                      disabled={!cfg.available}
+                      title={cfg.available ? undefined : '향후 망분리 규제 완화 시 활성화 (RFP ONM-007)'}
+                      onClick={() => cfg.available && setInfra(c)}
                       className={cn(
                         'flex items-center gap-3 p-3 rounded-lg border text-left transition-colors',
-                        on ? 'bg-info-bg border-info-border' : 'bg-white border-line hover:border-info-border',
+                        !cfg.available
+                          ? 'bg-surface border-line-soft cursor-not-allowed opacity-70'
+                          : on
+                            ? 'bg-info-bg border-info-border'
+                            : 'bg-white border-line hover:border-info-border',
                       )}
                     >
                       <span className="text-[22px] leading-none">{cfg.logo}</span>
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-extrabold text-ink">{cfg.label}</span>
+                        <span
+                          className={cn(
+                            'block text-[12.5px] font-extrabold',
+                            cfg.available ? 'text-ink' : 'text-ink-light',
+                          )}
+                        >
+                          {cfg.label}
+                          {!cfg.available && (
+                            <span className="ml-1.5 text-[9.5px] font-bold text-ink-light">향후</span>
+                          )}
+                        </span>
                         <span className="block text-[10.5px] text-ink-mid font-semibold">{cfg.engine}</span>
                       </span>
                       <span
@@ -165,6 +205,9 @@ export default function KnowledgeTaskRegisterPage() {
                   );
                 })}
               </div>
+              <p className="mt-2 text-[10.5px] text-ink-mid font-semibold">
+                🔒 {INFRAS.hybrid.note} — RFP ONM-007 대비
+              </p>
             </FormField>
           </SectionCard>
         </div>
@@ -178,7 +221,7 @@ export default function KnowledgeTaskRegisterPage() {
           <SidebarCard title="선택 요약">
             <div className="space-y-1.5 text-[11.5px]">
               <SummaryRow k="유형" v={taskType} />
-              <SummaryRow k="클라우드" v={cloudCfg.label} />
+              <SummaryRow k="인프라" v={infraCfg.label} />
             </div>
           </SidebarCard>
 
