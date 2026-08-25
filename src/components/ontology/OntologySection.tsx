@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import OntologyGraph from './OntologyGraph';
 import OntologyEditor from './OntologyEditor';
+import TriplePanel, { type Highlight, type TripleDraft } from './TriplePanel';
 import { AutoMapPane, MaterializePane, DiagnosticsPane } from './MappingTools';
 import { useOntology, mergeClasses } from '@/lib/ontologyStore';
 import {
@@ -34,9 +35,6 @@ export default function OntologySection() {
 
   return (
     <div className="card">
-      {/* 구축 단계 — 파이프라인 요약. 카드를 누르면 해당 화면으로 간다. */}
-      <BuildStages onGo={setSub} />
-
       {/* 하위 탭 */}
       <div className="px-5 pt-1 border-b border-line-soft flex items-center gap-1">
         <SubTabBtn on={sub === 'overview'} onClick={() => setSub('overview')}>
@@ -140,9 +138,9 @@ function BuildStages({ onGo }: { onGo: (t: SubTab) => void }) {
     { icon: 'inst' as const, n: `${ABOX_COUNT}`, unit: '인스턴스', sub: '실체화', go: 'materialize' as SubTab },
   ];
   return (
-    <div className="px-5 py-4 border-b border-line-soft">
-      <div className="flex items-center gap-1.5 mb-2.5">
-        <span className="text-[11px] font-extrabold text-ink">구축 단계</span>
+    <div>
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className="text-[12.5px] font-extrabold text-ink">구축 단계</span>
         <span className="text-[10.5px] text-ink-light font-semibold">클릭하면 해당 화면으로 이동</span>
         <span className="text-[10.5px] text-ink-mid font-semibold ml-1.5 pl-1.5 border-l border-line-soft">
           여신심사 + 전결권 도메인 · 정형DB는 가상 뷰(zero-copy), 규정은 문서 실체화
@@ -235,6 +233,9 @@ function OverviewPane({ onGo }: { onGo: (t: SubTab) => void }) {
 
   return (
     <div className="p-5 space-y-4">
+      {/* 구축 단계 — 파이프라인 요약. 카드를 누르면 해당 화면으로 간다. */}
+      <BuildStages onGo={onGo} />
+
       {/* 매핑 현황 */}
       <div>
         <div className="flex items-baseline gap-2 mb-2">
@@ -357,6 +358,8 @@ function OverviewPane({ onGo }: { onGo: (t: SubTab) => void }) {
 function GraphDesign() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showAttrs, setShowAttrs] = useState(true);
+  const [highlight, setHighlight] = useState<Highlight>(null);
+  const [draft, setDraft] = useState<TripleDraft>(null);
   const { classes, relations } = useOntology();
 
   const askMerge = (src: string, dst: string) => {
@@ -366,19 +369,46 @@ function GraphDesign() {
     }
   };
 
+  // 그래프 노드 ＋ 클릭 — 그 클래스를 열고 속성 추가 폼을 편다.
+  const addFrom = (cls: string) => {
+    setSelected(cls);
+    setDraft({ kind: 'attr', cls });
+  };
+  // ＋ 를 다른 노드로 끌어다 놓음 — 출발·도착이 채워진 관계 폼을 편다.
+  const linkTo = (domain: string, range: string) => {
+    setSelected(domain);
+    setDraft({ kind: 'rel', domain, range });
+  };
+
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
         <div className="text-[11.5px] text-ink-mid font-semibold">
           <b className="text-ink">{classes.length}</b> classes · <b className="text-ink">{relations.length}</b> relationships
           <span className="mx-1.5 text-ink-light">·</span>
-          클릭=상세 · 드래그=이동 · <b className="text-ink-dark">겹쳐 놓으면 병합</b> · Space+드래그=화면 이동 · ⌘/Ctrl+휠=줌
+          호버=관계 강조 · 클릭=속성·관계 패널 · 노드 <b className="text-ink-dark">＋</b>=추가(드래그=관계 연결) ·
+          <b className="text-ink-dark"> 겹쳐 놓으면 병합</b> · Space+드래그=화면 이동 · ⌘/Ctrl+휠=줌
         </div>
         <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-ink-dark cursor-pointer">
           <input type="checkbox" checked={showAttrs} onChange={(e) => setShowAttrs(e.target.checked)} />
           속성 표시
         </label>
       </div>
+
+      {selected && (
+        <TriplePanel
+          selected={selected}
+          draft={draft}
+          onDraft={setDraft}
+          onHighlight={setHighlight}
+          onClose={() => {
+            setSelected(null);
+            setDraft(null);
+            setHighlight(null);
+          }}
+          onSelect={setSelected}
+        />
+      )}
 
       <div className="grid grid-cols-[1fr_300px] gap-3">
         <div className="border border-line-soft rounded bg-surface-soft h-[440px] overflow-hidden">
@@ -387,6 +417,9 @@ function GraphDesign() {
             onSelectClass={setSelected}
             selectedClass={selected}
             onMergeAsk={askMerge}
+            onAddFrom={addFrom}
+            onLinkTo={linkTo}
+            highlight={highlight}
           />
         </div>
         <OntologyEditor selected={selected} onSelect={setSelected} />

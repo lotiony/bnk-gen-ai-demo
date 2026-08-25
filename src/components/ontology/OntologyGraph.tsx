@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useOntology } from '@/lib/ontologyStore';
+import type { OntologyRelation } from '@/data/ontology';
 import { INSTANCES, instById, type Instance, type TravEdge } from '@/data/ontologyInstances';
 import { buildSim, simViewBox, degreeMap, shade, dispLabel, CLASS_R, PROP_R, PROP_COLOR, type SimNode } from './graphSim';
 
@@ -25,6 +26,8 @@ const DEEP = '#A82410';
 /** 허브(연결 TOP 5) — 원본의 앰버 자리. */
 const CORE = '#B8791F';
 const HIER = '#7C8695';
+/** 추가·연결 진행 색 — 확정(브랜드 레드)과 구분되는 '작업 중' 파랑. */
+const ADD = '#1F5BB8';
 
 const T_COL_W = 250;
 const T_INST_Y0 = 130;
@@ -78,6 +81,12 @@ export interface OntologyGraphProps {
   onSelectClass?: (n: string) => void;
   onSelectInstance?: (i: Instance) => void;
   onMergeAsk?: (src: string, dst: string) => void;
+  /** 노드 ＋ 클릭 — 그 클래스에 속성·관계를 추가한다. */
+  onAddFrom?: (cls: string) => void;
+  /** 노드 ＋ 를 다른 노드로 끌어다 놓음 — 관계 생성. */
+  onLinkTo?: (domain: string, range: string) => void;
+  /** 패널 태그 호버 강조 — 그래프에서 해당 요소만 살린다. */
+  highlight?: { kind: 'attr'; cls: string; attr: string } | { kind: 'rel'; uri: string } | null;
   selectedClass?: string | null;
   selectedInstance?: string | null;
   className?: string;
@@ -101,6 +110,9 @@ function Canvas({
   onSelectClass,
   onSelectInstance,
   onMergeAsk,
+  onAddFrom,
+  onLinkTo,
+  highlight = null,
   selectedClass = null,
   selectedInstance = null,
   className,
@@ -248,6 +260,9 @@ function Canvas({
 
   /* ── 드래그 · 팬 · 줌 ── */
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const [hoverCls, setHoverCls] = useState<string | null>(null);
+  /** ＋ 배지 드래그로 관계를 잇는 중. moved=false 면 클릭으로 친다. */
+  const [linkDrag, setLinkDrag] = useState<{ from: string; sx: number; sy: number; x: number; y: number; moved: boolean } | null>(null);
   const dragId = useRef<string | null>(null);
   const panFrom = useRef<{ p: Pt; v: Pt } | null>(null);
   const [spaceDown, setSpaceDown] = useState(false);
@@ -314,6 +329,11 @@ function Canvas({
         setView((v) => ({ ...v, x: pan.v.x - (p.x - pan.p.x), y: pan.v.y - (p.y - pan.p.y) }));
         return;
       }
+      if (linkDrag) {
+        const q = toSvg(e);
+        setLinkDrag((ld) => ld && { ...ld, x: q.x, y: q.y, moved: ld.moved || Math.hypot(q.x - ld.sx, q.y - ld.sy) > 8 });
+        return;
+      }
       const id = dragId.current;
       if (!id) return;
       moved.current = true;
@@ -327,6 +347,21 @@ function Canvas({
     const up = (e: MouseEvent) => {
       panFrom.current = null;
       setPanning(false);
+      if (linkDrag) {
+        // 안 끌었으면 클릭으로 친다 — ＋ 는 클릭=추가 카드, 드래그=관계 연결.
+        if (!linkDrag.moved) onAddFrom?.(linkDrag.from);
+        else {
+          const q = toSvg(e);
+          const hit = classes.find((c) => {
+            if (c.name === linkDrag.from) return null;
+            const t = simP(c.name);
+            return t && Math.hypot(t.x - q.x, t.y - q.y) < CLASS_R + 14;
+          });
+          if (hit) onLinkTo?.(linkDrag.from, hit.name);
+        }
+        setLinkDrag(null);
+        return;
+      }
       const id = dragId.current;
       dragId.current = null;
       if (!id) return;
@@ -349,7 +384,7 @@ function Canvas({
       window.removeEventListener('mousemove', mv);
       window.removeEventListener('mouseup', up);
     };
-  }, [toSvg, built, classes, simP, onMergeAsk]);
+  }, [toSvg, built, classes, simP, onMergeAsk, linkDrag, onAddFrom, onLinkTo]);
 
   const wheel = (e: React.WheelEvent) => {
     if (!(e.ctrlKey || e.metaKey)) return;
@@ -361,6 +396,37 @@ function Canvas({
   };
 
   const spring = reduce ? { duration: 0 } : ({ type: 'spring', stiffness: 170, damping: 26 } as const);
+
+  /* ── 에고 네트워크 강조 ──
+     호버(없으면 선택) 클래스와 그에 직접 연결된 것만 살리고 나머지는 죽인다.
+     드래그 중에는 끄는데, 노드를 끌면서 화면이 계속 명멸하면 못 본다. */
+  const focus = dragId.current || linkDrag ? null : (hoverCls ?? selectedClass);
+  const adj = useMemo(() => {
+    if (!focus) return null;
+    const set = new Set<string>([focus]);
+    for (const r of relations) {
+      if (r.domain === focus) set.add(r.range);
+      if (r.range === focus) set.add(r.domain);
+    }
+    return set;
+  }, [focus, relations]);
+  const clsLive = useCallback(
+    (n: string) => {
+      if (highlight) return highlight.kind === 'attr' ? n === highlight.cls : relations.some((r) => r.uri === highlight.uri && (r.domain === n || r.range === n));
+      return !adj || adj.has(n);
+    },
+    [adj, highlight, relations],
+  );
+  const relLive = useCallback(
+    (r: OntologyRelation) => {
+      if (highlight) return highlight.kind === 'rel' && r.uri === highlight.uri;
+      return !focus || r.domain === focus || r.range === focus;
+    },
+    [focus, highlight],
+  );
+  /** 강조가 걸린 상태인가 — 걸리면 나머지를 죽인다. */
+  const dimming = !!focus || !!highlight;
+  const focusRelCount = focus ? relations.filter((r) => r.domain === focus || r.range === focus).length : 0;
 
   /* ── 등장 타임라인 ──
      클래스 → 그 클래스의 속성 → 양끝이 다 나온 관계선. 순서가 이렇게
@@ -412,6 +478,9 @@ function Canvas({
           <marker id="ard" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M0,0 L8,4 L0,8 Z" fill="#C2C7CD" />
           </marker>
+          <marker id="aradd" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill={ADD} />
+          </marker>
         </defs>
 
         {trav &&
@@ -433,7 +502,10 @@ function Canvas({
           if (!a || !b) return null;
           const on = relSet.has(r.uri);
           const g = edgeGeom(a, b, i % 2 ? 0.09 : -0.09);
-          const op = on ? 0.9 : trav ? 0.16 : 0.55;
+          const live = trav || relLive(r);
+          const op = trav ? (on ? 0.9 : 0.16) : dimming ? (live ? 1 : 0.07) : on ? 0.9 : 0.55;
+          // 강조된 엣지는 브랜드색으로 끌어올리고 라벨을 필로 띄운다.
+          const hot = !trav && dimming && live;
           return (
             <motion.g
               key={r.uri}
@@ -442,13 +514,19 @@ function Canvas({
               animate={{ opacity: 1 }}
               transition={{ duration: reduce ? 0 : 0.3, delay: reduce ? 0 : tEdge(r.domain, r.range) }}
             >
-              <path d={g.d} fill="none" stroke={on ? BRAND : '#C2C7CD'} strokeWidth={on ? 1.6 : 1.1} opacity={op}
-                strokeDasharray={trav ? '5 5' : undefined} markerEnd={on ? 'url(#ar)' : 'url(#ard)'} />
+              <path d={g.d} fill="none" stroke={on || hot ? BRAND : '#C2C7CD'} strokeWidth={on || hot ? 1.8 : 1.1} opacity={op}
+                strokeDasharray={trav ? '5 5' : undefined} markerEnd={on || hot ? 'url(#ar)' : 'url(#ard)'} />
               {!trav && (
-                <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill={on ? DEEP : '#98A0A8'} opacity={op}
-                  style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>
-                  {r.name}
-                </text>
+                <g opacity={op}>
+                  {hot && (
+                    <rect x={g.mx - (r.name.length * 5.2 + 9) / 2} y={g.my - 15} width={r.name.length * 5.2 + 9} height={14} rx={7}
+                      fill="#fff" stroke={BRAND} strokeWidth={1} />
+                  )}
+                  <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={hot ? 800 : 700} fill={on || hot ? BRAND : '#98A0A8'}
+                    style={hot ? undefined : { paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>
+                    {r.name}
+                  </text>
+                </g>
               )}
             </motion.g>
           );
@@ -472,12 +550,19 @@ function Canvas({
                 const hp = CP(n.host!);
                 if (!hp) return null;
                 const p = trav ? hp : { x: n.x ?? 0, y: n.y ?? 0 };
+                // 강조 중에는 살아 있는 클래스의 속성만 남긴다.
+                const satOp = trav
+                  ? 1
+                  : highlight?.kind === 'attr'
+                    ? highlight.cls === n.host && highlight.attr === n.label ? 1 : 0.06
+                    : dimming ? (clsLive(n.host!) ? 1 : 0.06) : 1;
                 return (
                   <motion.g
                     key={n.id}
                     initial={reduce ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: reduce ? 0 : 0.26, delay: reduce ? 0 : tSat(n.host!) }}
+                    style={{ opacity: satOp }}
                   >
                     <line x1={hp.x} y1={hp.y} x2={p.x} y2={p.y} stroke={PROP_COLOR} strokeOpacity={0.32} strokeWidth={1.1} />
                     <circle cx={p.x} cy={p.y} r={PROP_R} fill={PROP_COLOR + '22'} stroke={PROP_COLOR} strokeOpacity={0.65} strokeWidth={1.2} />
@@ -564,9 +649,16 @@ function Canvas({
           const sel = selectedClass === c.name;
           return (
             <motion.g key={c.uri}
-              animate={{ x: p.x, y: p.y, opacity: trav ? (shown ? 1 : 0.05) : 1, scale: trav && !shown ? 0.75 : 1 }}
+              animate={{
+                x: p.x,
+                y: p.y,
+                opacity: trav ? (shown ? 1 : 0.05) : dimming && !clsLive(c.name) ? 0.09 : 1,
+                scale: trav && !shown ? 0.75 : 1,
+              }}
               transition={dragId.current === c.name ? { duration: 0 } : spring}
               onMouseDown={nodeDown(c.name)}
+              onMouseEnter={() => !trav && setHoverCls(c.name)}
+              onMouseLeave={() => !trav && setHoverCls((h) => (h === c.name ? null : h))}
               onClick={() => !moved.current && onSelectClass?.(c.name)}
               style={{ cursor: trav ? 'default' : 'grab' }}>
               <title>{`${c.name} · 관계 ${deg[c.name] ?? 0}개 · 속성 ${c.attrs.length}개`}</title>
@@ -584,9 +676,58 @@ function Canvas({
                   {dispLabel(c.name)}
                 </text>
               </motion.g>
+
+              {/* 호버 요약 — 관계 수와 허브 여부. 클릭 전에 판단할 근거가 된다. */}
+              {!trav && hoverCls === c.name && !dragId.current && !linkDrag && (() => {
+                const txt = `${c.name} · 관계 ${focusRelCount}개${hub ? ' · 핵심(연결 TOP 5)' : ''}`;
+                const w = txt.length * 6.6 + 16;
+                return (
+                  <g transform={`translate(0 ${CLASS_R + 22})`} style={{ pointerEvents: 'none' }}>
+                    <rect x={-w / 2} y={0} width={w} height={19} rx={4} fill="#212121" opacity={0.92} />
+                    <text x={0} y={13.5} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff">{txt}</text>
+                  </g>
+                );
+              })()}
+
+              {/* ＋ 배지 — 클릭=속성·관계 추가, 다른 노드로 드래그=관계 연결 */}
+              {!trav && hoverCls === c.name && !dragId.current && !linkDrag && !spaceDown && (
+                <g
+                  transform={`translate(${CLASS_R * 0.95} ${-CLASS_R * 0.95})`}
+                  style={{ cursor: 'crosshair' }}
+                  onMouseDown={(ev) => {
+                    ev.stopPropagation();
+                    const q = toSvg(ev);
+                    setLinkDrag({ from: c.name, sx: q.x, sy: q.y, x: q.x, y: q.y, moved: false });
+                  }}
+                  onClick={(ev) => ev.stopPropagation()}
+                >
+                  <title>클릭=속성·관계 추가 · 드래그=다른 클래스로 관계 연결</title>
+                  <circle r={9.5} fill={ADD} stroke="#fff" strokeWidth={1.4} />
+                  <path d="M -4.5 0 H 4.5 M 0 -4.5 V 4.5" stroke="#fff" strokeWidth={2} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
+                </g>
+              )}
             </motion.g>
           );
         })}
+
+        {/* ＋ 드래그 중 — 커서(또는 스냅된 대상)까지 예상 연결선 */}
+        {linkDrag && linkDrag.moved && (() => {
+          const a = simP(linkDrag.from);
+          if (!a) return null;
+          const snap = classes.find((c) => {
+            if (c.name === linkDrag.from) return false;
+            const t = simP(c.name);
+            return !!t && Math.hypot(t.x - linkDrag.x, t.y - linkDrag.y) < CLASS_R + 14;
+          });
+          const t = snap ? simP(snap.name) : null;
+          const end = t ?? { x: linkDrag.x, y: linkDrag.y };
+          return (
+            <g style={{ pointerEvents: 'none' }}>
+              <path d={`M ${a.x} ${a.y} L ${end.x} ${end.y}`} fill="none" stroke={ADD} strokeWidth={2.4} strokeDasharray="7 5" markerEnd="url(#aradd)" />
+              {t && <path d={hexPath(CLASS_R + 7)} transform={`translate(${t.x} ${t.y})`} fill="none" stroke={ADD} strokeWidth={2} strokeDasharray="4 4" />}
+            </g>
+          );
+        })()}
 
         {/* 재방문 컬럼 헤드 — 같은 클래스가 뒤쪽 hop 의 대표로 다시 등장할 때.
              클래스 노드는 클래스당 하나만 그려지므로(모프 애니메이션 유지) 그
