@@ -345,6 +345,23 @@ function QueryView() {
     return n;
   }, [shown, scenario]);
   const activeInstances = useMemo(() => allSteps.slice(0, litCount).flat(), [allSteps, litCount]);
+  // 시나리오 드롭다운 — 네이티브 select 는 OS 스타일이라 톤을 못 입힌다.
+  const [qOpen, setQOpen] = useState(false);
+  const ddRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!qOpen) return;
+    const away = (e: MouseEvent) => {
+      if (!ddRef.current?.contains(e.target as Node)) setQOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setQOpen(false);
+    document.addEventListener('mousedown', away);
+    window.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [qOpen]);
+
   const [picked, setPicked] = useState<Instance | null>(null);
   const [openStep, setOpenStep] = useState<number | null>(null);
   useEffect(() => {
@@ -354,39 +371,83 @@ function QueryView() {
 
   return (
     <div className="p-5">
-      {/* 질의 입력 줄 */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 flex items-center gap-2 border border-brand rounded px-3 py-2 bg-white">
+      {/* 질의 입력 줄 — 아래 본문 그리드와 같은 컬럼(1fr / 400px)이라
+           시나리오 선택 묶음이 '추론 과정' 패널과 정확히 폭을 맞춘다. */}
+      <div className="grid grid-cols-[1fr_400px] gap-3 mb-3">
+        <div className="flex items-center gap-2 border border-brand rounded px-3 h-[38px] bg-white">
           <span className="text-ink-mid text-[13px]">🔍</span>
           <span className="text-[12.5px] font-semibold text-ink truncate">{scenario.question}</span>
         </div>
-        <select
-          className="h-[38px] border border-line rounded px-2 text-[11.5px] font-semibold text-ink-dark bg-white max-w-[220px]"
-          value={scenario.id}
-          onChange={(e) => {
-            const s = SCENARIOS.find((x) => x.id === e.target.value);
-            if (s) reset(s);
-          }}
-        >
-          {SCENARIOS.map((s) => (
-            <option key={s.id} value={s.id}>
-              [{s.tag}] {s.question.slice(0, 22)}…
-            </option>
-          ))}
-          {EXTRA_QUESTIONS.map((q) => (
-            <option key={q} value={q} disabled>
-              {q.slice(0, 26)}… (준비 중)
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={run}
-          disabled={running}
-          className="h-[38px] px-4 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-60"
-        >
-          {running ? '실행 중…' : '▶ 실행'}
-        </button>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="relative flex-1 min-w-0" ref={ddRef}>
+            <button
+              type="button"
+              onClick={() => setQOpen((o) => !o)}
+              className={cn(
+                'w-full h-[38px] flex items-center gap-2 border rounded pl-2 pr-2.5 bg-white text-left transition-colors',
+                qOpen ? 'border-brand' : 'border-line hover:border-brand',
+              )}
+            >
+              <span className="pill bg-brand-tint text-brand border border-brand-tint flex-shrink-0">{scenario.tag}</span>
+              <span className="flex-1 min-w-0 truncate text-[11.5px] font-semibold text-ink-dark">{scenario.question}</span>
+              <svg width="9" height="9" viewBox="0 0 10 10" className={cn('flex-shrink-0 transition-transform', qOpen && 'rotate-180')}>
+                <path d="M1 3.2 L5 7 L9 3.2" fill="none" stroke="#666666" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {qOpen && (
+              <div className="absolute right-0 top-[42px] z-30 w-[420px] bg-white border border-line rounded shadow-xl overflow-hidden">
+                <div className="px-3 py-2 border-b border-line-soft bg-surface text-[10px] font-extrabold text-ink-mid">
+                  시연 시나리오 <span className="text-brand">{SCENARIOS.length}</span>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto py-1">
+                  {SCENARIOS.map((sc) => {
+                    const cur = sc.id === scenario.id;
+                    return (
+                      <button
+                        key={sc.id}
+                        type="button"
+                        onClick={() => {
+                          setQOpen(false);
+                          if (!cur) reset(sc);
+                        }}
+                        className={cn(
+                          'w-full flex items-start gap-2 px-3 py-2 text-left',
+                          cur ? 'bg-brand-bg' : 'hover:bg-surface',
+                        )}
+                      >
+                        <span className="pill bg-brand-tint text-brand border border-brand-tint flex-shrink-0 mt-[1px]">{sc.tag}</span>
+                        <span className={cn('flex-1 min-w-0 text-[11.5px] leading-snug', cur ? 'font-extrabold text-ink' : 'font-semibold text-ink-dark')}>
+                          {sc.question}
+                        </span>
+                        {cur && <span className="text-brand text-[11px] font-extrabold flex-shrink-0">✓</span>}
+                      </button>
+                    );
+                  })}
+
+                  <div className="mt-1 pt-1.5 border-t border-line-soft px-3 pb-1 text-[9.5px] font-extrabold text-ink-light">
+                    준비 중 · 동일 온톨로지로 확장 가능한 질의
+                  </div>
+                  {EXTRA_QUESTIONS.map((q) => (
+                    <div key={q} className="flex items-start gap-2 px-3 py-1.5 text-[11px] text-ink-light font-semibold leading-snug">
+                      <span className="w-1 h-1 rounded-full bg-line flex-shrink-0 mt-[6px]" />
+                      <span className="flex-1 min-w-0">{q}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={run}
+            disabled={running}
+            className="h-[38px] px-4 flex-shrink-0 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-60"
+          >
+            {running ? '실행 중…' : '▶ 실행'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-[1fr_400px] gap-3">

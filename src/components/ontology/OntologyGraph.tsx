@@ -150,6 +150,9 @@ function Canvas({
   const trav = useMemo(() => {
     if (!traverse) return null;
     const cols = allSteps.filter((s) => s.length);
+    // clsAt 은 클래스명 키라 같은 클래스가 두 hop 의 대표면 뒤쪽 컬럼이
+    // 헤드를 못 가진다. 컬럼 자체는 별도 배열(colAt)로 관리한다.
+    const colAt: Array<Pt & { hop: number; cls: string; repeat: boolean }> = [];
     const clsAt = new Map<string, Pt & { hop: number }>();
     const instAt = new Map<string, Pt>();
     const hidden = new Map<number, number>();
@@ -167,7 +170,11 @@ function Canvas({
       shown.forEach((id, i) => instAt.set(id, { x, y: T_INST_Y0 + i * T_INST_H }));
       maxRows = Math.max(maxRows, shown.length);
       const head = instById(ids[0]);
-      if (head && !clsAt.has(head.cls)) clsAt.set(head.cls, { x, y: 0, hop: ci });
+      if (head) {
+        const first = !clsAt.has(head.cls);
+        if (first) clsAt.set(head.cls, { x, y: 0, hop: ci });
+        colAt.push({ x, y: 0, hop: ci, cls: head.cls, repeat: !first });
+      }
     });
     // viewBox 는 실제 노드 좌표에서 구한다 — 공식으로 잡으면 컬럼이 적을 때
     // 빈 여백만 크게 잡혀 그래프가 구석에 몰린다.
@@ -181,13 +188,14 @@ function Canvas({
       minY = Math.min(minY, p.y - halfH);
       maxY = Math.max(maxY, p.y + halfH);
     };
-    clsAt.forEach((p) => bump(p, CLASS_R + 20, CLASS_R + 30));
+    colAt.forEach((p) => bump(p, CLASS_R + 20, CLASS_R + 30));
     instAt.forEach((p) => bump(p, 78, 52));
     if (!Number.isFinite(minX)) {
       minX = 0; minY = 0; maxX = 600; maxY = 400;
     }
     const M = 70;
     return {
+      colAt,
       clsAt,
       instAt,
       hidden,
@@ -196,6 +204,8 @@ function Canvas({
   }, [traverse, allSteps]);
 
   const CP = useCallback((n: string): Pt | null => (trav ? (trav.clsAt.get(n) ?? simP(n)) : simP(n)), [trav, simP]);
+  /** 개체 x 좌표가 속한 컬럼. 개체는 컬럼 x 에 정확히 정렬되므로 이걸로 역인덱싱한다. */
+  const colOfX = useCallback((x: number) => trav?.colAt.find((c) => Math.abs(c.x - x) < 2) ?? null, [trav]);
   const IP = useCallback((id: string): Pt | null => trav?.instAt.get(id) ?? null, [trav]);
   const visible = useCallback((n: string) => !trav || trav.clsAt.has(n), [trav]);
 
@@ -288,13 +298,12 @@ function Canvas({
 
   useEffect(() => {
     const mv = (e: MouseEvent) => {
-      if (panFrom.current) {
+      const pan = panFrom.current;
+      if (pan) {
+        // setView 업데이터는 지연 실행된다. 그 사이 mouseup 이 panFrom 을
+        // 비우면 ref 를 다시 읽을 때 null 이라 크래시한다 — 지역에 잡아 쓴다.
         const p = toSvg(e);
-        setView((v) => ({
-          ...v,
-          x: panFrom.current!.v.x - (p.x - panFrom.current!.p.x),
-          y: panFrom.current!.v.y - (p.y - panFrom.current!.p.y),
-        }));
+        setView((v) => ({ ...v, x: pan.v.x - (p.x - pan.p.x), y: pan.v.y - (p.y - pan.p.y) }));
         return;
       }
       const id = dragId.current;
@@ -384,8 +393,8 @@ function Canvas({
         </defs>
 
         {trav &&
-          [...trav.clsAt.entries()].map(([name, p]) => (
-            <g key={`bg-${name}`}>
+          trav.colAt.map((p) => (
+            <g key={`bg-${p.hop}`}>
               <rect x={p.x - T_COL_W / 2 + 12} y={trav.vb.y + 14} width={T_COL_W - 24} height={trav.vb.h - 34} rx={8} fill={BRAND} fillOpacity={0.035} stroke={BRAND} strokeOpacity={0.12} />
               <text x={p.x} y={trav.vb.y + 40} textAnchor="middle" fontSize={10} fontWeight={800} fill={BRAND}>hop {p.hop}</text>
             </g>
@@ -417,39 +426,69 @@ function Canvas({
           );
         })}
 
-        {/* 속성 위성 — 원 + 아래 작은 텍스트 */}
-        {showAttrs &&
-          (built.sim.nodes() as SimNode[]).filter((n) => n.isProp).map((n, i) => {
-            const hp = CP(n.host!);
-            if (!hp) return null;
-            const shown = visible(n.host!);
-            const op = trav ? (shown ? 0.14 : 0.03) : 1;
-            const p = trav ? hp : { x: n.x ?? 0, y: n.y ?? 0 };
-            return (
-              <motion.g key={n.id} animate={{ x: p.x, y: p.y, opacity: op }} transition={spring} style={{ pointerEvents: 'none' }}>
-                {!trav && <line x1={hp.x - p.x} y1={hp.y - p.y} x2={0} y2={0} stroke="#D9DDE2" strokeWidth={1} />}
-                <motion.g {...pop(i + classes.length)}>
-                  <circle r={PROP_R} fill={PROP_COLOR + '22'} stroke={PROP_COLOR} strokeWidth={1.4} />
-                  <text y={PROP_R + 10} textAnchor="middle" fontSize={8.5} fontWeight={600} fill="#7A828B">{dispLabel(n.label)}</text>
-                </motion.g>
-              </motion.g>
-            );
-          })}
+        {/* 속성 위성 — 원 + 아래 작은 텍스트.
+             원본과 동일하게 개별 pop 을 주지 않는다. 선과 원이 한 그룹에서
+             같이 나타나야 "밑선만 먼저 그려진" 어긋남이 없다.
+             레이어 전체만 순회 진입 시 페이드아웃한다. */}
+        {showAttrs && (
+          <motion.g
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: trav ? 0.1 : 1 }}
+            transition={{ duration: reduce ? 0 : 0.5 }}
+            style={{ pointerEvents: 'none' }}
+          >
+            {(built.sim.nodes() as SimNode[])
+              .filter((n) => n.isProp)
+              .map((n) => {
+                if (trav && !visible(n.host!)) return null;
+                const hp = CP(n.host!);
+                if (!hp) return null;
+                const p = trav ? hp : { x: n.x ?? 0, y: n.y ?? 0 };
+                return (
+                  <g key={n.id}>
+                    <line x1={hp.x} y1={hp.y} x2={p.x} y2={p.y} stroke={PROP_COLOR} strokeOpacity={0.32} strokeWidth={1.1} />
+                    <circle cx={p.x} cy={p.y} r={PROP_R} fill={PROP_COLOR + '22'} stroke={PROP_COLOR} strokeOpacity={0.65} strokeWidth={1.2} />
+                    <text x={p.x} y={p.y + PROP_R + 11} textAnchor="middle" fontSize={8.5} fontWeight={700} fill="#7A828B" opacity={0.9}>
+                      {dispLabel(n.label)}
+                    </text>
+                  </g>
+                );
+              })}
+          </motion.g>
+        )}
 
         {/* 클래스 → 개체 펼침선 */}
         {trav &&
           [...trav.instAt.keys()].map((id) => {
             const inst = instById(id)!;
-            const cp = CP(inst.cls);
             const p = IP(id);
-            if (!cp || !p) return null;
+            if (!p) return null;
+            // 펼침선은 **컬럼 대표 클래스**에서 내려온다.
+            // 개체의 소속 클래스로 잡으면, 그 클래스가 컬럼에 없을 때
+            // CP 가 force 좌표(화면 밖)로 폴백해 선이 화면 밖에서 날아온다.
+            const cp = colOfX(p.x);
+            if (!cp) return null;
             const on = litSet.has(id);
             const col = clsColor(inst.cls);
             // 원본과 동일한 베지어 펼침선 — 클래스에서 아래로 내려와 개체로
             const midY = (cp.y + CLASS_R + p.y) / 2;
             const d = `M ${cp.x} ${cp.y + CLASS_R} C ${cp.x} ${midY}, ${p.x} ${midY}, ${p.x} ${p.y - instR(on ? 'focus' : 'cand') - 5}`;
-            return <path key={`ci-${id}`} d={d} fill="none" stroke={on ? col : '#D3D7DC'} strokeWidth={on ? 1.4 : 0.9}
-              strokeDasharray={on ? undefined : '4 4'} opacity={on ? 0.5 : 0.35} />;
+            const hop0 = cp.hop;
+            const row = Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H));
+            const delay = reduce ? 0 : Math.min(hop0 * 0.1 + row * 0.04, 0.55);
+            return (
+              <motion.path
+                key={`ci-${id}`}
+                d={d}
+                fill="none"
+                stroke={on ? col : '#D3D7DC'}
+                strokeWidth={on ? 1.4 : 0.9}
+                strokeDasharray={on ? undefined : '4 4'}
+                initial={reduce ? false : { pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: on ? 0.5 : 0.35 }}
+                transition={{ duration: reduce ? 0 : 0.35, delay, ease: 'easeOut' }}
+              />
+            );
           })}
 
         {/* 개체 간 순회 엣지 */}
@@ -482,6 +521,7 @@ function Canvas({
           const p = CP(c.name);
           if (!p) return null;
           const shown = visible(c.name);
+          if (trav && !shown) return null;
           const on = activeClasses.includes(c.name);
           const hub = hubs.includes(c.name);
           const t = Math.sqrt((deg[c.name] ?? 0) / maxDeg);
@@ -513,6 +553,41 @@ function Canvas({
           );
         })}
 
+        {/* 재방문 컬럼 헤드 — 같은 클래스가 뒤쪽 hop 의 대표로 다시 등장할 때.
+             클래스 노드는 클래스당 하나만 그려지므로(모프 애니메이션 유지) 그
+             복제 헤드를 여기서 채운다. 없으면 그 컬럼만 헤드 없이 떠 보인다. */}
+        {trav &&
+          trav.colAt
+            .filter((c) => c.repeat)
+            .map((c) => {
+              const on = activeClasses.includes(c.cls);
+              const hub = hubs.includes(c.cls);
+              const t = Math.sqrt((deg[c.cls] ?? 0) / maxDeg);
+              const base = on ? BRAND : hub ? CORE : HIER;
+              return (
+                <motion.g
+                  key={`rh-${c.hop}`}
+                  animate={{ x: c.x, y: c.y }}
+                  transition={spring}
+                  initial={false}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  <motion.g
+                    initial={reduce ? false : { scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 240, damping: 24, delay: Math.min(c.hop * 0.1, 0.55) }}
+                  >
+                    <path d={hexPath(CLASS_R)} fill={shade(base, t)} stroke={base} strokeWidth={1.2 + t * 1.6} strokeDasharray="5 3"
+                      style={{ filter: `drop-shadow(0 0 ${4 + Math.round(t * 12)}px ${base}66)` }} />
+                    <path d={hexPath(CLASS_R * 0.46)} fill={base} fillOpacity={0.5 + t * 0.4} />
+                    <text y={CLASS_R + 15} textAnchor="middle" fontSize={11} fontWeight={800} fill="#212121">
+                      {dispLabel(c.cls)}
+                    </text>
+                  </motion.g>
+                </motion.g>
+              );
+            })}
+
         {/* 개체 노드 — 원본과 동일: 원형 · 클래스 색 상속 · 속성값 2줄 ·
              소속 클래스 위치에서 튀어나오는 등장 · hop 뱃지 · 앵커 '시작' 뱃지 */}
         {trav &&
@@ -529,14 +604,14 @@ function Canvas({
             const col = on ? clsColor(inst.cls) : '#8E979F';
             const lines = attrLines(inst, foc ? 2 : 1);
             const cp = CP(inst.cls) ?? p;
-            const hop = [...trav.clsAt.values()].find((c) => Math.abs(c.x - p.x) < 2)?.hop;
+            const hop = colOfX(p.x)?.hop;
             const fillA = isSel ? '3a' : isAnchor ? '30' : on ? '1c' : '12';
             return (
               <motion.g
                 key={id}
                 initial={reduce ? false : { x: cp.x, y: cp.y, scale: 0, opacity: 0 }}
                 animate={{ x: p.x, y: p.y, scale: 1, opacity: foc ? 1 : 0.5 }}
-                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26, delay: Math.min((hop ?? 0) * 0.1, 0.6) }}
+                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26, delay: Math.min((hop ?? 0) * 0.1 + Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H)) * 0.05, 0.6) }}
                 onClick={(e) => { e.stopPropagation(); onSelectInstance?.(inst); }}
                 style={{ cursor: 'pointer' }}
               >
@@ -583,10 +658,10 @@ function Canvas({
           })}
 
         {trav &&
-          [...trav.clsAt.entries()].map(([name, p]) => {
+          trav.colAt.map((p) => {
             const n = trav.hidden.get(p.hop) ?? 0;
             return n ? (
-              <text key={`h-${name}`} x={p.x} y={trav.vb.y + trav.vb.h - 24} textAnchor="middle" fontSize={10} fontWeight={700} fill="#B9BFC6">+{n}개</text>
+              <text key={`h-${p.hop}`} x={p.x} y={trav.vb.y + trav.vb.h - 24} textAnchor="middle" fontSize={10} fontWeight={700} fill="#B9BFC6">+{n}개</text>
             ) : null;
           })}
       </svg>
