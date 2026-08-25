@@ -24,8 +24,12 @@ import { buildSim, simViewBox, degreeMap, shade, dispLabel, CLASS_R, PROP_R, PRO
 const BRAND = '#CB2C10';
 const DEEP = '#A82410';
 /** 허브(연결 TOP 5) — 원본의 앰버 자리. */
-const CORE = '#B8791F';
-const HIER = '#7C8695';
+/* 노드 팔레트 — 화이트 배경 기준.
+   blur glow 는 어두운 바닥에서만 빛으로 읽힌다. 흰 배경에서는 뿌연 때로
+   보일 뿐이라 동심 헤일로 링으로 대체했다. 임팩트는 밝기가 아니라
+   채도·명도 대비에서 나온다. */
+const CORE = '#D98A00'; // 허브 TOP5 — 앰버
+const HIER = '#3D4E8F'; // 일반 클래스 — 인디고(화이트 대비 8.4:1)
 /** 추가·연결 진행 색 — 확정(브랜드 레드)과 구분되는 '작업 중' 파랑. */
 const ADD = '#1F5BB8';
 
@@ -46,6 +50,32 @@ function hexPath(r: number) {
     d += `${i ? 'L' : 'M'}${(r * Math.cos(a)).toFixed(2)} ${(r * Math.sin(a)).toFixed(2)}`;
   }
   return d + 'Z';
+}
+
+/**
+ * 중심 → 방향 단위벡터로 r 만큼 잘라낸 점.
+ * 선은 중심을 기준으로 잡되 보이는 구간은 노드 경계부터 시작한다 —
+ * 안 자르면 선이 노드를 뚫고 들어가 화살촉이 도형 안에 묻힌다.
+ */
+/** 색마다 화살촉 마커가 따로 필요하다 — SVG marker 는 stroke 색을 못 물려받는다. */
+const ARROW_COLORS = ['#CB2C10', '#D98A00', '#3D4E8F', '#C2C7CD', '#1F5BB8'];
+const arrowId = (c: string) => `ar${c.replace('#', '')}`;
+
+/**
+ * 라벨 폭 추정 — 한글은 전각이라 라틴의 두 배 가까이 먹는다.
+ * 글자수 × 상수로 잡으면 한글 라벨이 필 밖으로 삐져나온다.
+ */
+function textW(t: string, size: number) {
+  let w = 0;
+  for (const ch of t) w += /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF]/.test(ch) ? 1 : 0.55;
+  return w * size;
+}
+
+function clipTo(from: Pt, to: Pt, r: number): Pt {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const d = Math.hypot(dx, dy) || 1e-6;
+  return { x: to.x - (dx / d) * r, y: to.y - (dy / d) * r };
 }
 
 /** 진행 방향에 수직으로 살짝 휜 곡선 (원본 edgeGeom). */
@@ -481,6 +511,11 @@ function Canvas({
           <marker id="aradd" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L8,4 L0,8 Z" fill={ADD} />
           </marker>
+          {ARROW_COLORS.map((c) => (
+            <marker key={c} id={arrowId(c)} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill={c} />
+            </marker>
+          ))}
         </defs>
 
         {trav &&
@@ -501,11 +536,17 @@ function Canvas({
           const b = CP(r.range);
           if (!a || !b) return null;
           const on = relSet.has(r.uri);
-          const g = edgeGeom(a, b, i % 2 ? 0.09 : -0.09);
+          // 보이는 구간은 노드 경계부터. 도착 쪽은 화살촉 자리만큼 더 물린다.
+          const sc = clipTo(b, a, CLASS_R + 2);
+          const tc = clipTo(a, b, CLASS_R + 6);
+          const g = edgeGeom(sc, tc, i % 2 ? 0.09 : -0.09);
           const live = trav || relLive(r);
           const op = trav ? (on ? 0.9 : 0.16) : dimming ? (live ? 1 : 0.07) : on ? 0.9 : 0.55;
-          // 강조된 엣지는 브랜드색으로 끌어올리고 라벨을 필로 띄운다.
+          // 강조된 엣지는 라벨을 필로 띄운다.
           const hot = !trav && dimming && live;
+          // 선 색 = 출발 클래스 색. 질의 점등만 브랜드 레드로 덮는다.
+          const eCol = on ? BRAND : clsColor(r.domain);
+          const strong = on || hot;
           return (
             <motion.g
               key={r.uri}
@@ -514,20 +555,30 @@ function Canvas({
               animate={{ opacity: 1 }}
               transition={{ duration: reduce ? 0 : 0.3, delay: reduce ? 0 : tEdge(r.domain, r.range) }}
             >
-              <path d={g.d} fill="none" stroke={on || hot ? BRAND : '#C2C7CD'} strokeWidth={on || hot ? 1.8 : 1.1} opacity={op}
-                strokeDasharray={trav ? '5 5' : undefined} markerEnd={on || hot ? 'url(#ar)' : 'url(#ard)'} />
-              {!trav && (
-                <g opacity={op}>
-                  {hot && (
-                    <rect x={g.mx - (r.name.length * 5.2 + 9) / 2} y={g.my - 15} width={r.name.length * 5.2 + 9} height={14} rx={7}
-                      fill="#fff" stroke={BRAND} strokeWidth={1} />
-                  )}
-                  <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={hot ? 800 : 700} fill={on || hot ? BRAND : '#98A0A8'}
-                    style={hot ? undefined : { paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>
-                    {r.name}
-                  </text>
-                </g>
+              {/* 강조 시 굵은 후광 한 겹 — 겹친 선들 사이에서 경로가 읽힌다 */}
+              {strong && <path d={g.d} fill="none" stroke={eCol} strokeOpacity={0.16} strokeWidth={6} strokeLinecap="round" opacity={op} />}
+              <path d={g.d} fill="none" stroke={strong ? eCol : '#C2C7CD'} strokeWidth={strong ? 1.8 : 1.1} opacity={op}
+                strokeDasharray={trav ? '5 5' : undefined} markerEnd={`url(#${arrowId(strong ? eCol : '#C2C7CD')})`} />
+              {/* 흐름 점선 — 방향을 읽히게 한다 */}
+              {!trav && !reduce && (
+                <path className="og-flowdash" d={g.d} fill="none" stroke={eCol} strokeWidth={strong ? 2.4 : 1.6}
+                  strokeDasharray="7 45" strokeLinecap="round" opacity={op * (strong ? 1 : 0.45)} />
               )}
+              {!trav && (() => {
+                // 라벨은 항상 흰 필 위에 올린다 — 선 위에 맨몸으로 얹으면
+                // 겹친 선과 글자가 섞여서 못 읽는다.
+                const fs = 9.5;
+                const w = textW(r.name, fs) + 16;
+                return (
+                  <g opacity={op}>
+                    <rect x={g.mx - w / 2} y={g.my - 9} width={w} height={18} rx={9}
+                      fill="#fff" fillOpacity={0.96} stroke={strong ? eCol : '#DFE3E7'} strokeWidth={1} />
+                    <text x={g.mx} y={g.my + 3.4} textAnchor="middle" fontSize={fs} fontWeight={hot ? 800 : 700} fill={strong ? eCol : '#7A828B'}>
+                      {r.name}
+                    </text>
+                  </g>
+                );
+              })()}
             </motion.g>
           );
         })}
@@ -669,8 +720,10 @@ function Canvas({
                     transition={{ duration: 3.4, repeat: Infinity, delay: (i % 7) * 0.4 }} />
                 )}
                 {sel && <path d={hexPath(CLASS_R + 5)} fill="none" stroke={BRAND} strokeWidth={1.4} strokeDasharray="3 3" />}
-                <path d={hexPath(CLASS_R)} fill={shade(base, t)} stroke={base} strokeWidth={1.2 + t * 1.6}
-                  style={{ filter: `drop-shadow(0 0 ${4 + Math.round(t * 12)}px ${base}66)` }} />
+                {/* 헤일로 2겹 — 흰 배경에서 '빛나는' 인상을 만드는 건 블러가 아니라 링이다 */}
+                <path d={hexPath(CLASS_R + 11)} fill="none" stroke={base} strokeWidth={1} opacity={0.08 + t * 0.06} />
+                <path d={hexPath(CLASS_R + 6)} fill="none" stroke={base} strokeWidth={1.6} opacity={0.16 + t * 0.12} />
+                <path d={hexPath(CLASS_R)} fill={shade(base, t)} stroke={base} strokeWidth={1.2 + t * 1.6} />
                 <path d={hexPath(CLASS_R * 0.46)} fill={base} fillOpacity={0.5 + t * 0.4} style={{ pointerEvents: 'none' }} />
                 <text y={CLASS_R + 15} textAnchor="middle" fontSize={11} fontWeight={800} fill="#212121" style={{ pointerEvents: 'none' }}>
                   {dispLabel(c.name)}
@@ -753,8 +806,8 @@ function Canvas({
                     animate={{ scale: 1, opacity: 1 }}
                     transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 240, damping: 24, delay: Math.min(c.hop * 0.1, 0.55) }}
                   >
-                    <path d={hexPath(CLASS_R)} fill={shade(base, t)} stroke={base} strokeWidth={1.2 + t * 1.6} strokeDasharray="5 3"
-                      style={{ filter: `drop-shadow(0 0 ${4 + Math.round(t * 12)}px ${base}66)` }} />
+                    <path d={hexPath(CLASS_R + 6)} fill="none" stroke={base} strokeWidth={1.6} opacity={0.16 + t * 0.12} />
+                    <path d={hexPath(CLASS_R)} fill={shade(base, t)} stroke={base} strokeWidth={1.2 + t * 1.6} strokeDasharray="5 3" />
                     <path d={hexPath(CLASS_R * 0.46)} fill={base} fillOpacity={0.5 + t * 0.4} />
                     <text y={CLASS_R + 15} textAnchor="middle" fontSize={11} fontWeight={800} fill="#212121">
                       {dispLabel(c.cls)}

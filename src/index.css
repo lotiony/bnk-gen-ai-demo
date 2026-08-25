@@ -73,3 +73,10 @@
   animation: ogShimmer 1.4s ease-in-out infinite;
   border-radius: 3px;
 }
+
+/* 관계선 흐름 — 점선을 흘려 방향을 읽히게 한다(climax og-flowdash 이식). */
+@keyframes ogFlow { to { stroke-dashoffset: -52 } }
+.og-flowdash { animation: ogFlow 1.7s linear infinite }
+@media (prefers-reduced-motion: reduce) {
+  .og-flowdash { animation: none; opacity: 0 }
+}
