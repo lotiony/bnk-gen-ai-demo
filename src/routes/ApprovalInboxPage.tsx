@@ -27,7 +27,7 @@ export default function ApprovalInboxPage() {
   const rejected = visible.filter((a) => a.state === 'rejected');
 
   return (
-    <div className="max-w-[1440px] mx-auto px-6 py-6">
+    <div className="max-w-[1760px] mx-auto px-6 py-6">
       <Crumb items={[{ label: '홈', to: '/' }, { label: '결재함' }]} />
 
       <div className="card px-6 py-5 mb-3.5">

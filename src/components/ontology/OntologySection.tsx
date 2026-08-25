@@ -7,7 +7,7 @@
  * 하위 3탭 — 그래프 설계 / 데이터 매핑 / Query.
  * Query 가 시연의 클라이맥스다(핸드오프 화면 4).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import OntologyGraph from './OntologyGraph';
 import {
@@ -141,11 +141,11 @@ function GraphDesign() {
       </div>
 
       <div className="grid grid-cols-[1fr_260px] gap-3">
-        <div className="border border-line-soft rounded bg-surface-soft h-[430px] overflow-hidden">
+        <div className="border border-line-soft rounded bg-surface-soft h-[560px] overflow-hidden">
           <OntologyGraph showAttrs={showAttrs} onSelect={setSelected} selected={selected} />
         </div>
 
-        <div className="border border-line-soft rounded p-3.5 bg-white overflow-y-auto h-[430px]">
+        <div className="border border-line-soft rounded p-3.5 bg-white overflow-y-auto h-[560px]">
           {!cls ? (
             <div className="text-[11.5px] text-ink-mid font-semibold text-center pt-16 leading-relaxed">
               그래프에서 클래스를 클릭하면
@@ -274,7 +274,7 @@ function MappingView() {
       </div>
 
       <div className="border border-line-soft rounded overflow-hidden">
-        <div className="max-h-[380px] overflow-y-auto">
+        <div className="max-h-[520px] overflow-y-auto">
           <table className="w-full text-[11.5px]">
             <thead className="bg-surface-soft sticky top-0">
               <tr className="text-ink-mid">
@@ -363,6 +363,21 @@ function QueryView() {
   const activeRelations = [...new Set(lit.flatMap((s) => s.lightRelations ?? []))];
   const done = shown >= scenario.steps.length;
 
+  // hop = 그 클래스가 처음 점등된 스텝 순서. 순회 모드의 컬럼이 된다.
+  const hopOf = useMemo(() => {
+    const m: Record<string, number> = {};
+    let hop = 0;
+    for (const st of lit) {
+      const fresh = (st.lightClasses ?? []).filter((c) => !(c in m));
+      if (!fresh.length) continue;
+      fresh.forEach((c) => (m[c] = hop));
+      hop += 1;
+    }
+    return m;
+  }, [shown, scenario]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const anchorClass = scenario.steps.find((st) => st.kind === 'anchor')?.lightClasses?.[0] ?? null;
+
   return (
     <div className="p-5">
       {/* 질의 입력 줄 */}
@@ -403,20 +418,39 @@ function QueryView() {
       <div className="grid grid-cols-[1fr_400px] gap-3">
         {/* 좌: 그래프 순회 */}
         <div>
-          <div className="text-[10.5px] text-ink-mid font-semibold mb-1.5">
-            온톨로지 순회 — 질문을 실행하면 앵커부터 관계를 타고 경로가 펼쳐집니다
+          <div className="text-[10.5px] text-ink-mid font-semibold mb-1.5 flex items-center gap-2">
+            <span>온톨로지 순회 — 앵커부터 관계를 타고 hop 순서로 펼쳐집니다</span>
+            {shown > 0 && (
+              <span className="pill bg-brand-tint text-brand border border-brand-tint">
+                {Object.keys(hopOf).length} 클래스 · {activeRelations.length} 관계 · {Math.max(0, ...Object.values(hopOf)) + (shown ? 1 : 0)} hop
+              </span>
+            )}
+            {running && (
+              <span className="inline-flex items-center gap-1">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-brand"
+                    style={{ animation: 'ogDot 1.1s ease-in-out infinite', animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </span>
+            )}
           </div>
-          <div className="border border-line-soft rounded bg-surface-soft h-[440px] overflow-hidden">
+          <div className="border border-line-soft rounded bg-surface-soft h-[600px] overflow-hidden">
             <OntologyGraph
               activeClasses={activeClasses}
               activeRelations={activeRelations}
+              hopOf={hopOf}
+              anchor={anchorClass}
+              running={running}
               showAttrs={false}
             />
           </div>
         </div>
 
         {/* 우: 추론 과정 */}
-        <div className="border border-line-soft rounded bg-white h-[464px] overflow-y-auto">
+        <div className="border border-line-soft rounded bg-white h-[624px] overflow-y-auto">
           <div className="px-3.5 py-2.5 border-b border-line-soft bg-brand-bg sticky top-0">
             <div className="text-[11.5px] font-extrabold text-ink">추론 과정</div>
             <div className="text-[10.5px] text-ink-dark font-semibold mt-0.5 leading-relaxed">
@@ -437,7 +471,7 @@ function QueryView() {
               {lit.map((s, i) => {
                 const tone = STEP_TONE[s.kind];
                 return (
-                  <div key={i} className="flex gap-2.5">
+                  <div key={i} className="flex gap-2.5 og-step">
                     <div className="flex flex-col items-center flex-shrink-0">
                       <span className="w-5 h-5 rounded-full bg-brand text-white text-[9.5px] font-extrabold inline-flex items-center justify-center">
                         {i + 1}
@@ -465,6 +499,17 @@ function QueryView() {
                 );
               })}
 
+              {running && (
+                <div className="flex gap-2.5">
+                  <div className="w-5 flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5 pt-1">
+                    {[92, 78, 64].map((w, i) => (
+                      <div key={i} className="og-skel h-[11px]" style={{ width: `${w}%`, animationDelay: `${i * 0.12}s` }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {done && <AnswerCard s={scenario} />}
             </div>
           )}
@@ -476,7 +521,7 @@ function QueryView() {
 
 function AnswerCard({ s }: { s: QueryScenario }) {
   return (
-    <div className="mt-1 border border-brand-tint bg-brand-bg rounded p-3.5">
+    <div className="og-answer mt-1 border border-brand-tint bg-brand-bg rounded p-3.5">
       <div className="text-[11px] font-extrabold text-ink uppercase tracking-[0.3px] mb-2">답변</div>
 
       <ul className="space-y-1 mb-2.5">

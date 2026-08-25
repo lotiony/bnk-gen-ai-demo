@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmberLink - Demo Day</title>
+<link rel="icon" type="image/png" href="assets/ember-icon-dark.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  /* ── LIGHT theme ── */
+  --bg:#f5f7fb; --surface:#ffffff; --card:#ffffff;
+  --border:#e4e8f1; --line:#eef1f7;
+  --text:#161c2e; --muted:#5c6883; --tagline:#8a94ac;
+  --accent:#F0483A; --accent-bright:#FF5A4D; --accent2:#F97316;
+  --teal:#0FA894; --teal-bright:#22c3ad; --teal-ink:#0b7d6e;
+  --green:#16a34a;
+  --sh:0 10px 34px rgba(22,28,46,.09);
+  --sh-sm:0 4px 16px rgba(22,28,46,.07);
+  --font:'Poppins','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic','맑은 고딕',system-ui,sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden;height:100vh;
+  /* 한글은 기본값이면 음절 단위로 끊긴다("변환까/지"). 단어 단위로만 넘긴다.
+     끊을 곳이 없는 긴 영문 토큰(URL 등)만 예외로 강제 분리한다. */
+  word-break:keep-all;overflow-wrap:break-word;}
+.deck{width:100vw;height:100vh;overflow:hidden;position:relative;}
+.slide{
+  width:100vw;height:100vh;display:none;flex-direction:column;
+  justify-content:center;align-items:center;padding:54px 90px;
+  position:absolute;top:0;left:0;opacity:0;transition:opacity .4s ease;text-align:center;
+}
+.slide.active{display:flex;opacity:1;}
+
+.slide-number{position:fixed;bottom:24px;right:36px;font-size:13px;color:var(--tagline);z-index:100;font-weight:600;letter-spacing:.05em;}
+.progress-bar{position:fixed;top:0;left:0;height:3px;background:var(--accent);transition:width .4s ease;z-index:120;}
+/* 코너 로고 높이는 타이틀 슬라이드 로고(.t-logo)와 동일하게 맞춘다 */
+.corner-logo{position:fixed;top:24px;left:32px;height:54px;opacity:.85;z-index:100;transition:opacity .3s;}
+.nav-hint{position:fixed;bottom:24px;left:36px;font-size:12px;color:var(--tagline);opacity:.7;letter-spacing:.04em;z-index:100;}
+
+.tag{
+  display:inline-block;background:rgba(15,168,148,.1);color:var(--teal-ink);
+  padding:7px 18px;border-radius:22px;font-size:13px;font-weight:700;
+  margin-bottom:22px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid rgba(15,168,148,.24);
+}
+.accent{color:var(--accent);}.teal{color:var(--teal-ink);}.green{color:var(--green);}.dim{color:var(--muted);}
+
+.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:-2;background:radial-gradient(1200px 640px at 50% 10%, rgba(15,168,148,.06), transparent 62%),radial-gradient(820px 520px at 88% 96%, rgba(255,90,77,.05), transparent 60%);}
+.grid-tex{position:fixed;inset:0;pointer-events:none;z-index:-2;
+  background-image:linear-gradient(rgba(22,28,46,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(22,28,46,.028) 1px,transparent 1px);
+  background-size:50px 50px;
+  -webkit-mask-image:radial-gradient(ellipse 86% 74% at 50% 42%,#000 44%,transparent 100%);
+  mask-image:radial-gradient(ellipse 86% 74% at 50% 42%,#000 44%,transparent 100%);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.slide.active .fade-up{animation:fadeUp .55s ease forwards;}
+.slide.active .fade-up.d1{animation-delay:.12s;opacity:0;}
+.slide.active .fade-up.d2{animation-delay:.26s;opacity:0;}
+.slide.active .fade-up.d3{animation-delay:.42s;opacity:0;}
+
+.headline{font-size:58px;font-weight:800;line-height:1.22;letter-spacing:-.02em;max-width:1220px;color:var(--text);}
+.headline.sm{font-size:48px;}
+.sub-line{margin-top:24px;font-size:19px;color:var(--muted);font-weight:400;line-height:1.6;max-width:860px;}
+.sub-line b{color:var(--text);font-weight:700;}
+
+/* ══ Title ══ */
+#titleSlide .t-logo{height:54px;margin-bottom:34px;opacity:.95;transition:transform .8s cubic-bezier(.5,0,.15,1);}
+#titleSlide.cover .t-logo{transform:translateY(197px) scale(2.6);}
+.t-foot{margin-top:44px;font-size:14px;color:var(--tagline);}
+.t-foot b{color:var(--muted);font-weight:700;}
+
+/* ══ Opening sequence — slide 1 내부 단계(0 표지 → 1~4 한 문장씩 → 5 캐치프레이즈) ══ */
+/* 단계마다 높이가 달라도 로고가 흔들리지 않도록 고정 높이 무대 */
+/* margin-bottom 은 그룹 전체를 위로 올리기 위한 것 — flex 가운데 정렬이 마진을 포함해
+   계산하므로, 아래 여백을 주면 로고+본문 묶음이 그 절반만큼 위로 올라간다. */
+.op-wrap{height:270px;margin-bottom:90px;width:100%;display:flex;justify-content:center;align-items:flex-start;}
+.op{display:none;max-width:1180px;width:100%;opacity:0;}
+#titleSlide[data-st="1"] .op1,
+#titleSlide[data-st="2"] .op2,
+#titleSlide[data-st="3"] .op3{display:block;animation:fadeUp .5s ease .18s forwards;}
+
+.op-line{font-size:47px;font-weight:800;line-height:1.32;letter-spacing:-.022em;color:var(--text);}
+.op-line b{color:var(--accent);font-weight:800;}
+.op-line .tl{color:var(--teal-ink);}
+.op-line.big{font-size:60px;}
+.op-sub{margin-top:20px;font-size:19px;color:var(--muted);font-weight:500;line-height:1.6;}
+.op-sub b{color:var(--text);font-weight:700;}
+.op-emoji{font-size:88px;line-height:1;margin-bottom:22px;}
+/* 다음 장으로 넘기는 질문. 여기서 던지고 2p 헤드라인이 답한다.
+   앞 문장과 한 줄로 붙이되 색과 굵기로만 무게를 준다. */
+.op-sub .q{color:var(--teal-ink);font-weight:800;}
+
+/* 2 · 시장 분위기 — 좌우 빈 공간에 떠다니는 뉴스 카드
+   .op2 는 fadeUp 애니메이션(transform)을 가지므로 그 자체가 절대배치 기준이 된다. */
+.op2,.op3{position:relative;}
+.ncard{position:absolute;width:300px;text-align:left;background:var(--card);
+  border:1px solid var(--border);border-radius:16px;padding:17px 20px;box-shadow:var(--sh-sm);
+  opacity:0;animation:nfade .6s ease forwards, ndrift 6s ease-in-out infinite;}
+.ncard .nhead{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.ncard .nsrc{font-size:12px;font-weight:800;letter-spacing:.06em;
+  color:var(--teal-ink);background:rgba(15,168,148,.1);border:1px solid rgba(15,168,148,.22);
+  border-radius:20px;padding:3px 10px;white-space:nowrap;}
+.ncard .ndate{font-size:12px;font-weight:700;color:var(--tagline);white-space:nowrap;}
+.ncard p{font-size:16.5px;font-weight:700;line-height:1.5;color:var(--text);}
+.ncard p b{color:var(--accent);}
+@keyframes nfade{to{opacity:.96;}}
+@keyframes ndrift{0%,100%{translate:0 0;}50%{translate:0 -13px;}}
+/* 위치·기울기·리듬을 조금씩 다르게 줘야 '떠다니는' 느낌이 난다 */
+.n1{left:-96px; top:-14px;   rotate:-2.2deg; animation-delay:.35s, .0s;   animation-duration:.6s, 6.4s;}
+.n2{left:-64px; top:186px; rotate:1.6deg;  animation-delay:.75s, .9s;   animation-duration:.6s, 7.2s;}
+.n3{right:-96px;top:-20px;     rotate:2deg;    animation-delay:.55s, .45s;  animation-duration:.6s, 6.8s;}
+.n4{right:-64px;top:180px; rotate:-1.5deg; animation-delay:.95s, 1.4s;  animation-duration:.6s, 7.6s;}
+/* 화면이 좁으면 가운데 문구와 겹치므로 숨긴다 */
+@media (max-width:1240px){.ncard{display:none;}}
+@media (prefers-reduced-motion:reduce){.ncard{animation:nfade .6s ease forwards;}}
+
+/* 1 · 팀 — 레퍼런스 로고월 */
+/* 로고월 = 좌측 '참여 프로젝트' 라벨 + 2줄 로고 묶음 */
+/* 라벨은 두 줄 묶음의 가운데가 아니라 1행 상단에 맞춘다 */
+.op-refs{display:flex;align-items:flex-start;justify-content:center;gap:20px;margin-top:26px;}
+.op-refs-label{flex:0 0 auto;text-align:right;font-size:14px;font-weight:800;color:var(--muted);
+  line-height:1.4;letter-spacing:.01em;border-right:1px solid var(--border);padding-right:20px;
+  /* 칩 안에서 로고가 세로 가운데라, 칩 최상단이 아니라 로고 눈높이에 맞춰 살짝 내린다 */
+  padding-top:7px;}
+.op-refs-walls{display:flex;flex-direction:column;gap:10px;}
+.op1 .logo-wall{margin:0;gap:10px;max-width:920px;}
+.op1 .logo-chip{width:132px;height:54px;padding:8px 9px;border-radius:11px;}
+/* 여백을 잘라낸 로고(logos_trim)를 칸에 꽉 채운다 */
+.op1 .logo-chip img{width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;}
+.op1 .logo-chip.txt{font-size:16px;font-weight:700;color:var(--text);}
+
+
+/* ③ 는 대화처럼 순서대로 — 질문 → 답변 → 결론 → 다리 질문.
+   묶음 전체가 한 번에 뜨면 이미 끝난 대화를 보는 것 같아 장면이 살지 않는다.
+   부모 페이드를 끄고 자식마다 시차를 준다. */
+
+/* 4 · 발견 — 시켜봤더니 */
+.op-ask{display:inline-flex;flex-direction:column;gap:10px;margin-bottom:28px;}
+.ask-row{display:flex;align-items:center;gap:12px;}
+.ask-row .who{font-size:34px;line-height:1;flex:0 0 auto;}
+.ask-bubble{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:12px 20px;font-size:19px;font-weight:700;color:var(--text);box-shadow:var(--sh-sm);}
+.ask-bubble.no{color:var(--accent);border-color:rgba(240,72,58,.32);background:rgba(240,72,58,.06);box-shadow:none;}
+
+/* ══ Slide 2 — staged: (0) single project centered → (1) shift left, depts appear ══ */
+#hookSlide{padding:38px 56px;}
+.hook2{display:flex;justify-content:center;align-items:center;width:100%;max-width:1340px;margin-top:44px;}
+.hook-left{flex:0 0 740px;width:740px;transition:transform .6s cubic-bezier(.3,.7,.2,1);}
+.hook-right{flex:0 0 0;min-width:0;height:0;opacity:0;overflow:hidden;
+  transition:opacity .45s ease;padding-left:0;}
+#hookSlide.stage1 .hook-right{flex:0 0 520px;height:auto;opacity:1;padding-left:48px;border-left:1px dashed var(--border);}
+.hook-lab{font-size:15.5px;font-weight:700;color:var(--muted);margin-bottom:18px;text-align:left;}
+.hook-lab b{color:var(--text);}
+
+/* project bar + bracket */
+.pbar-wrap{width:100%;max-width:700px;margin:0 auto;}
+.pbracket{position:relative;height:24px;border-top:2px solid var(--tagline);border-left:2px solid var(--tagline);border-right:2px solid var(--tagline);border-radius:11px 11px 0 0;margin-bottom:11px;
+  transform:scaleX(.4);opacity:0;transform-origin:center;}
+#hookSlide.play .pbracket{animation:brExpand .6s cubic-bezier(.2,.7,.2,1) .1s forwards;}
+@keyframes brExpand{to{transform:scaleX(1);opacity:1;}}
+.pbracket span{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--bg);padding:0 14px;font-size:14.5px;font-weight:800;color:var(--muted);white-space:nowrap;}
+/* 개발과 데이터 연계는 칼로 자르듯 나뉘지 않는다. 경계를 두면 앞 구간이
+   따로 떨어져 보여 에이전트 개발이 사소한 일처럼 읽힌다. 하나의 그라데이션으로
+   이어 붙이고, 라벨 위치로만 두 구간을 가리킨다. */
+.pbar{display:flex;height:80px;border-radius:15px;overflow:hidden;box-shadow:var(--sh-sm);
+  background:linear-gradient(155deg,#0FA894 0%,#35C0AE 24%,#C9E3DC 36%,#FFD2C4 45%,#FF8873 66%,#F0483A 100%);}
+.pseg{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#fff;
+  text-shadow:0 1px 3px rgba(22,28,46,.22);}
+.pseg.dev{flex:0 0 30%;}
+.pseg.data{flex:1;}
+
+/* connect lines + source chips */
+.hook-core{position:relative;width:100%;max-width:700px;height:200px;margin:6px auto 0;}
+.hook-core svg.connect{position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;}
+.connect path{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-dasharray:1;stroke-dashoffset:1;opacity:.5;}
+#hookSlide.play .connect path{animation:draw .7s ease forwards;}
+#hookSlide.play .connect path.l1{animation-delay:.55s;}
+#hookSlide.play .connect path.l2{animation-delay:.7s;}
+#hookSlide.play .connect path.l3{animation-delay:.85s;}
+#hookSlide.play .connect path.l4{animation-delay:1s;}
+@keyframes draw{to{stroke-dashoffset:0;}}
+.src-chip{position:absolute;top:138px;transform:translateX(-50%) translateY(8px);opacity:0;
+  background:var(--card);border:1px solid var(--border);border-radius:13px;padding:11px 16px;
+  font-size:15px;font-weight:700;color:var(--text);box-shadow:var(--sh-sm);white-space:nowrap;text-align:center;line-height:1.25;}
+.src-chip small{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px;}
+#hookSlide.play .src-chip{animation:pop .5s cubic-bezier(.2,.7,.2,1) forwards;}
+#hookSlide.play .src-chip.c1{animation-delay:.6s;}
+#hookSlide.play .src-chip.c2{animation-delay:.75s;}
+#hookSlide.play .src-chip.c3{animation-delay:.9s;}
+#hookSlide.play .src-chip.c4{animation-delay:1.05s;}
+@keyframes pop{to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.src-chip.kdoc{border-color:rgba(240,72,58,.4);}
+.kdoc-mini{display:inline-block;width:24px;height:15px;border-radius:2px;background:#fff;border:1px solid #d8b; position:relative;vertical-align:middle;margin-right:5px;}
+.kdoc-mini::before{content:'';position:absolute;top:1px;left:1px;right:1px;height:3px;background:var(--accent);border-radius:1px;}
+.kdoc-mini::after{content:'';position:absolute;top:6px;left:1px;width:60%;height:2px;background:#c9d0e0;box-shadow:0 3px 0 #c9d0e0;}
+
+/* 부서 막대 = 좌측에서 하나씩 순차로 날아 들어옴 (CSS fly-in) */
+.dept-row{display:flex;align-items:center;gap:12px;margin-bottom:15px;opacity:0;transform:translateX(-460px) scale(.85);}
+#hookSlide.stage1 .dept-row{animation:copyIn .58s cubic-bezier(.32,.72,.32,1.03) forwards;}
+#hookSlide.stage1 .dept-row.r1{animation-delay:.2s;}
+#hookSlide.stage1 .dept-row.r2{animation-delay:.7s;}
+#hookSlide.stage1 .dept-row.r3{animation-delay:1.2s;}
+@keyframes copyIn{0%{opacity:0;transform:translateX(-460px) scale(.85);}30%{opacity:1;}100%{opacity:1;transform:translateX(0) scale(1);}}
+.dept-name{flex:0 0 86px;font-size:14.5px;font-weight:700;color:var(--text);text-align:right;white-space:nowrap;}
+.dept-bar{flex:1;display:flex;height:40px;border-radius:10px;box-shadow:var(--sh-sm);}
+.dept-bar{background:linear-gradient(155deg,#0FA894 0%,#35C0AE 24%,#C9E3DC 36%,#FFD2C4 45%,#FF8873 66%,#F0483A 100%);border-radius:10px;}
+.dept-bar .db-dev{flex:0 0 30%;}
+.dept-bar .db-data{flex:1;}
+.dept-tag{margin-top:18px;opacity:0;text-align:left;}
+#hookSlide.stage1 .dept-tag{animation:fadeUp .5s ease 1.9s forwards;}
+.pain-tag{display:inline-block;font-size:20px;font-weight:800;color:var(--accent);line-height:1.35;text-align:left;
+  background:rgba(240,72,58,.09);border:1px solid rgba(240,72,58,.3);border-radius:11px;padding:10px 18px;}
+.hook-pain{opacity:0;margin-top:20px;}
+#hookSlide.play .hook-pain{animation:fadeUp .5s ease 1.3s forwards;}
+
+/* ══ Slide (chart) ══ */
+#chartSlide{padding:40px 70px 30px;}
+.chart-wrap{width:100%;max-width:1180px;}
+.chart-svg{width:100%;height:auto;}
+.chart-svg text{font-family:var(--font);}
+.chart-el{transition:opacity .5s ease;}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.05s ease;}
+.draw.on{stroke-dashoffset:0;}
+.bar{transform:scaleY(0);transform-origin:bottom;transform-box:fill-box;transition:transform .65s cubic-bezier(.22,1,.36,1);}
+.bar.on{transform:scaleY(1);}
+
+/* ══ Solution — animated connected diagram ══ */
+.sol-diagram{position:relative;width:1120px;height:420px;margin-top:18px;}
+.sol-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
+.sol-lines .flow{fill:none;stroke-width:3;stroke-linecap:round;stroke-dasharray:1 15;animation:solflow 1.1s linear infinite;}
+.sol-lines .flow.a{stroke:#F0483A;}
+.sol-lines .flow.a.d1{animation-delay:-.36s;}.sol-lines .flow.a.d2{animation-delay:-.73s;}
+.sol-lines .flow.t{stroke:#0FA894;}
+.sol-lines .flow.t.d1{animation-delay:-.36s;}.sol-lines .flow.t.d2{animation-delay:-.73s;}
+@keyframes solflow{to{stroke-dashoffset:-16;}}
+.sol-node{position:absolute;width:170px;height:56px;background:#fff;border:1px solid var(--border);border-radius:13px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15.5px;text-align:center;z-index:2;}
+.sol-node.src::before,.sol-node.agt::before{content:'';width:9px;height:9px;border-radius:50%;margin-right:10px;flex-shrink:0;}
+.sol-node.src::before{background:var(--accent);}
+.sol-node.agt::before{background:var(--teal);}
+.sol-node.core{width:180px;height:140px;flex-direction:column;gap:5px;background:linear-gradient(135deg,#13b9a3,#0d9a87);border:none;color:#fff;box-shadow:0 16px 44px rgba(15,168,148,.34);}
+.sol-node.core .cl{font-size:12px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.85);}
+.sol-node.core .ct{font-size:21px;font-weight:800;line-height:1.15;}
+.sol-node.core::after{content:'';position:absolute;inset:-9px;border-radius:22px;border:2px solid rgba(15,168,148,.3);animation:corePulse 2.2s ease-in-out infinite;}
+@keyframes corePulse{0%,100%{opacity:.35;transform:scale(1);}50%{opacity:.85;transform:scale(1.04);}}
+.sol-tail{margin-top:34px;font-size:19px;color:var(--text);font-weight:500;}
+
+/* ══ Demo slide ══ */
+#demoSlide{padding:0;justify-content:flex-start;align-items:stretch;text-align:left;}
+.demo-wrap{display:flex;flex-direction:column;width:100vw;height:100vh;}
+.demo-bar{flex:0 0 auto;padding:11px 28px;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 2px 12px rgba(22,28,46,.06);}
+.demo-bar-top{display:flex;align-items:center;gap:14px;}
+.live-tag{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--accent);flex-shrink:0;}
+.live-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:livepulse 1.3s ease-in-out infinite;box-shadow:0 0 8px var(--accent);}
+@keyframes livepulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.8);}}
+.steps{display:flex;gap:6px;flex:1;}
+.step{flex:1;display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);cursor:pointer;transition:all .25s;min-width:0;}
+.step .sidx{width:19px;height:19px;border-radius:50%;background:#e9edf4;color:var(--muted);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step .slab{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* 라벨이 비어 있어도 칩 높이가 무너지지 않게 자리를 잡아둔다(내용 채우기 전 상태) */
+.step .slab:empty::before{content:"\00a0";}
+.step.on{border-color:var(--teal);background:rgba(15,168,148,.1);}
+.step.on .sidx{background:var(--teal);color:#fff;}
+.step.on .slab{color:var(--text);}
+.step.on.last{border-color:var(--accent);background:rgba(240,72,58,.09);}
+.step.on.last .sidx{background:var(--accent);color:#fff;}
+.step.done{opacity:.5;}
+/* 설명 줄 — 아직 비어 있어도 높이를 유지해 채울 때 레이아웃이 안 흔들리게 한다 */
+.demo-bar-cap{display:flex;align-items:baseline;gap:12px;margin-top:9px;flex-wrap:wrap;min-height:26px;}
+.demo-cap-title{font-size:21px;font-weight:800;color:var(--text);}
+.demo-cap-title .cnum{color:var(--teal-ink);}
+.demo-cap-sub{font-size:12px;font-weight:800;color:var(--accent2);background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);padding:2px 9px;border-radius:20px;}
+.demo-cap-sub:empty{display:none;}          /* 비면 빈 알약이 남지 않게 */
+.demo-cap-one{font-size:14.5px;color:var(--muted);font-weight:500;}
+.demo-cap-one b{color:var(--text);font-weight:700;}
+.demo-frame-wrap{flex:1;position:relative;background:#e9edf4;}
+/* 단계 설명 화면 — 시연 직전에 "이번엔 뭘 보여줄지"를 한 장으로 띄운다.
+   iframe 을 덮기만 하고 언마운트하지 않는다. 매번 다시 마운트하면 앱이 리로드돼
+   로그인·프로젝트 상태가 날아가고 시연 흐름이 끊긴다. */
+.demo-explain{position:absolute;inset:0;z-index:4;background:var(--bg);
+  display:none;flex-direction:column;justify-content:center;align-items:center;
+  padding:0 96px;text-align:center;}
+.demo-explain.show{display:flex;}
+.dx-body{display:flex;flex-direction:column;align-items:center;}
+.demo-explain.show .dx-body > *{animation:fadeUp .5s ease backwards;}
+.demo-explain.show .dx-body > *:nth-child(2){animation-delay:.08s;}
+.demo-explain.show .dx-body > *:nth-child(3){animation-delay:.18s;}
+.demo-explain.show .dx-body > *:nth-child(4){animation-delay:.28s;}
+.dx-num{font-size:13px;font-weight:900;letter-spacing:.18em;color:var(--teal-ink);
+  background:rgba(15,168,148,.1);border:1px solid rgba(15,168,148,.28);
+  border-radius:22px;padding:6px 18px;margin-bottom:26px;}
+.dx-title{font-size:58px;font-weight:800;letter-spacing:-.025em;line-height:1.2;color:var(--text);}
+.dx-one{margin-top:24px;font-size:23px;font-weight:500;color:var(--muted);line-height:1.6;max-width:920px;}
+.dx-one b{color:var(--text);font-weight:800;}
+/* 자체 실측 수치 — 효과 줄에 묻히면 안 읽힌다. 제목급으로 세운다. */
+.dx-stats{margin-top:26px;display:flex;align-items:flex-end;justify-content:center;gap:26px;flex-wrap:wrap;}
+.dx-stats:empty{display:none;}
+.dx-stats .st{display:flex;flex-direction:column;align-items:center;opacity:0;
+  animation:fadeUp .5s ease both;}
+.dx-stats .st b{font-size:52px;font-weight:900;line-height:1;letter-spacing:-.03em;color:var(--teal-ink);}
+.dx-stats .st small{font-size:14px;font-weight:700;color:var(--muted);margin-top:8px;}
+.dx-stats .st.dim b{color:var(--tagline);font-size:40px;}
+.dx-stats .st.dim small{color:var(--tagline);font-weight:600;}
+.dx-stats .sep{width:1px;align-self:stretch;background:var(--border);margin:6px 0;}
+
+/* 무엇을 하는지 — 단계 흐름도.
+   노드가 왼쪽부터 하나씩 서고, 그 사이를 데이터가 흘러간다. 정지된 그림이 아니라
+   "지금 지나가는 중"으로 보이게 해서 4p 해법 다이어그램(solflow)과 결을 맞춘다. */
+.dx-flow{margin-top:36px;display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;max-width:1140px;}
+.dx-flow:empty{display:none;}
+.dx-flow .n{position:relative;background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:13px 20px;font-size:16px;font-weight:700;color:var(--text);box-shadow:var(--sh-sm);white-space:nowrap;
+  opacity:0;animation:dxPop .52s cubic-bezier(.2,.7,.2,1) both;}
+@keyframes dxPop{from{opacity:0;transform:translateY(10px) scale(.94);}to{opacity:1;transform:none;}}
+.dx-flow .n.hi{border-color:rgba(15,168,148,.5);color:var(--teal-ink);background:rgba(15,168,148,.08);}
+/* 강조 노드는 숨 쉬듯 테두리가 번진다 */
+.dx-flow .n.hi::after{content:"";position:absolute;inset:-6px;border-radius:17px;
+  border:2px solid rgba(15,168,148,.34);animation:dxRing 2.3s ease-in-out infinite;pointer-events:none;}
+@keyframes dxRing{0%,100%{opacity:.28;transform:scale(1);}50%{opacity:.85;transform:scale(1.035);}}
+/* 노드 사이 — 선 위로 점이 흘러간다 */
+.dx-flow .a{position:relative;flex:0 0 auto;width:52px;height:2px;margin:0 9px;
+  background:var(--border);border-radius:2px;opacity:0;animation:dxPop .4s ease both;}
+.dx-flow .a i{position:absolute;top:-3.5px;width:9px;height:9px;border-radius:50%;
+  background:var(--teal);box-shadow:0 0 0 3px rgba(15,168,148,.15);animation:dxRun 1.7s linear infinite;}
+@keyframes dxRun{0%{left:-9px;opacity:0;}18%{opacity:1;}82%{opacity:1;}100%{left:52px;opacity:0;}}
+
+/* 그래서 뭐가 좋은지 — 효과. 흐름이 다 선 뒤에 하나씩 올라온다 */
+.dx-list{margin-top:34px;display:flex;gap:34px;justify-content:center;flex-wrap:wrap;max-width:1140px;}
+.dx-list:empty{display:none;}
+.dx-list li{list-style:none;text-align:left;max-width:320px;font-size:16px;line-height:1.6;
+  color:var(--muted);padding-left:18px;position:relative;opacity:0;
+  animation:fadeUp .5s ease both;}
+.dx-list li::before{content:"";position:absolute;left:0;top:8px;width:8px;height:8px;
+  border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px rgba(15,168,148,.14);}
+.dx-list li b{color:var(--text);font-weight:800;}
+@media (prefers-reduced-motion:reduce){
+  .dx-flow .n,.dx-flow .a,.dx-list li{animation:none;opacity:1;}
+  .dx-flow .n.hi::after,.dx-flow .a i{animation:none;}
+}
+/* 외부 HTML 을 그대로 띄우는 설명 화면(예: 3개 어시스턴트 동시 사용 리포트).
+   임베드가 있으면 텍스트 카드 대신 화면을 꽉 채운다. */
+.dx-embed{display:none;width:100%;height:100%;border:0;background:#fff;}
+.demo-explain.embed{padding:0;}
+.demo-explain.embed .dx-body{display:none;}
+.demo-explain.embed .dx-embed{display:block;}
+#demoFrame{width:100%;height:100%;border:0;display:block;background:#fff;}
+
+/* ══ Business ══ */
+/* 사업화 경로 3단계 */
+.biz-path{display:flex;align-items:stretch;justify-content:center;gap:14px;max-width:1060px;width:100%;margin-top:30px;}
+.bp{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;text-align:left;box-shadow:var(--sh-sm);}
+.bp.now{border-color:rgba(240,72,58,.42);box-shadow:0 10px 30px rgba(240,72,58,.12);}
+.bp-n{font-size:11px;font-weight:900;letter-spacing:.14em;color:var(--teal-ink);}
+.bp.now .bp-n{color:var(--accent);}
+.bp-t{font-size:19px;font-weight:800;margin:6px 0 8px;color:var(--text);}
+.bp-d{font-size:13.5px;color:var(--muted);line-height:1.6;}
+.bp-arrow{align-self:center;font-size:22px;font-weight:900;color:var(--tagline);flex:0 0 auto;}
+.mode-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 26px;text-align:left;box-shadow:var(--sh-sm);}
+.mode-card.acc{border-top:3px solid var(--accent);}
+.mode-card.tl{border-top:3px solid var(--teal);}
+.mode-h{font-size:19px;font-weight:800;color:var(--text);}
+.mode-d{font-size:14.5px;color:var(--muted);margin-top:9px;line-height:1.6;}
+.biz-nums2{display:flex;gap:52px;justify-content:center;margin-top:30px;}
+.bn2{font-size:15px;color:var(--muted);text-align:center;}
+.bn2 b{font-size:34px;font-weight:900;display:block;line-height:1;margin-bottom:6px;letter-spacing:-.02em;color:var(--text);}
+.biz-foot{margin-top:28px;font-size:14px;color:var(--tagline);max-width:1000px;}
+
+/* ══ Closing (ending catchphrase) ══ */
+#closeSlide .c-line{font-size:56px;font-weight:800;line-height:1.34;letter-spacing:-.025em;max-width:1120px;}
+#closeSlide .c-line .old{color:var(--muted);}
+#closeSlide .c-line .new{color:var(--accent);}
+#closeSlide .c-logo{margin-top:52px;height:56px;opacity:.92;}
+
+/* ══ Appendix divider ══ */
+#apxDivider .apx-big{font-size:92px;font-weight:900;letter-spacing:.04em;color:#e7ebf3;}
+#apxDivider .apx-sub{font-size:20px;color:var(--muted);margin-top:4px;}
+
+/* ══ Appendix generic ══ */
+.apx-tag{display:inline-block;background:#eef1f7;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:18px;font-size:13.5px;font-weight:700;letter-spacing:.08em;margin-bottom:18px;}
+.apx-tag b{color:var(--teal-ink);}
+.apx-h{font-size:37px;font-weight:800;margin-bottom:24px;letter-spacing:-.01em;color:var(--text);}
+.cards{display:flex;gap:16px;max-width:1160px;width:100%;flex-wrap:wrap;justify-content:center;}
+.dcard{flex:1;min-width:220px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 22px;text-align:left;box-shadow:var(--sh-sm);}
+.dcard .dn{font-size:13.5px;font-weight:800;color:var(--teal-ink);letter-spacing:.06em;}
+.dcard h4{font-size:20.5px;font-weight:800;margin:7px 0 10px;line-height:1.35;color:var(--text);}
+.dcard p{font-size:16px;color:var(--muted);line-height:1.65;}
+.dcard p b{color:var(--text);font-weight:700;}
+/* 각주가 아니라 읽히는 보조 설명. 회색 작은 글씨는 청중석에서 안 읽힌다.
+   테두리나 강조선 없이 바탕만 한 톤 눌러 묶는다 — 카드(.dcard)와 구분되면서
+   장식이 늘지 않는다. */
+.apx-note{margin-top:24px;max-width:1100px;text-align:left;font-size:16px;line-height:1.85;
+  color:var(--text);background:#e9eef6;border-radius:14px;padding:18px 26px;}
+.apx-note b{color:var(--text);font-weight:800;}
+.apx-note .k{color:var(--accent);font-weight:800;}   /* 강조할 수치 */
+.ptable{width:100%;max-width:1150px;border-collapse:collapse;font-size:17px;text-align:left;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--sh-sm);}
+.ptable th{color:var(--teal-ink);font-size:14px;text-transform:uppercase;letter-spacing:.05em;padding:15px 19px;border-bottom:2px solid var(--border);background:#f9fafd;}
+.ptable td{padding:15px 19px;border-bottom:1px solid var(--line);color:var(--muted);}
+.ptable td b,.ptable .hl{color:var(--text);font-weight:600;}
+.ptable th .kk{display:block;font-size:10.5px;font-weight:600;letter-spacing:.02em;
+  text-transform:none;color:var(--tagline);margin-top:2px;}
+.apx-note .ref{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.04em;
+  color:var(--tagline);background:#dde4ee;border-radius:20px;padding:2px 9px;margin-right:7px;}
+.mini-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:980px;width:100%;}
+.mm{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 12px;text-align:center;box-shadow:var(--sh-sm);}
+.mm .v{font-size:37px;font-weight:900;color:var(--teal-ink);}
+.mm .l{font-size:15px;color:var(--text);font-weight:700;margin-top:7px;}
+.mm .s{font-size:13px;color:var(--muted);margin-top:3px;}
+.target-label{display:inline-block;margin-top:16px;font-size:13.5px;font-weight:700;color:var(--accent);background:rgba(240,72,58,.08);border:1px solid rgba(240,72,58,.28);padding:4px 12px;border-radius:16px;}
+/* ══ A5 서비스 아키텍처 ══ */
+.arch{display:flex;align-items:stretch;justify-content:center;max-width:1240px;width:100%;margin-top:4px;}
+.arch-col{display:flex;flex-direction:column;justify-content:center;gap:10px;flex:0 0 215px;}
+.arch-lab{font-size:11.5px;font-weight:900;letter-spacing:.14em;color:var(--tagline);text-align:center;margin-bottom:2px;}
+.arch-lab.core{color:var(--teal-ink);}
+.anode{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 12px;
+  font-size:15px;font-weight:700;color:var(--text);box-shadow:var(--sh-sm);text-align:center;}
+.anode small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:3px;}
+.anode.ag{border-color:rgba(15,168,148,.42);color:var(--teal-ink);}
+.arch-foot{font-size:11.5px;font-weight:700;color:var(--tagline);text-align:center;margin-top:2px;}
+/* 좌우 연결선 — 데크의 흐르는 선 언어 그대로 */
+.arch-link{flex:0 0 60px;align-self:center;position:relative;height:3px;background:var(--border);
+  border-radius:2px;margin:0 14px;}
+.arch-link i{position:absolute;top:-4px;width:11px;height:11px;border-radius:50%;background:var(--teal);
+  box-shadow:0 0 0 3px rgba(15,168,148,.16);animation:archRun 1.7s linear infinite;}
+@keyframes archRun{0%{left:-11px;opacity:0}18%{opacity:1}82%{opacity:1}100%{left:60px;opacity:0}}
+.arch-core{flex:1 1 auto;max-width:440px;background:rgba(15,168,148,.06);
+  border:1px solid rgba(15,168,148,.34);border-radius:16px;padding:13px;
+  display:flex;flex-direction:column;gap:8px;}
+.core-row{display:flex;gap:8px;}
+.cnode{flex:1;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:10px 10px;
+  font-size:14px;font-weight:700;color:var(--text);text-align:center;}
+.cnode small{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px;}
+.core-bar{background:var(--teal-ink);color:#fff;border-radius:11px;padding:9px;text-align:center;
+  font-size:14px;font-weight:800;letter-spacing:.01em;}
+.core-ep{border:1px dashed rgba(15,168,148,.5);color:var(--teal-ink);border-radius:11px;padding:8px;
+  text-align:center;font-size:13px;font-weight:800;}
+
+/* ══ A10 로드맵 구성도 ══ */
+.road{display:flex;align-items:stretch;justify-content:center;max-width:1240px;width:100%;margin-top:4px;}
+.road-now{flex:0 0 250px;align-self:center;text-align:left;background:var(--card);border:1px solid rgba(15,168,148,.42);
+  border-radius:16px;padding:16px 18px;box-shadow:var(--sh-sm);}
+.rl{font-size:11px;font-weight:900;letter-spacing:.1em;margin-bottom:10px;}
+.rl.done{color:var(--teal-ink);}
+.road-now ul{margin:0;padding:0;}
+.road-now li{list-style:none;font-size:14px;font-weight:600;color:var(--text);line-height:1.5;
+  padding-left:16px;position:relative;margin-bottom:5px;}
+.road-now li::before{content:"✓";position:absolute;left:0;color:var(--teal);font-weight:900;font-size:12px;}
+.road-arrow{flex:0 0 56px;align-self:center;position:relative;height:3px;background:var(--border);
+  border-radius:2px;margin:0 14px;}
+.road-arrow i{position:absolute;top:-4px;width:11px;height:11px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 3px rgba(240,72,58,.15);animation:roadRun 1.9s linear infinite;}
+@keyframes roadRun{0%{left:-11px;opacity:0}18%{opacity:1}82%{opacity:1}100%{left:56px;opacity:0}}
+.road-tracks{flex:1 1 auto;max-width:470px;display:flex;flex-direction:column;gap:9px;}
+/* 한 변만 강조하면 모서리 처리가 지저분해진다. 네 변을 같은 두께·색으로 두른다. */
+.trk{background:var(--card);border:2px solid var(--accent);
+  border-radius:12px;padding:12px 14px;text-align:left;box-shadow:var(--sh-sm);}
+.trk .tn{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--accent);}
+.trk b{display:block;font-size:16px;font-weight:800;color:var(--text);margin:3px 0 4px;}
+.trk p{font-size:13px;color:var(--muted);line-height:1.5;}
+.road-goal{flex:0 0 165px;align-self:center;background:var(--teal-ink);color:#fff;border-radius:16px;
+  padding:20px 14px;text-align:center;box-shadow:0 12px 30px rgba(15,168,148,.24);}
+.road-goal b{display:block;font-size:20px;font-weight:800;}
+.road-goal small{display:block;font-size:12px;opacity:.8;margin-top:4px;}
+@media (prefers-reduced-motion:reduce){.arch-link i,.road-arrow i{animation:none}}
+
+.team-lineup{display:flex;gap:12px;justify-content:center;margin:8px 0;}
+.tm-card{flex:1 1 0;max-width:150px;display:flex;flex-direction:column;align-items:center;}
+.tm-photo{width:100%;aspect-ratio:1/1.14;border-radius:12px;overflow:hidden;background:#eef1f7;border:1px solid var(--border);box-shadow:var(--sh-sm);}
+.tm-photo img{width:100%;height:100%;object-fit:cover;object-position:top center;filter:grayscale(1) contrast(1.03);}
+.tm-name{font-size:14px;font-weight:700;margin-top:9px;color:var(--text);}
+.tm-role{font-size:10.5px;font-weight:600;margin-top:3px;text-align:center;color:var(--teal-ink);line-height:1.4;}
+.tm-role span{display:block;color:var(--muted);font-weight:500;}
+.logo-wall{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;max-width:900px;}
+.logo-chip{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:#fff;box-shadow:var(--sh-sm);}
+.logo-chip img{max-height:19px;max-width:92px;object-fit:contain;}
+.logo-chip.txt{background:#f4f6fb;font-size:11.5px;font-weight:600;color:var(--muted);}
+
+/* ══ Speaker script bar (S) ══ */
+.script-bar{position:fixed;left:0;right:0;bottom:0;z-index:250;background:#fff;border-top:1px solid var(--border);padding:12px 40px 14px;max-height:34vh;overflow:auto;transition:transform .3s ease;box-shadow:0 -6px 24px rgba(22,28,46,.08);}
+.script-bar.hidden{transform:translateY(100%);}
+.script-bar .sb-label{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--teal-ink);margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.script-bar .sb-label .sb-hint{color:var(--muted);font-weight:500;letter-spacing:0;}
+.script-bar .sb-edited{color:var(--accent);font-weight:700;letter-spacing:0;}
+.script-bar .sb-actions{margin-left:auto;display:flex;gap:6px;}
+.script-bar .sb-actions button{font-family:var(--font);font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:3px 11px;cursor:pointer;letter-spacing:0;transition:all .15s;}
+.script-bar .sb-actions button:hover{color:var(--text);border-color:var(--teal);}
+textarea.sb-text{width:100%;max-width:1180px;font-family:var(--font);font-size:15px;line-height:1.7;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;resize:vertical;outline:none;min-height:66px;box-sizing:border-box;}
+textarea.sb-text:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,168,148,.12);}
+
+/* ══ Memo (M) ══ */
+.memo-panel{position:fixed;top:60px;right:34px;width:330px;z-index:300;background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px;box-shadow:var(--sh);display:none;flex-direction:column;gap:9px;}
+.memo-panel.open{display:flex;}
+.memo-panel h4{font-size:13px;color:var(--accent);font-weight:800;margin:0;}
+.memo-panel textarea{width:100%;height:150px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px;color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;resize:vertical;outline:none;}
+.memo-panel textarea:focus{border-color:var(--accent);}
+.memo-hint{font-size:11px;color:var(--muted);}
+
+/* 슬라이드 번호 바로가기 — 입력 중인 값을 화면에 띄워 오타를 바로 알아채게 한다 */
+.jump-hud{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:400;display:none;
+  font-family:var(--font);font-size:30px;font-weight:800;letter-spacing:.08em;
+  background:rgba(22,28,46,.92);color:#fff;border-radius:14px;padding:12px 26px;
+  box-shadow:0 12px 34px rgba(22,28,46,.28);}
+.jump-hud.on{display:block;}
+.jump-hud small{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;opacity:.6;margin-top:4px;}
+/* ══════════════════════════════════════════════════════════════
+   인쇄 / PDF — 슬라이드 한 장이 한 페이지.
+   단계로 나뉜 장(오프닝 3단계 · 시연 6단계)은 단계마다 한 페이지로 펼친다.
+   화면에서는 한 번에 하나만 보이지만 인쇄물은 순서대로 남아야 한다.
+   ══════════════════════════════════════════════════════════════ */
+@media print{
+  @page{size:A4 landscape;margin:0;}
+  html,body{height:auto;overflow:visible;background:#fff;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .deck{height:auto;overflow:visible;}
+  .bg-glow,.grid-tex{display:none;}
+
+  /* 진행용 UI 는 인쇄물에 남기지 않는다 */
+  .script-bar,.memo-panel,.nav-hint,.jump-hud,.progress-bar,.demo-key-hint,
+  .corner-logo{display:none!important;}   /* 코너 로고는 각 장의 로고와 겹친다 */
+  /* fixed 는 모든 페이지에 겹쳐 찍힌다 */
+  .corner-logo,.slide-number{position:absolute!important;}
+
+  /* 중간 프레임이 찍히지 않게 모션 정지 */
+  *,*::before,*::after{animation:none!important;transition:none!important;opacity:1!important;}
+
+  .slide{display:flex!important;position:relative!important;top:auto;left:auto;
+    width:100%;height:100vh;break-after:page;page-break-after:always;}
+  .slide:last-child{break-after:auto;page-break-after:auto;}
+
+  /* ── 오프닝: 단계마다 한 페이지 ── */
+  #titleSlide{display:block!important;height:auto;padding:0;break-after:auto;page-break-after:auto;}
+  #titleSlide .t-logo{position:absolute;top:44px;left:50%;transform:translateX(-50%) !important;height:40px;}
+  #titleSlide .op-wrap{display:block;height:auto;margin:0;}
+  #titleSlide .op{display:flex!important;flex-direction:column;align-items:center;justify-content:center;
+    height:100vh;padding:0 80px;break-after:page;page-break-after:always;}
+  /* 뉴스 카드는 절대배치라 인쇄에서 겹친다 — 흐름 배치로 바꾼다 */
+  #titleSlide .ncard{position:static!important;width:auto;max-width:310px;rotate:none!important;}
+  #titleSlide .op2{gap:0;}
+  #titleSlide .op2 .ncard,
+  #titleSlide .op3 .ncard{display:inline-block;margin:6px;vertical-align:top;}
+
+  /* ── 시연: 설명 화면만 단계별로, 라이브 iframe 은 뺀다 ── */
+  #demoSlide{display:block!important;height:auto;break-after:auto;page-break-after:auto;}
+  #demoSlide .demo-bar{display:none!important;}
+  #demoSlide #demoFrame,#demoSlide .dx-embed{display:none!important;}
+  #demoSlide .demo-frame-wrap{height:auto;background:none;}
+  #demoSlide .demo-explain{position:relative!important;display:flex!important;height:100vh;
+    break-after:page;page-break-after:always;}
+
+  /* ── 2p·3p 는 모든 단계가 드러난 상태로 한 페이지 ── */
+  #hookSlide .hook-right{flex:0 0 520px!important;height:auto!important;padding-left:48px!important;}
+  #hookSlide .dept-row,#hookSlide .dept-tag,#hookSlide .src-chip,#hookSlide .hook-pain{transform:none!important;}
+  #chartSlide .chart-el{opacity:1!important;}
+  #chartSlide .bar{transform:scaleY(1)!important;}
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="grid-tex"></div>
+
+<div class="deck" id="deck">
+  <div class="progress-bar" id="progress"></div>
+  <div class="slide-number" id="slideNum"></div>
+  <img src="assets/EmberLink_compact_light.png" class="corner-logo" alt="EmberLink" id="cornerLogo"
+       onerror="this.src='assets/EmberLink_compact_onDark.png'">
+  <div class="nav-hint">← → 이동 · 숫자 바로가기(1~7 · A1~A11) · S 스크립트 · M 메모</div>
+
+  <!-- ═══ 1. TITLE ═══ -->
+  <div class="slide active cover" id="titleSlide" data-st="0">
+    <img src="assets/EmberLink_primary_light.png" class="t-logo" alt="EmberLink"
+         onerror="this.src='assets/EmberLink_primary_onDark.png'">
+    <div class="op-wrap">
+
+    <!-- ① 우리는 누구인가 -->
+    <div class="op op1">
+      <div class="op-line">우리는 <span class="tl">기업의 AI를 현장에서</span><br>직접 만들어온 팀입니다.</div>
+      <div class="op-refs">
+        <div class="op-refs-label">참여<br>프로젝트</div>
+        <div class="op-refs-walls">
+          <div class="logo-wall">
+            <span class="logo-chip"><img src="assets/한화손해보험.png" alt="한화손해보험"></span>
+            <span class="logo-chip"><img src="assets/메리츠화재.png" alt="메리츠화재"></span>
+            <span class="logo-chip"><img src="assets/신한은행.png" alt="신한은행"></span>
+            <span class="logo-chip"><img src="assets/수협은행.png" alt="수협은행"></span>
+            <span class="logo-chip"><img src="assets/포스코.png" alt="포스코"></span>
+            <span class="logo-chip"><img src="assets/현대자동차.png" alt="현대자동차"></span>
+          </div>
+          <div class="logo-wall">
+            <span class="logo-chip"><img src="assets/농수산물유통공사.png" alt="농수산물유통공사"></span>
+            <span class="logo-chip"><img src="assets/한국지능정보사회진흥원.png" alt="한국지능정보사회진흥원"></span>
+            <span class="logo-chip"><img src="assets/한국콘텐츠진흥원.png" alt="한국콘텐츠진흥원"></span>
+            <span class="logo-chip"><img src="assets/산림청.png" alt="산림청"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② 시장 분위기 -->
+    <div class="op op2">
+      <!-- 실제 보도·조사 인용 — 매체명과 발행일을 카드에 명시한다 -->
+      <article class="ncard n1">
+        <div class="nhead"><span class="nsrc">ZDNet Korea</span><span class="ndate">2026.06.22</span></div>
+        <p>AI 인재 확보 경쟁,<br><b>전 산업으로 확산</b></p></article>
+      <article class="ncard n2">
+        <div class="nhead"><span class="nsrc">글로벌이코노믹</span><span class="ndate">2026.04.05</span></div>
+        <p>올해 기업 최대 <b>75%</b>가<br>에이전트형 AI에 <b>투자</b></p></article>
+      <article class="ncard n3">
+        <div class="nhead"><span class="nsrc">서울경제</span><span class="ndate">2026.06.22</span></div>
+        <p>AI 인재 채용 공고 <b>70%↑</b><br>신입직은 <b>80%↑</b></p></article>
+      <article class="ncard n4">
+        <div class="nhead"><span class="nsrc">AI 활용현황 조사</span><span class="ndate">2026.01.21</span></div>
+        <p>AI 에이전트 <b>미도입 기업은 18.9%</b>뿐<br>이미 열에 여덟은 착수</p></article>
+
+      <div class="op-emoji">🔥</div>
+      <div class="op-line">AI를 향한 의지는,<br><b>그 어느 때보다 뜨겁습니다.</b></div>
+      <div class="op-sub">저희가 만나본 고객사 <b>대부분이</b> 지금 에이전트를 이야기합니다.</div>
+    </div>
+
+    <!-- ③ 그런데 성과는 — ② 와 같은 형식, 반대 방향 -->
+    <div class="op op3">
+      <!-- 실제 보도·조사 인용 — 매체명과 발행일을 카드에 명시한다 -->
+      <article class="ncard n1">
+        <div class="nhead"><span class="nsrc">지티티코리아</span><span class="ndate">2026.03.26</span></div>
+        <p>AI 성패는 <b>모델이 아니라</b><br><b>데이터 관리·통합</b>에서 갈린다</p></article>
+      <article class="ncard n2">
+        <div class="nhead"><span class="nsrc">디지털데일리</span><span class="ndate">2026.05.14</span></div>
+        <p><b>PoC는 통과, 운영에서 무너짐</b><br>기업 데이터 <b>43%가 빈 칸</b></p></article>
+      <article class="ncard n3">
+        <div class="nhead"><span class="nsrc">컴퓨터월드</span><span class="ndate">2026.05.01</span></div>
+        <p>도입은 늘었는데 <b>경쟁력은 제자리</b><br>문제는 <b>데이터 준비</b></p></article>
+      <article class="ncard n4">
+        <div class="nhead"><span class="nsrc">CIO 코리아</span><span class="ndate">2026.05.26</span></div>
+        <p>도입 의지가 <b>데이터 기반보다</b> 앞섬<br>데이터 성숙도 갖춘 곳은 <b>극히 일부</b></p></article>
+
+      <div class="op-emoji">🚧</div>
+      <div class="op-line">그런데 현장은,<br><b>같은 자리에서 멈춰 섭니다.</b></div>
+      <div class="op-sub">막히는 지점은 대체로 같습니다 — <b>에이전트가 아니라, 데이터가 닿지 않아서</b>입니다.</div>
+    </div>
+
+    </div><!-- /op-wrap -->
+  </div><!-- /#titleSlide -->
+
+  <!-- ═══ 2. 발견 + 문제 (animated) ═══ -->
+  <div class="slide" id="hookSlide">
+    <div class="headline sm fade-up">데이터를 붙이는 시간, <span class="accent">그게 병목이었습니다.</span></div>
+    <div class="hook2">
+      <!-- LEFT: one project — 대부분이 데이터 연계, 소스가 지저분 -->
+      <div class="hook-left">
+        <div class="hook-lab">한 에이전트를 붙이는 <b>프로젝트 하나</b></div>
+        <div class="pbar-wrap">
+          <div class="pbracket"><span>프로젝트 기간</span></div>
+          <div class="pbar">
+            <div class="pseg dev">에이전트 개발</div>
+            <div class="pseg data">데이터 연계</div>
+          </div>
+        </div>
+        <div class="hook-core">
+          <svg class="connect" viewBox="0 0 700 200" preserveAspectRatio="none">
+            <path class="l1" pathLength="1" d="M472,2 C340,50 108,74 88,128"/>
+            <path class="l2" pathLength="1" d="M472,2 C420,54 275,74 263,128"/>
+            <path class="l3" pathLength="1" d="M472,2 C480,54 445,74 438,128"/>
+            <path class="l4" pathLength="1" d="M472,2 C560,50 640,74 613,128"/>
+          </svg>
+          <div class="src-chip c1" style="left:88px;">비표준 API</div>
+          <div class="src-chip c2" style="left:263px;">레거시 DB</div>
+          <div class="src-chip c3" style="left:438px;">법률형 문서<small>조·항 계층 깨짐</small></div>
+          <div class="src-chip c4 kdoc" style="left:613px;"><span class="kdoc-mini"></span>K-문서<small>사람 눈엔 예쁜 문서</small></div>
+        </div>
+        <div class="hook-pain pain-tag">→ 소스마다 사람이 하나씩 직접 연결<br>법률형·K-문서는 에이전트가 못 읽는 형태</div>
+      </div>
+      <!-- RIGHT: same work, other departments (duplication) — reveals on stage 1 -->
+      <div class="hook-right">
+        <div class="hook-lab">그런데 <b>같은 회사, 다른 부서</b>도 똑같이</div>
+        <div class="dept-row r1"><div class="dept-name">영업팀</div><div class="dept-bar"><div class="db-dev"></div><div class="db-data"></div></div></div>
+        <div class="dept-row r2"><div class="dept-name">고객지원팀</div><div class="dept-bar"><div class="db-dev"></div><div class="db-data"></div></div></div>
+        <div class="dept-row r3"><div class="dept-name">마케팅팀</div><div class="dept-bar"><div class="db-dev"></div><div class="db-data"></div></div></div>
+        <div class="dept-tag pain-tag">→ 같은 연동을, 부서마다 처음부터 다시</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. 핵심 그래프 (X = 에이전트 수) ═══ -->
+  <div class="slide" id="chartSlide">
+    <div class="headline sm fade-up" style="margin-bottom:6px;">곱하기를 <span class="teal">더하기</span>로.</div>
+    <div class="chart-wrap fade-up d1">
+      <svg class="chart-svg" id="chartSvg" viewBox="0 0 920 470" xmlns="http://www.w3.org/2000/svg">
+        <!-- gridlines -->
+        <line x1="110" y1="230" x2="870" y2="230" stroke="#eef1f7" stroke-width="1"/>
+        <line x1="110" y1="60" x2="870" y2="60" stroke="#eef1f7" stroke-width="1"/>
+        <!-- axes -->
+        <line x1="110" y1="46" x2="110" y2="400" stroke="#c9d0e0" stroke-width="1.5"/>
+        <line x1="110" y1="400" x2="870" y2="400" stroke="#c9d0e0" stroke-width="1.5"/>
+        <text x="30" y="52" fill="#5c6883" font-size="12">누적</text>
+        <text x="30" y="68" fill="#5c6883" font-size="12">연동 수</text>
+        <g fill="#8a94ac" font-size="11" text-anchor="end">
+          <text x="102" y="64">1,000</text><text x="102" y="234">500</text><text x="102" y="404">0</text>
+        </g>
+        <g text-anchor="middle">
+          <text x="290" y="421" fill="#5c6883" font-size="13" font-weight="700">에이전트 10개</text><text x="290" y="439" fill="#8a94ac" font-size="11.5">소스 8개</text>
+          <text x="500" y="421" fill="#5c6883" font-size="13" font-weight="700">에이전트 25개</text><text x="500" y="439" fill="#8a94ac" font-size="11.5">소스 12개</text>
+          <text x="710" y="421" fill="#5c6883" font-size="13" font-weight="700">에이전트 50개</text><text x="710" y="439" fill="#8a94ac" font-size="11.5">소스 20개</text>
+        </g>
+
+        <!-- legend -->
+        <g class="chart-el" data-stg="1" style="opacity:0">
+          <rect x="150" y="82" width="14" height="14" rx="3" fill="#F0483A"/>
+          <text x="172" y="94" fill="#5c6883" font-size="13" font-weight="600">기존 · N×M (에이전트 × 소스)</text>
+        </g>
+        <g class="chart-el" data-stg="2" style="opacity:0">
+          <rect x="150" y="106" width="14" height="14" rx="3" fill="#0FA894"/>
+          <text x="172" y="118" fill="#5c6883" font-size="13" font-weight="600">공용 계층 · N+M (에이전트 + 소스)</text>
+        </g>
+
+        <!-- 기존 N×M bars (stage1) — 아래부터 자라남, 순차 -->
+        <rect class="bar chart-el" data-stg="1" style="transition-delay:0s" x="232" y="373" width="56" height="27" rx="4" fill="#F0483A"/>
+        <rect class="bar chart-el" data-stg="1" style="transition-delay:.12s" x="442" y="298" width="56" height="102" rx="4" fill="#F0483A"/>
+        <rect class="bar chart-el" data-stg="1" style="transition-delay:.24s" x="652" y="60" width="56" height="340" rx="4" fill="#F0483A"/>
+        <g class="chart-el" data-stg="1" style="opacity:0" fill="#F0483A" font-size="14.5" font-weight="800" text-anchor="middle">
+          <text x="260" y="366">80</text><text x="470" y="291">300</text><text x="680" y="52">1,000</text>
+        </g>
+
+        <!-- EmberLink N+M bars (stage2) — 아래부터 자라남, 순차 -->
+        <rect class="bar chart-el" data-stg="2" style="transition-delay:0s" x="292" y="394" width="56" height="6" rx="3" fill="#0FA894"/>
+        <rect class="bar chart-el" data-stg="2" style="transition-delay:.12s" x="502" y="387" width="56" height="13" rx="3" fill="#0FA894"/>
+        <rect class="bar chart-el" data-stg="2" style="transition-delay:.24s" x="712" y="376" width="56" height="24" rx="3" fill="#0FA894"/>
+        <g class="chart-el" data-stg="2" style="opacity:0" fill="#0b7d6e" font-size="14.5" font-weight="800" text-anchor="middle">
+          <text x="320" y="388">18</text><text x="530" y="380">37</text><text x="740" y="369">70</text>
+        </g>
+
+        <!-- stage3 callout -->
+        <g class="chart-el" data-stg="3" style="opacity:0">
+          <rect x="356" y="182" width="264" height="56" rx="12" fill="#fff" stroke="rgba(240,72,58,.45)"/>
+          <text x="488" y="206" fill="#161c2e" font-size="13" font-weight="700" text-anchor="middle">같은 50개 에이전트인데</text>
+          <text x="488" y="228" fill="#F0483A" font-size="15.5" font-weight="800" text-anchor="middle">1,000건 vs 70건 — 14배</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ═══ 4. 해법 ═══ -->
+  <div class="slide" id="solSlide">
+    <div class="headline sm fade-up">사내 데이터와 에이전트를 이어주는<br><span class="teal">Knowledge Layer, EmberLink</span></div>
+    <div class="sol-diagram fade-up d1">
+      <svg class="sol-lines" viewBox="0 0 1120 440" preserveAspectRatio="none">
+        <g stroke="#dfe4ee" stroke-width="2.5" fill="none">
+          <path d="M210,88 C 330,88 360,185 470,185"/>
+          <path d="M210,218 C 340,218 360,220 470,220"/>
+          <path d="M210,348 C 330,348 360,255 470,255"/>
+          <path d="M650,185 C 760,185 790,88 900,88"/>
+          <path d="M650,220 C 780,220 790,218 900,218"/>
+          <path d="M650,255 C 760,255 790,348 900,348"/>
+        </g>
+        <path class="flow a" d="M210,88 C 330,88 360,185 470,185"/>
+        <path class="flow a d1" d="M210,218 C 340,218 360,220 470,220"/>
+        <path class="flow a d2" d="M210,348 C 330,348 360,255 470,255"/>
+        <path class="flow t" d="M650,185 C 760,185 790,88 900,88"/>
+        <path class="flow t d1" d="M650,220 C 780,220 790,218 900,218"/>
+        <path class="flow t d2" d="M650,255 C 760,255 790,348 900,348"/>
+      </svg>
+      <div class="sol-node src" style="left:40px;top:60px;">레거시 API</div>
+      <div class="sol-node src" style="left:40px;top:190px;">DB 스키마</div>
+      <div class="sol-node src" style="left:40px;top:320px;">사내 문서</div>
+      <div class="sol-node core" style="left:470px;top:150px;">
+        <div class="cl">EMBERLINK</div><div class="ct">Knowledge<br>Layer</div>
+      </div>
+      <div class="sol-node agt" style="left:900px;top:60px;">영업 에이전트</div>
+      <div class="sol-node agt" style="left:900px;top:190px;">고객지원 에이전트</div>
+      <div class="sol-node agt" style="left:900px;top:320px;">마케팅 에이전트</div>
+    </div>
+    <div class="sol-tail fade-up d2">시스템은 계층에 <b style="color:var(--text);">한 번만</b>, 에이전트는 계층 <b style="color:var(--text);">하나만</b>.</div>
+  </div>
+
+  <!-- ═══ 5. LIVE DEMO ═══ -->
+  <div class="slide" id="demoSlide">
+    <div class="demo-wrap">
+      <div class="demo-bar">
+        <div class="demo-bar-top">
+          <span class="live-tag"><span class="live-dot"></span>LIVE DEMO</span>
+          <div class="steps" id="demoSteps"></div>
+        </div>
+        <div class="demo-bar-cap">
+          <div class="demo-cap-title" id="demoCapTitle"></div>
+          <span class="demo-cap-sub" id="demoCapSub"></span>
+          <div class="demo-cap-one" id="demoCapOne"></div>
+        </div>
+      </div>
+      <div class="demo-frame-wrap">
+        <iframe id="demoFrame"
+          loading="eager" allow="clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer"></iframe>
+        <script>
+          /* 기본은 상대경로 "/" — 앱과 same-origin 이어야 한다. iframe 이 서드파티가 되면
+             Azure 로그인 팝업 응답(BroadcastChannel)이 스토리지 파티션에 막혀 timed_out 된다.
+             이 덱은 frontend/public 아래 있어 앱과 늘 함께 서빙되므로(vite dev · 컨테이너
+             둘 다 "/" 가 앱이다) 호스트를 가릴 필요가 없다.
+             file:// 로 열었을 때만 같은 오리진에 앱이 없으므로 배포본으로 폴백한다. */
+          document.getElementById("demoFrame").src =
+            location.protocol === "file:"
+              ? "https://climax-preview.proudforest-cf720ea4.koreacentral.azurecontainerapps.io/"
+              : "/";
+        </script>
+        <!-- 시연 직전 설명 화면. 내용은 DEMO_STAGES 에서 채운다. -->
+        <div class="demo-explain" id="demoExplain">
+          <div class="dx-body" id="dxBody">
+            <div class="dx-num" id="dxNum"></div>
+            <div class="dx-title" id="dxTitle"></div>
+            <div class="dx-one" id="dxOne"></div>
+            <div class="dx-stats" id="dxStats"></div>
+            <div class="dx-flow" id="dxFlow"></div>
+            <ul class="dx-list" id="dxList"></ul>
+          </div>
+          <iframe class="dx-embed" id="dxEmbed" referrerpolicy="no-referrer"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 6. 사업 ═══ -->
+  <div class="slide" id="bizSlide">
+    <span class="tag fade-up">Business</span>
+    <div class="headline sm fade-up d1">진행 중인 프로젝트 안에서 검증하고, <span class="teal">레퍼런스로 확산합니다.</span></div>
+    <div class="biz-path fade-up d2">
+      <div class="bp now">
+        <div class="bp-n">01 · 진행 중</div>
+        <div class="bp-t">PoC</div>
+        <div class="bp-d">한화손보 프로젝트 기간 안에서 검증 · 그 자리에서 고객 의사 타진</div>
+      </div>
+      <div class="bp-arrow">→</div>
+      <div class="bp">
+        <div class="bp-n">02</div>
+        <div class="bp-t">1호 레퍼런스</div>
+        <div class="bp-d">실 구축 사례와 정량 효과 확보 · 영업 자산화</div>
+      </div>
+      <div class="bp-arrow">→</div>
+      <div class="bp">
+        <div class="bp-n">03</div>
+        <div class="bp-t">확산</div>
+        <div class="bp-d">보험 → 금융 → 제조·유통</div>
+      </div>
+    </div>
+    <div class="biz-nums2 fade-up d2">
+      <div class="bn2"><b class="accent">3.5억</b>초기 개발비 · 인건비 + 인프라</div>
+      <div class="bn2"><b>2~3억</b>구축 1건</div>
+      <div class="bn2"><b class="green">2곳</b>손익분기</div>
+    </div>
+    <div class="biz-foot fade-up d3">개발 인건비 3.24억(<b style="color:var(--text);">6명 × 3개월</b>) + 인프라·라이선스 0.26억 — 새로 집행하는 투자금이 아니라 <b style="color:var(--text);">기존 인력의 개발 공수</b>입니다 · 한 번 구축한 계층은 유지보수로 남고 다음 구축에 그대로 재사용됩니다(상세 Appendix)</div>
+  </div>
+
+  <!-- ═══ 7. 클로징 (엔딩 캐치프레이즈) ═══ -->
+  <div class="slide" id="closeSlide">
+    <div class="c-line fade-up">그동안의 고객은 <span class="old">사람</span>,<br>우리의 <span class="new">다음 고객은 에이전트</span>입니다.</div>
+    <img src="assets/EmberLink_primary_light.png" class="c-logo fade-up d2" alt="EmberLink"
+         onerror="this.src='assets/EmberLink_primary_onDark.png'">
+  </div>
+
+  <!-- ═══ APPENDIX divider ═══ -->
+  <div class="slide" id="apxDivider">
+    <div class="apx-big fade-up">APPENDIX</div>
+    <div class="apx-sub fade-up d1">Q&amp;A 방어 자료</div>
+  </div>
+
+  <!-- ═══ A1 ═══ -->
+  <div class="slide" id="a1">
+    <span class="apx-tag"><b>A1</b> · 방어</span>
+    <div class="apx-h">"고객이 데이터 연계도 직접 하면?"</div>
+    <div class="cards">
+      <div class="dcard"><div class="dn">① 축적의 비대칭</div><h4>도메인 경험이 자산</h4><p>금융·제조·유통·공공 <b>전 산업 AI 구축</b> 경험. 한 회사 내부팀은 자기 도메인만 본다.</p></div>
+      <div class="dcard"><div class="dn">② 구조</div><h4>잘해도 건수는 안 줄어든다</h4><p>내부팀이 아무리 유능해도 <b>에이전트 × 소스</b>만큼의 연동은 그대로 남습니다. 줄이려면 계층을 따로 두는 수밖에 없습니다.</p></div>
+      <div class="dcard"><div class="dn">③ 운영</div><h4>한 번 만들고 끝이 아니다</h4><p>소스가 바뀌면 파서와 색인을 계속 고쳐야 합니다. 현업 요구가 밀려드는 내부팀에 <b>이 일을 전담할 사람</b>은 남지 않습니다.</p></div>
+    </div>
+  </div>
+
+  <!-- ═══ A2 ═══ -->
+  <div class="slide" id="a2">
+    <span class="apx-tag"><b>A2</b> · 방어</span>
+    <div class="apx-h">"KMS는 실패했는데?"</div>
+    <div class="cards" style="max-width:1200px;">
+      <div class="dcard"><div class="dn">1</div><h4>사용자가 다르다</h4><p>KMS는 <b>사람의 채택</b>에서 죽었다. 우리 사용자는 <b>에이전트</b> — 귀찮아하지 않고, 잊지 않는다.</p></div>
+      <div class="dcard"><div class="dn">2</div><h4>복사가 아니라 연결</h4><p>원본은 <b>SoR에 그대로</b>. 변경분만 자동 재색인 — 최신성이 깨지지 않는다.</p></div>
+      <div class="dcard"><div class="dn">3</div><h4>배관을 책임진다</h4><p>중앙(IT/DX)은 <b>콘텐츠가 아니라 배관</b>을 맡는다.</p></div>
+      <div class="dcard"><div class="dn">4</div><h4>검색 이전 필터링</h4><p>권한은 <b>원천 체계 상속</b> · 검색 <b>전에</b> 필터.</p></div>
+      <div class="dcard"><div class="dn">5</div><h4>측정된다</h4><p>KMS는 사용 여부조차 몰랐다. 우리는 <b>호출·토큰·비용 대시보드</b>로 측정.</p></div>
+    </div>
+  </div>
+
+  <!-- ═══ A3 ═══ -->
+  <div class="slide" id="a3">
+    <span class="apx-tag"><b>A3</b> · 운영</span>
+    <div class="apx-h">코퍼스 운영 3계층</div>
+    <table class="ptable">
+      <tr><th>계층</th><th>수집 방식</th><th>수명</th><th>색인</th></tr>
+      <tr><td class="hl">등록 코퍼스</td><td>커넥터 자동 동기화</td><td>영구</td><td>벡터 + 그래프</td></tr>
+      <tr><td class="hl">세션 문서</td><td>온디맨드(그 자리에서)</td><td>TTL 소멸</td><td>벡터만</td></tr>
+      <tr><td class="hl">승격</td><td>사용 빈도 기반 후보 → 관리자 승인</td><td>영구</td><td>벡터 + 그래프</td></tr>
+    </table>
+    <div class="apx-note">무엇을 등록할지 회의로 정하지 않는다 — <b>에이전트가 자주 찾은 문서가 후보로 올라온다.</b></div>
+  </div>
+
+  <!-- ═══ A4 ═══ -->
+  <div class="slide" id="a4">
+    <span class="apx-tag"><b>A4</b> · 경쟁</span>
+    <div class="apx-h">통합 Knowledge Layer는 아직 없다</div>
+    <table class="ptable">
+      <tr><th>경쟁</th><th>포지션</th><th>한계</th></tr>
+      <tr><td class="hl">삼성SDS FabriX</td><td>MCP 풀스택</td><td>대규모 구축형 · 문서 품질관리 부재</td></tr>
+      <tr><td class="hl">팔란티어 AIP</td><td>온톨로지 운영 AI</td><td>고가·대형 · 국산 문서 미대응</td></tr>
+      <tr><td class="hl">업스테이지 / 솔트룩스</td><td>문서 파싱 / 지식그래프</td><td>기간계 쓰기 연동 없음 (반쪽)</td></tr>
+      <tr><td class="hl">고객사 자체 구축(In-house)</td><td>내부 DX·SI</td><td>부서마다 재구축 · 도메인 축적 불가</td></tr>
+      <tr style="background:rgba(240,72,58,.06);"><td class="hl" style="color:var(--accent);">EmberLink</td><td style="color:var(--text);">API 실행 + 문서 지식 통합</td><td style="color:var(--accent);">부서 단위 진입 후 확산</td></tr>
+    </table>
+  </div>
+
+  <!-- ═══ A5 ═══ -->
+  <div class="slide" id="a5">
+    <span class="apx-tag"><b>A5</b> · 아키텍처</span>
+    <div class="apx-h">서비스 아키텍처</div>
+    <div class="arch">
+      <div class="arch-col">
+        <div class="arch-lab">고객 자산</div>
+        <div class="anode">레거시 API<small>비표준 · 사내 규약</small></div>
+        <div class="anode">DB 스키마<small>수십 년 누적</small></div>
+        <div class="anode">사내 문서<small>HWP · PDF · 엑셀 · 스캔</small></div>
+        <div class="arch-foot">SSO · OAuth · 폐쇄망</div>
+      </div>
+
+      <div class="arch-link"><i></i></div>
+
+      <div class="arch-core">
+        <div class="arch-lab core">EMBERLINK</div>
+        <div class="core-row">
+          <div class="cnode">수집<small>원본은 원천에 그대로</small></div>
+          <div class="cnode">파싱 → IR<small>Canonical Markdown</small></div>
+        </div>
+        <div class="core-row">
+          <div class="cnode">임베딩 → 색인<small>벡터 + 그래프</small></div>
+          <div class="cnode">OpenAPI → MCP tool<small>표준 도구화</small></div>
+        </div>
+        <div class="core-bar">Tool Selector · Skill Pool</div>
+        <div class="core-ep">MCP 엔드포인트 1개</div>
+      </div>
+
+      <div class="arch-link"><i></i></div>
+
+      <div class="arch-col">
+        <div class="arch-lab">소비</div>
+        <div class="anode ag">상담 에이전트</div>
+        <div class="anode ag">보상 에이전트</div>
+        <div class="anode ag">영업 에이전트</div>
+        <div class="arch-foot">표준 MCP 호출</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ A6 ═══ -->
+  <div class="slide" id="a6">
+    <span class="apx-tag"><b>A6</b> · 문서</span>
+    <div class="apx-h">문서 지식화 파이프라인</div>
+    <div class="cards">
+      <div class="dcard"><div class="dn">정규화</div><h4>확장자는 달라도 출구는 Markdown 하나</h4><p>PDF·HWP·XLSX·스캔 → 형식별 파서 → <b>단일 Canonical Markdown</b>(출처·page marker 포함).</p></div>
+      <div class="dcard"><div class="dn">청킹</div><h4>목적별 전략 fan-out</h4><p>Markdown/Table/Recursive/ParentChild + <b>약관 전용 Terms parser</b>(조·항 계층).</p></div>
+      <div class="dcard"><div class="dn">약관 3-pass</div><h4>계층해석 → 경계보정 → 감사</h4><p>실패 span만 재수리. <b>'약관 2편 3장 12조'</b>까지 출처. 실측 288 chunk 검증.</p></div>
+    </div>
+  </div>
+
+  <!-- ═══ A7 ═══ -->
+  <div class="slide" id="a7">
+    <span class="apx-tag"><b>A7</b> · 성능</span>
+    <div class="apx-h">툴 셀렉터 — E5 하이브리드 라우팅</div>
+    <div class="mini-metrics">
+      <div class="mm"><div class="v">97.2%</div><div class="l">라우팅 정확도</div><div class="s">현행 82% · +15~22%p</div></div>
+      <div class="mm"><div class="v">92<span style="font-size:14px;">토큰</span></div><div class="l">판단당 토큰</div><div class="s">16,469→92 · 178배↓</div></div>
+      <div class="mm"><div class="v">0.42<span style="font-size:14px;">초</span></div><div class="l">판단 지연(p50)</div><div class="s">6.4초→0.42초 · 15배↓</div></div>
+      <div class="mm"><div class="v">8/8</div><div class="l">되묻기 정확도</div><div class="s">현행 4/8 대비</div></div>
+    </div>
+    <div class="target-label">일부 수치 Target — PoC로 실측·보정 예정</div>
+  </div>
+
+  <!-- ═══ A8 ═══ -->
+  <div class="slide" id="a8">
+    <span class="apx-tag"><b>A8</b> · 인프라</span>
+    <div class="apx-h">Self-hosted vs SaaS</div>
+    <table class="ptable">
+      <tr><th>구성</th><th style="color:var(--accent);">Self-hosted (폐쇄망)</th><th style="color:var(--teal-ink);">SaaS (Azure)</th></tr>
+      <tr><td class="hl">배포</td><td>단일 VM · Docker Compose</td><td>AKS · 고객사별 namespace</td></tr>
+      <tr><td class="hl">DB · 색인</td><td>로컬 PostgreSQL + 벡터</td><td>Azure DB · AI Search (PE)</td></tr>
+      <tr><td class="hl">네트워크</td><td>VNet Gateway · 외부 노출 없음</td><td>App Gateway (WAF·TLS)</td></tr>
+      <tr><td class="hl">격리</td><td>물리적 격리</td><td>namespace + NetworkPolicy</td></tr>
+    </table>
+    <div class="apx-note">공통: 공인 IP 미노출 · Private Endpoint · SSO/OAuth · Key Vault. <b>앱 서버는 FastAPI·MCP SDK로 공통.</b></div>
+  </div>
+
+  <!-- ═══ A9 ═══ -->
+  <div class="slide" id="a9">
+    <span class="apx-tag"><b>A9</b> · ROI</span>
+    <div class="apx-h">1차년도 회수 시나리오</div>
+    <table class="ptable" style="max-width:820px;">
+      <tr><th>확보 고객</th><th>누적 매출</th><th>투자 대비</th></tr>
+      <tr><td class="hl">1곳</td><td>2.3억</td><td>-34%</td></tr>
+      <tr style="background:rgba(22,163,74,.07);"><td class="hl" style="color:var(--green);">2곳 (BEP)</td><td style="color:var(--green);">4.6억</td><td style="color:var(--green);">+31%</td></tr>
+      <tr><td class="hl">3곳</td><td>6.9억</td><td>+97%</td></tr>
+    </table>
+    <div class="apx-note">
+      <b>초기 개발비 3.5억</b> = 인건비 <span class="k">3.24억</span>(6명 × 3개월 × MM당 1,800만원) + 인프라·라이선스 0.26억<br>
+      <b>구축 1건 첫해 2.3억</b> = 구축 <span class="k">2억</span> + 연 유지보수 3,000만(구축비 15%)<br>
+      <b>구축 원가</b> 2명 × 2개월 = 4MM · 7,200만원 → <span class="k">마진율 64%</span> · 고객 자체구축(3.24억) 대비 <span class="k">38% 절감</span>
+    </div>
+    <div class="target-label">Target — PoC로 실측·보정 예정</div>
+  </div>
+
+  <!-- ═══ A10 ═══ -->
+  <div class="slide" id="a10">
+    <span class="apx-tag"><b>A10</b> · 로드맵</span>
+    <div class="apx-h">여기까지 됐고, 여기까지 갑니다</div>
+    <div class="road">
+      <div class="road-now">
+        <div class="rl done">오늘 시연 범위 · 동작함</div>
+        <ul>
+          <li>소스 연결 · 리소스 자동 탐지</li>
+          <li>API → MCP 도구 변환</li>
+          <li>문서 RAG · 조·항 출처</li>
+          <li>자연어 스킬 생성</li>
+          <li>에이전트 다중 연결</li>
+        </ul>
+      </div>
+
+      <div class="road-arrow"><i></i></div>
+
+      <div class="road-tracks">
+        <div class="trk">
+          <span class="tn">TRACK 1</span>
+          <b>지금 기능을 제품 수준으로</b>
+          <p>Mock 제거 · SSO/LDAP · 감사 로그 · 온프레미스 패키징</p>
+        </div>
+        <div class="trk">
+          <span class="tn">TRACK 2</span>
+          <b>온톨로지 생성 · 추론 엔진</b>
+          <p>스키마·문서에서 온톨로지 자동 생성 · 관계 추론으로 질의 확장</p>
+        </div>
+        <div class="trk">
+          <span class="tn">TRACK 3</span>
+          <b>커넥터 확장</b>
+          <p>DB · SharePoint · Confluence · 그룹웨어 · 파일서버</p>
+        </div>
+      </div>
+
+      <div class="road-arrow"><i></i></div>
+
+      <div class="road-goal">
+        <b>상용 제품</b>
+        <small>1호 고객 구축</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ A11 ═══ -->
+  <div class="slide" id="a11">
+    <span class="apx-tag"><b>A11</b> · 검색 성능</span>
+    <div class="apx-h">약관 검색 — 방식별 실측 비교</div>
+    <table class="ptable" style="max-width:1090px;">
+      <tr>
+        <th>검색 방식</th>
+        <th>Hit<span class="kk">K=1 / 5 / 10</span></th>
+        <th>답변 정확도<span class="kk">K=1 / 5 / 10</span></th>
+        <th>G-Eval<span class="kk">K=1 / 5 / 10</span></th>
+      </tr>
+      <tr style="background:rgba(15,168,148,.09);">
+        <td class="hl" style="color:var(--teal-ink);">terms → GraphRAG</td>
+        <td style="color:var(--teal-ink);font-weight:700;">96.0 / 92.0 / 94.7%</td>
+        <td style="color:var(--teal-ink);font-weight:700;">74.7 / 79.2 / 82.4%</td>
+        <td style="color:var(--teal-ink);font-weight:700;">76.6 / 80.5 / 81.1</td>
+      </tr>
+      <tr><td class="hl">rag → GraphRAG</td><td>80.0 / 73.3 / 85.3%</td><td>56.3 / 66.9 / 73.1%</td><td>66.2 / 69.9 / 73.3</td></tr>
+      <tr><td class="hl">terms → AI Search</td><td>66.7 / 88.0 / 92.0%</td><td>37.8 / 73.8 / 78.8%</td><td>57.0 / 75.7 / 81.1</td></tr>
+      <tr><td class="hl">rag → AI Search</td><td>60.0 / 84.0 / 92.0%</td><td>29.6 / 62.1 / 73.0%</td><td>49.9 / 67.2 / 74.4</td></tr>
+      <tr><td class="hl">basic 벡터 DB</td><td>57.7 / 81.0 / 83.4%</td><td>31.1 / 49.4 / 56.0%</td><td>51.1 / 56.9 / 60.9</td></tr>
+    </table>
+    <div class="apx-note">
+      자동차보험 약관 <b>75문항</b> · Blind G-Eval 채점(오류 0건). <b>terms → GraphRAG</b> 가 K=1·5·10 전 구간에서 세 지표 모두 1위.<br>
+      단순 벡터 대비 G-Eval <span class="k">+20.2점</span>(81.1 vs 60.9) — 조·항이 얽힌 문서일수록 그래프가 벌리는 폭이 크다.<br>
+      <span class="ref">참고 · 공개 실험</span>LightRAG 는 단순 벡터 RAG 대비 평균 <b>+38.44%p</b>, 법률 도메인 <b>+65.08%p</b>. 운영 수치는 별도 측정 필요.
+    </div>
+  </div>
+
+
+
+</div>
+
+<!-- ═══ Speaker script (S) ═══ -->
+<div class="script-bar hidden" id="scriptBar">
+  <div class="sb-label">🎤 발표 스크립트 <span id="sbNum"></span> <span class="sb-hint">— S 토글 · 여기서 바로 수정(자동 저장)</span><span class="sb-edited" id="sbEdited"></span>
+    <span class="sb-actions">
+      <button id="sbReset" title="이 슬라이드를 기본 스크립트로 되돌리기">기본값</button>
+      <button id="sbCopy" title="전체 스크립트를 클립보드로 복사(내보내기)">전체 복사</button>
+    </span>
+  </div>
+  <textarea class="sb-text" id="sbText" placeholder="이 슬라이드의 발표 스크립트를 입력…"></textarea>
+</div>
+
+<!-- ═══ Memo (M) ═══ -->
+<div class="memo-panel" id="memoPanel">
+  <h4 id="memoTitle">메모</h4>
+  <textarea id="memoText" placeholder="이 슬라이드 수정 메모…"></textarea>
+  <div class="memo-hint">자동 저장됨 (브라우저 로컬)</div>
+</div>
+
+<script>
+const slides=document.querySelectorAll('.slide');
+const progress=document.getElementById('progress');
+const slideNum=document.getElementById('slideNum');
+const cornerLogo=document.getElementById('cornerLogo');
+let current=0;
+const MAIN=7;
+const LABELS=(function(){
+  const a=[];for(let i=0;i<MAIN;i++)a.push((i+1)+' / '+MAIN);
+  a.push('APPENDIX');for(let i=1;i<=11;i++)a.push('A'+i);return a;
+})();
+
+/* Demo stepper — 단계마다 "설명 화면 → 시연 화면" 이 번갈아 나온다.
+   → 를 누르면 설명 → 시연 → 다음 단계 설명 → 시연 … 순으로 진행되고,
+   마지막 단계의 시연에서 한 번 더 누르면 다음 슬라이드로 넘어간다.
+     t       : 상단 칩 이름 · 설명 화면 제목
+     sub     : 제목 옆 주황 배지(비우면 배지가 안 보인다)
+     one     : 한 줄 설명
+     bullets : 설명 화면에 함께 띄울 칩들(비워도 됨) */
+const DEMO_STAGES=[
+  {t:'프로젝트 생성', sub:'', one:'고객 환경에 맞춰 <b>연결할 리소스를 알아서 찾아냅니다</b>',
+   // 1회성 tool 서버 구축(4명×6개월=24MM) 대비 자체 산정 — cost-benchmark 리포트 기준
+   stats:[{v:'2개월', l:'구축 기간'},
+          {v:'4MM', l:'투입 MM'},
+          {v:'24MM', l:'1회성 구축 · 4명×6개월', dim:true}],
+   flow:['프로젝트 정보','레거시 위치','*소스 자동 탐지','변환','플랫폼 입장'],
+   bullets:['환경 유형(내부망·폐쇄망·클라우드)만 고르면 <b>수집 경로가 정해집니다</b>',
+            'OpenAPI 스펙에서 <b>엔드포인트를 그대로 추출</b> — 구독에서도 확인',
+            '<b>API · DB · 문서</b>를 연결하면 <b>MCP 도구 변환까지</b> 이 단계에서 끝납니다']},
+
+  {t:'RAG 연결 확인', sub:'', one:'붙인 문서가 <b>에이전트가 쓸 수 있는 지식</b>이 됐는지 확인합니다',
+   // 자동차보험 약관 75문항 자체 평가 · K=10 기준(A11 표와 동일 기준)
+   stats:[{v:'96%', l:'검색 적중률'},
+          {v:'81점', l:'G-Eval'},
+          {v:'61점', l:'단순 벡터 DB', dim:true}],
+   flow:['PDF · HWP · 스캔','Canonical Markdown','*조·항 단위 청킹','벡터 + 그래프'],
+   bullets:['확장자는 달라도 <b>출구는 Markdown 하나</b>',
+            '약관은 3-pass 로 <b>조·항 계층을 지켜</b> 쪼갭니다',
+            '답변에 <b>“2편 3장 12조”</b>까지 출처가 붙습니다']},
+
+  {t:'MCP 탐색 · 스킬 만들기', sub:'', one:'필요한 도구를 <b>자연어로 찾고</b>, 그 조합을 <b>스킬 하나</b>로 굳힙니다',
+   flow:['변환된 도구 풀','*자연어 검색','조합 추천','스킬 1개'],
+   bullets:['이름을 몰라도 <b>하려는 일을 문장으로</b> 넣습니다',
+            '필요한 도구를 골라 <b>순서까지 붙여</b> 제안합니다',
+            '그 순서를 스킬로 굳히면 <b>다음부터는 커맨드 한 줄</b>']},
+
+  {t:'에이전트 3개 동시', sub:'', one:'성격이 다른 에이전트들이 <b>같은 계층을 그대로 재사용</b>', bullets:[],
+   // 이 단계는 앱 시연 없이 리포트 화면으로 끝낸다
+   noDemo:true, embed:'assets/connected-services.html'}
+];
+let demoStage=0;
+let demoMode='explain';                       // 'explain' | 'demo'
+const stepsEl=document.getElementById('demoSteps');
+DEMO_STAGES.forEach((s,i)=>{
+  const d=document.createElement('div');
+  d.className='step'+(i===DEMO_STAGES.length-1?' last':'');
+  d.innerHTML='<span class="sidx">'+(i+1)+'</span><span class="slab">'+s.t+'</span>';
+  // 칩을 직접 누르면 그 단계의 설명부터 다시 시작한다
+  d.addEventListener('click',e=>{e.stopPropagation();demoStage=i;demoMode='explain';renderDemoStage();});
+  stepsEl.appendChild(d);
+});
+function renderDemoStage(){
+  [...stepsEl.children].forEach((c,i)=>{c.classList.toggle('on',i===demoStage);c.classList.toggle('done',i<demoStage);});
+  const s=DEMO_STAGES[demoStage];
+  // 자동 시연 러너(demo/run.mjs)가 지금 어느 단계의 무엇을 띄우고 있는지 읽어가는 창구.
+  // 러너는 이 값만 폴링하므로 덱은 러너의 존재를 몰라도 된다.
+  window.__deckDemo={stage:demoStage, mode:demoMode, title:s.t};
+  dispatchEvent(new CustomEvent('deck:demo',
+    {detail:{stage:demoStage, mode:demoMode, slide:window.__deckSlide}}));
+  document.getElementById('demoCapTitle').innerHTML='<span class="cnum">'+(demoStage+1)+'</span> '+s.t;
+  document.getElementById('demoCapSub').textContent=s.sub;
+  document.getElementById('demoCapOne').innerHTML=s.one;
+
+  const ex=document.getElementById('demoExplain');
+  if(demoMode==='explain'){
+    document.getElementById('dxNum').textContent='STEP '+(demoStage+1)+' / '+DEMO_STAGES.length;
+    document.getElementById('dxTitle').textContent=s.t;
+    document.getElementById('dxOne').innerHTML=s.one;
+    // 큰 수치 — 있으면 한 줄 설명 바로 아래에 크게 세운다
+    document.getElementById('dxStats').innerHTML=(s.stats||[])
+      .map((x,i)=>'<span class="st'+(x.dim?' dim':'')+'" style="animation-delay:'
+                  +(0.22+i*0.12).toFixed(2)+'s"><b>'+x.v+'</b><small>'+x.l+'</small></span>')
+      .join('<span class="sep"></span>');
+    // 흐름도 — 앞에 * 를 붙인 항목이 강조 노드.
+    // 노드·연결선이 왼쪽부터 차례로 서도록 지연을 인덱스로 계산한다.
+    const STEP=0.16;
+    document.getElementById('dxFlow').innerHTML=(s.flow||[]).map((n,i)=>{
+      const hi=n.startsWith('*');
+      const node='<span class="n'+(hi?' hi':'')+'" style="animation-delay:'+(0.28+i*STEP).toFixed(2)+'s">'
+                 +n.replace(/^\*/,'')+'</span>';
+      if(!i) return node;
+      const line='<span class="a" style="animation-delay:'+(0.20+i*STEP).toFixed(2)+'s">'
+                 +'<i style="animation-delay:'+(i*0.22).toFixed(2)+'s"></i></span>';
+      return line+node;
+    }).join('');
+    // 효과는 흐름이 다 선 다음에 올라온다
+    const after=0.28+Math.max((s.flow||[]).length,1)*STEP+0.15;
+    document.getElementById('dxList').innerHTML=(s.bullets||[])
+      .map((b,i)=>'<li style="animation-delay:'+(after+i*0.13).toFixed(2)+'s">'+b+'</li>').join('');
+    // 임베드는 src 가 바뀔 때만 갱신한다. 매번 대입하면 단계를 오갈 때마다 리로드된다.
+    const em=document.getElementById('dxEmbed');
+    ex.classList.toggle('embed',!!s.embed);
+    if(s.embed && !em.src.endsWith(s.embed)) em.src=s.embed;
+    ex.classList.remove('show');void ex.offsetWidth;ex.classList.add('show');   // 등장 애니메이션 재생
+  }else{
+    ex.classList.remove('show');
+  }
+}
+/* 설명 → 시연 → 다음 단계 설명 … 순서. 더 갈 데가 없으면 false 를 돌려
+   호출한 쪽이 슬라이드를 넘기게 한다. */
+function demoNext(){
+  // noDemo 단계는 설명만 하고 바로 다음으로 넘어간다
+  if(demoMode==='explain' && !DEMO_STAGES[demoStage].noDemo){demoMode='demo';renderDemoStage();return true;}
+  if(demoStage<DEMO_STAGES.length-1){demoStage++;demoMode='explain';renderDemoStage();return true;}
+  return false;
+}
+function demoPrev(){
+  if(demoMode==='demo'){demoMode='explain';renderDemoStage();return true;}
+  if(demoStage>0){
+    demoStage--;
+    demoMode=DEMO_STAGES[demoStage].noDemo?'explain':'demo';
+    renderDemoStage();return true;
+  }
+  return false;
+}
+
+/* 인쇄 시 시연 설명 6장을 정적으로 펼친다.
+   화면에서는 컨테이너 하나를 단계마다 다시 그리므로, 그대로 인쇄하면 지금 단계
+   한 장만 남는다. beforeprint 에서 단계별 사본을 만들고 afterprint 에서 지운다. */
+(function(){
+  let clones = [];
+  addEventListener('beforeprint', () => {
+    if(clones.length) return;
+    const host = document.querySelector('#demoSlide .demo-frame-wrap');
+    if(!host) return;
+    const keepStage = demoStage, keepMode = demoMode;
+    DEMO_STAGES.forEach((_, i) => {
+      demoStage = i; demoMode = 'explain'; renderDemoStage();
+      const c = document.getElementById('demoExplain').cloneNode(true);
+      c.removeAttribute('id');
+      c.classList.add('print-copy', 'show');
+      host.appendChild(c); clones.push(c);
+    });
+    demoStage = keepStage; demoMode = keepMode; renderDemoStage();
+  });
+  addEventListener('afterprint', () => {
+    clones.forEach(c => c.remove()); clones = [];
+  });
+})();
+
+/* Chart stepper */
+const chartSvg=document.getElementById('chartSvg');
+let chartStage=0;
+function renderChart(){
+  chartSvg.querySelectorAll('[data-stg]').forEach(el=>{
+    const on=(+el.getAttribute('data-stg'))<=chartStage;
+    if(el.classList.contains('bar')){el.classList.toggle('on',on);}   // 막대는 아래부터 자라남(opacity 미사용)
+    else{el.style.opacity=on?'1':'0';}
+    if(el.classList.contains('draw'))el.classList.toggle('on',on);
+  });
+}
+
+/* Scripts */
+const SCRIPTS={
+  0:"▸① 안녕하세요. 엠버링크 플랫폼을 개발한 클라이맥스 팀입니다. 저희는 기업 고객에게 AI 서비스를 현장에서 구축해온 인력으로 구성되어 있습니다. 금융, 제조, 유통, 공공까지 산업 전반입니다. 이 아이디어도 현장에서 본 고객의 페인포인트를 풀어보려고 시작됐습니다.\n\n▸② 먼저 시장 분위기입니다. 고객사를 만나 보면 AI 도입 의지가 그 어느 때보다 높습니다. 지표도 같은 방향입니다. 딜로이트는 올해 기업의 75%가 에이전트형 AI에 투자할 것으로 봤고, 국내 조사에서 아직 도입하지 않은 기업은 18.9% 뿐입니다.\n\n▸③ 그런데 밝은 면 뒤에는 어두운 면도 있습니다. 화면의 기사들은 서로 다른 이야기를 하는 것 같지만, 결론은 한 곳으로 모입니다. 문제는 에이전트가 아니라, 그 에이전트가 쓸 데이터라는 겁니다. 시연에서 잘 돌던 것이 운영으로 넘어가면 무너지는 이유도, 도입은 늘었는데 성과는 제자리인 이유도 하나같이 데이터를 지목합니다. 저희가 현장에서 본 것도 같았습니다. 모델을 더 좋은 것으로 바꿔도 달라지지 않습니다. 결국 회사의 데이터에 닿게 해주는 일이 남습니다. 그럼 연결해 주면 되지 않느냐. 저희도 그렇게 해왔습니다. 그런데 바로 거기에서 시간이 걸렸습니다.",
+  1:"▸① 앞에서 말씀드린 그 시간이 어디로 가는지가 이 화면입니다. 한 프로젝트를 놓고 보면, 에이전트를 만드는 시간보다 데이터를 붙이는 시간이 훨씬 깁니다. 에이전트 개발이 어려워서가 아닙니다. 비표준 API와 수십 년 된 데이터베이스에 붙이는 앞단에서 일정이 막힙니다. 약관·규정처럼 조·항·호·목으로 짜인 법률형 문서와 사내 표 문서 — 화면의 K-문서입니다 — 는 사람 눈에는 멀쩡하지만, 에이전트는 그 계층을 잃어버려 '제3조 제2항'을 짚어내지 못합니다.\n\n▸② 그렇게 영업팀에 하나 연결하고 나면, 다음 달에는 고객지원팀이, 그다음에는 마케팅팀이 동일한 작업을 처음부터 반복합니다.",
+  2:"▸① 이 중복은 에이전트가 늘어날수록 곱셈으로 증가합니다. 가로축이 에이전트 수, 세로축이 누적 연동 건수입니다.\n\n▸② 에이전트 50개에 소스 20개면 연동 건수만 1,000건입니다. 현실적으로 감당할 수 있는 규모가 아닙니다.\n\n▸③ 중간에 공용 계층을 하나 두면, 이 구조가 덧셈으로 바뀝니다.\n\n▸④ 동일한 50개 에이전트 기준으로 1,000건이 70건. 열네 배 차이입니다.",
+  3:"결론은 이 한 장입니다. 사내 데이터와 에이전트 사이에 계층을 하나 둡니다. 시스템은 이 계층에 한 번만 연결하고, 모든 에이전트는 이 계층만 바라봅니다. 저희가 만든 것이 이 계층, EmberLink입니다. 설명보다 직접 보시는 편이 빠릅니다. 지금 만들어 보여드리겠습니다.",
+  4:"▸1 설명 — 먼저 프로젝트를 생성합니다. 고객사 내부에 어떤 리소스가 있는지는 사전에 알 수 없습니다. 연결해 두면 환경에 맞춰 자동으로 탐지하고, API와 DB, 문서가 MCP 도구로 변환되는 것까지 이 단계에서 끝납니다. 같은 범위를 고객사마다 1회성으로 구축하면 4명이 6개월, 24MM이 듭니다. 저희가 현장에서 수행해온 방식입니다. 이 플랫폼으로는 2명 2개월, 4MM이면 끝납니다.\n▸1 시연 — 화면으로 보시겠습니다.\n\n▸2 설명 — 연결한 문서가 어떻게 지식으로 바뀌는지 보시겠습니다. 약관은 조·항 단위로 분해되고, 조항 간 관계까지 그래프로 구성됩니다. 자동차보험 약관 75문항으로 직접 평가했습니다. 검색 적중률 96%, 답변 품질 G-Eval 81점입니다. 같은 조건에서 단순 벡터 검색은 61점이었습니다.\n▸2 시연 — 잘린 결과를 먼저 보시고, 그대로 질문해 보겠습니다. 「대인배상 I과 II는 뭐가 다른가요? 둘 다 필요한가요?」 — 답변에 조·항 출처가 그대로 붙습니다.\n\n▸3 설명 — 변환은 앞 단계에서 이미 끝났습니다. 여기서는 그 도구들 중 필요한 것을 찾고, 찾은 조합을 스킬로 굳힙니다. 도구가 수십 개가 되면 목록에서 고르는 일 자체가 부담이라, 하려는 일을 문장으로 넣습니다.\n▸3 시연 — 「직업명을 넣으면 그 직업의 가입한도가 나오게 하려면?」 라고 넣겠습니다. 직업분류코드 조회, 상해위험등급 조회, 누적한도 조회 — 필요한 도구가 순서까지 붙어 나옵니다. 이 순서를 스킬로 만들어 두면 다음부터는 커맨드 한 줄이면 됩니다.\n\n▸4 (시연 없음) — 마지막이 핵심입니다. 성격이 다른 세 개의 에이전트가, 방금 만든 계층 하나를 그대로 사용합니다. 두 번째와 세 번째 에이전트에는 추가 개발이 없었습니다. 오늘 말씀드리려던 것은 이 화면입니다.",
+  5:"사업화 방식을 말씀드리겠습니다.\n\n먼저 비용입니다. 3억 5천만 원이 필요합니다. 다만 별도로 집행해야 하는 투자금이 아닙니다. 6명이 3개월간 개발하는 인건비 3억 2천만 원에, 인프라와 라이선스 2천 6백만 원을 더한 금액입니다. 지금 있는 인력으로 만들 수 있다는 뜻입니다.\n\n검증은 새 고객을 찾아서 하지 않습니다. 지금 진행 중인 한화손보 프로젝트 안에서 PoC를 수행하고, 그 자리에서 고객 의사를 확인합니다. 별도 영업 비용 없이 검증이 끝납니다.\n\n그 결과를 1호 레퍼런스로 정리해 다음 고객에게 제시합니다. 보험에서 시작해 금융, 그다음 산업으로 넓힙니다.\n\n매출 구조는 단순합니다. 구축 1건에 저희가 투입하는 것은 2명 2개월, 원가로 7천 2백만 원입니다. 여기에 마진을 붙여 1억 8천만 원에 공급합니다. 고객이 같은 것을 직접 만들면 6명 3개월, 3억 2천이 드는 일이니 절반 가까이 낮추는 셈입니다. 여기에 연 유지보수가 구축비의 15%로 붙고, 두 곳이면 손익분기를 넘습니다. 한 번 구축한 계층은 유지보수로 남고, 다음 구축에서는 그대로 재사용됩니다.",
+  6:"정리하겠습니다. 지금은 모두가 에이전트를 만드는 시점이고, 그 역량은 곧 평준화됩니다. 이후에 남는 경쟁력은 그 에이전트가 회사를 제대로 아는가입니다. 그동안 저희 고객은 사람이었습니다. 다음 고객은 에이전트입니다. 감사합니다."
+};
+/* 화면에서 발표 스크립트 직접 수정 — 슬라이드별 localStorage 저장, 기본 SCRIPTS 오버라이드 */
+const SCRIPT_KEY='emberlink_v2light_scripts_v5';
+let scriptOverrides={};try{scriptOverrides=JSON.parse(localStorage.getItem(SCRIPT_KEY))||{};}catch(e){scriptOverrides={};}
+const sbText=document.getElementById('sbText');
+const sbEdited=document.getElementById('sbEdited');
+function saveScripts(){localStorage.setItem(SCRIPT_KEY,JSON.stringify(scriptOverrides));}
+function curScriptText(){return (scriptOverrides[current]!=null)?scriptOverrides[current]:(SCRIPTS[current]||'');}
+function markEdited(msg){sbEdited.textContent=msg!=null?msg:((scriptOverrides[current]!=null)?'· 수정됨':'');}
+function autoSizeScript(){
+  sbText.style.height='auto';
+  sbText.style.height=Math.min(sbText.scrollHeight+2,Math.round(window.innerHeight*0.24))+'px';
+}
+function updateScript(){
+  document.getElementById('sbNum').textContent=LABELS[current]||'';
+  sbText.value=curScriptText();
+  markEdited();autoSizeScript();
+}
+sbText.addEventListener('input',()=>{
+  const def=SCRIPTS[current]||'';
+  if(sbText.value===def)delete scriptOverrides[current];else scriptOverrides[current]=sbText.value;
+  saveScripts();markEdited();autoSizeScript();
+});
+document.getElementById('sbReset').addEventListener('click',e=>{
+  e.stopPropagation();delete scriptOverrides[current];saveScripts();
+  sbText.value=SCRIPTS[current]||'';markEdited();autoSizeScript();sbText.focus();
+});
+document.getElementById('sbCopy').addEventListener('click',e=>{
+  e.stopPropagation();
+  const all=[];
+  for(let i=0;i<slides.length;i++){const t=(scriptOverrides[i]!=null)?scriptOverrides[i]:(SCRIPTS[i]||'');if(t)all.push('['+(LABELS[i]||('#'+i))+']\n'+t);}
+  navigator.clipboard.writeText(all.join('\n\n')).then(()=>{markEdited('· 전체 복사됨!');setTimeout(markEdited,1600);}).catch(()=>{markEdited('· 복사 실패(권한)');setTimeout(markEdited,1600);});
+});
+
+/* Memo */
+const MEMO_KEY='emberlink_v2light_memos';
+let memos={};try{memos=JSON.parse(localStorage.getItem(MEMO_KEY))||{};}catch(e){memos={};}
+const memoPanel=document.getElementById('memoPanel');
+const memoText=document.getElementById('memoText');
+const memoTitle=document.getElementById('memoTitle');
+function loadMemo(){memoTitle.textContent=(LABELS[current]||'')+' 메모';memoText.value=memos[current]||'';}
+memoText.addEventListener('input',()=>{
+  if(memoText.value.trim())memos[current]=memoText.value;else delete memos[current];
+  localStorage.setItem(MEMO_KEY,JSON.stringify(memos));
+});
+
+/* Title 오프닝 시퀀스: 0 표지(로고만) → 1 팀 → 2 시장 → 3 변화 → 4 발견 → 5 캐치프레이즈 */
+const TITLE_MAX=3;
+let titleStage=0;
+const titleEl=document.getElementById('titleSlide');
+function titleSet(n){
+  titleStage=Math.max(0,Math.min(TITLE_MAX,n));
+  titleEl.setAttribute('data-st',titleStage);
+  titleEl.classList.toggle('cover',titleStage===0);
+}
+function titleNext(){ if(titleStage<TITLE_MAX){titleSet(titleStage+1);} else showSlide(current+1,1); }
+function titlePrev(){ if(titleStage>0){titleSet(titleStage-1);} else showSlide(current-1,-1); }
+
+/* Hook (slide 2) 2-stage: 0 = 한 프로젝트 가운데 / 1 = 왼쪽 이동 + 부서 순차 등장 */
+let hookStage=0;
+const hookEl=document.getElementById('hookSlide');
+function hookNext(){
+  if(hookStage<1){hookStage=1;hookEl.classList.remove('stage1');void hookEl.offsetWidth;hookEl.classList.add('stage1');}
+  else showSlide(current+1,1);
+}
+function hookPrev(){
+  if(hookStage>0){hookStage=0;hookEl.classList.remove('stage1');}
+  else showSlide(current-1,-1);
+}
+
+function showSlide(n,dir){
+  dir=dir||1;
+  slides[current].classList.remove('active');
+  current=(n+slides.length)%slides.length;
+  const s=slides[current];
+  s.classList.add('active');
+  window.__deckSlide=s.id;                     // 자동 시연 러너가 시연 장을 벗어난 것을 알아채는 값
+  progress.style.width=(current<MAIN?((current+1)/MAIN*100):100)+'%';
+  slideNum.textContent=LABELS[current]||'';
+  cornerLogo.style.opacity=(current===0||current===MAIN-1||s.id==='demoSlide')?'0':'.85';
+  if(s.id==='titleSlide'){titleSet(dir<0?TITLE_MAX:0);}
+  if(s.id==='hookSlide'){
+    hookStage=(dir<0)?1:0;
+    s.classList.remove('play','stage1');void s.offsetWidth;s.classList.add('play');
+    if(hookStage>=1)s.classList.add('stage1');
+  }
+  if(s.id==='demoSlide'){
+    // 앞에서 오면 1단계 설명부터, 뒤에서 되돌아오면 마지막 단계 시연 화면으로
+    demoStage=(dir<0)?DEMO_STAGES.length-1:0;
+    demoMode=(dir<0 && !DEMO_STAGES[demoStage].noDemo)?'demo':'explain';
+    renderDemoStage();
+  }
+  if(s.id==='chartSlide'){chartStage=(dir<0)?3:0;renderChart();}
+  loadMemo();updateScript();
+}
+
+/* ── 슬라이드 번호 바로가기 ───────────────────────────────────
+   1~7 본편 · A 부록 표지 · A1~A10 부록. 여러 글자를 받아야 하므로(A10)
+   짧은 입력 버퍼를 두고, 잠시 멈추거나 Enter 를 누르면 이동한다. */
+const APX_MAX = slides.length - MAIN - 1;          // 부록 장 수(현재 10)
+const jumpHud = document.createElement('div');
+jumpHud.className = 'jump-hud';
+document.body.appendChild(jumpHud);
+let jumpBuf = '', jumpTimer = null;
+
+function jumpShow(){
+  if(!jumpBuf){ jumpHud.classList.remove('on'); return; }
+  jumpHud.innerHTML = jumpBuf.toUpperCase() + '<small>Enter 이동 · Esc 취소</small>';
+  jumpHud.classList.add('on');
+}
+function jumpTarget(b){
+  if(/^\d+$/.test(b)){ const n = +b; return (n >= 1 && n <= MAIN) ? n - 1 : null; }
+  if(/^a$/i.test(b)) return MAIN;                   // APPENDIX 표지
+  const m = b.match(/^a(\d+)$/i);
+  if(m){ const n = +m[1]; return (n >= 1 && n <= APX_MAX) ? MAIN + n : null; }
+  return null;
+}
+function jumpFlush(){
+  clearTimeout(jumpTimer);
+  const idx = jumpTarget(jumpBuf);
+  jumpBuf = ''; jumpShow();
+  if(idx !== null) showSlide(idx, 1);
+}
+function jumpFeed(ch){
+  jumpBuf += ch; jumpShow();
+  clearTimeout(jumpTimer);
+  // A10 처럼 두 글자가 더 올 수 있으니 조금 기다렸다 확정한다
+  jumpTimer = setTimeout(jumpFlush, 800);
+}
+
+document.addEventListener('keydown',e=>{
+  if(/^(TEXTAREA|INPUT)$/.test(e.target.tagName)){if(e.key==='Escape')e.target.blur();return;}
+  if(jumpBuf && e.key==='Escape'){ clearTimeout(jumpTimer); jumpBuf=''; jumpShow(); return; }
+  if(jumpBuf && e.key==='Enter'){ e.preventDefault(); jumpFlush(); return; }
+  if(/^[0-9]$/.test(e.key)){ e.preventDefault(); jumpFeed(e.key); return; }
+  if(!jumpBuf && (e.key==='a'||e.key==='A')){ e.preventDefault(); jumpFeed('a'); return; }
+  // 입력 중에 상관없는 키를 누르면 대기 중이던 이동을 취소한다.
+  // 안 그러면 나중에 타임아웃이 터지며 엉뚱한 장으로 넘어간다.
+  if(jumpBuf){ clearTimeout(jumpTimer); jumpBuf=''; jumpShow(); }
+  if(e.key==='s'||e.key==='S'){document.getElementById('scriptBar').classList.toggle('hidden');return;}
+  if(e.key==='m'||e.key==='M'){memoPanel.classList.toggle('open');return;}
+  const id=slides[current].id;
+  if(e.key==='ArrowRight'||e.key===' '){
+    e.preventDefault();
+    if(id==='titleSlide'){titleNext();return;}
+    if(id==='hookSlide'){hookNext();return;}
+    if(id==='demoSlide'&&demoNext()){return;}
+    if(id==='chartSlide'&&chartStage<3){chartStage++;renderChart();return;}
+    showSlide(current+1,1);
+  }
+  if(e.key==='ArrowLeft'){
+    e.preventDefault();
+    if(id==='titleSlide'){titlePrev();return;}
+    if(id==='hookSlide'){hookPrev();return;}
+    if(id==='demoSlide'&&demoPrev()){return;}
+    if(id==='chartSlide'&&chartStage>0){chartStage--;renderChart();return;}
+    showSlide(current-1,-1);
+  }
+});
+
+document.addEventListener('click',e=>{
+  if(e.target.closest('#scriptBar')||e.target.closest('#memoPanel'))return;
+  const id=slides[current].id;
+  if(id==='demoSlide')return;
+  const goNext=e.clientX>window.innerWidth/2;
+  if(id==='titleSlide'){goNext?titleNext():titlePrev();return;}
+  if(id==='hookSlide'){goNext?hookNext():hookPrev();return;}
+  if(id==='chartSlide'){
+    if(goNext){chartStage<3?(chartStage++,renderChart()):showSlide(current+1,1);}
+    else{chartStage>0?(chartStage--,renderChart()):showSlide(current-1,-1);}
+    return;
+  }
+  goNext?showSlide(current+1,1):showSlide(current-1,-1);
+});
+
+let tx=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;});
+document.addEventListener('touchend',e=>{
+  if(slides[current].id==='demoSlide')return;
+  const d=e.changedTouches[0].clientX-tx;
+  if(Math.abs(d)>50){d<0?showSlide(current+1,1):showSlide(current-1,-1);}
+});
+
+renderDemoStage();renderChart();showSlide(0);
+</script>
+<!-- 덱 안에서 도는 자동 시연. 앱과 같은 오리진이라 iframe 을 직접 몬다 — 발표 PC 에
+     아무것도 깔지 않아도 된다. ?auto=0 또는 D 키로 끌 수 있다. -->
+<script src="assets/autodemo.js"></script>
+</body>
+</html>

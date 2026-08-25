@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stage Console · Climax 레거시 스테이지 (테스트 도구)</title>
+<style>
+  /* midnight command center — ref: styles.refero.design (Raycast/Linear/dope.security 계열) */
+  :root{
+    --bg:#0a0e14; --bg2:#0d121b; --panel:#111823; --panel2:#0e141d; --inset:#0a0f16;
+    --line:#1d2735; --line2:#28344a;
+    --ink:#d7e0ee; --muted:#8592a6; --faint:#4e596b;
+    --teal:#2dd4bf; --teal-dim:#164e48; --teal-wash:rgba(45,212,191,.08);
+    --up:#3fb950; --down:#f85149; --amber:#e3a008; --violet:#a78bfa; --blue:#79c0ff; --coral:#ff7b72;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Pretendard",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(900px 420px at 85% -10%, rgba(45,212,191,.06) 0%, transparent 60%),
+      radial-gradient(700px 380px at 0% 0%, rgba(121,192,255,.04) 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;
+    min-height:100vh;-webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:var(--mono)}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 clamp(16px,3vw,36px)}
+
+  /* ── header ── */
+  header{
+    position:sticky;top:0;z-index:10;
+    background:rgba(10,14,20,.86);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .hd{display:flex;align-items:center;gap:14px;padding:13px 0;flex-wrap:wrap}
+  .badge-test{
+    font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;
+    color:#160f00;background:var(--amber);padding:4px 10px;border-radius:5px;white-space:nowrap;
+  }
+  .hd-title{font-weight:800;font-size:16px;letter-spacing:-.01em}
+  .hd-title .accent{color:var(--teal)}
+  .hd-sub{font-size:11.5px;color:var(--muted)}
+  .hd-meta{margin-left:auto;display:flex;gap:16px;align-items:center;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .hd-meta b{color:var(--ink)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+  .live{display:inline-flex;align-items:center;gap:6px;color:var(--teal)}
+  .live .dot{background:var(--teal);box-shadow:0 0 8px rgba(45,212,191,.7);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  #upCount.ok{color:var(--up)} #upCount.bad{color:var(--down)}
+
+  /* ── framing strip ── */
+  .framing{
+    margin-top:26px;padding:20px 24px;border-radius:14px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  }
+  .framing::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--teal),transparent)}
+  .framing h1{font-size:clamp(17px,2.2vw,21px);font-weight:800;letter-spacing:-.02em;line-height:1.35}
+  .framing h1 em{font-style:normal;color:var(--teal)}
+  .framing p{margin-top:6px;font-size:12.5px;color:var(--muted);max-width:88ch}
+  .framing .mono-path{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+  /* ── section label ── */
+  .slabel{display:flex;align-items:center;gap:10px;margin:30px 0 14px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--faint)}
+  .slabel .no{color:var(--teal)}
+  .slabel .rule{flex:1;height:1px;background:var(--line)}
+
+  /* ── server profile cards ── */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+  .sv{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-radius:15px;overflow:hidden;
+    transition:transform .18s cubic-bezier(.2,.7,.3,1),border-color .18s,box-shadow .18s;
+  }
+  .sv:hover{transform:translateY(-3px);border-color:var(--line2);box-shadow:0 18px 40px -18px rgba(0,0,0,.6)}
+  .sv.down-state{border-color:#5a2320}
+  .sv-hd{padding:15px 17px 13px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .sv-hd .dot.up{background:var(--up);box-shadow:0 0 9px rgba(63,185,80,.8);animation:pulse 2s infinite}
+  .sv-hd .dot.down{background:var(--down);box-shadow:0 0 9px rgba(248,81,73,.8)}
+  .sv-name{font-weight:800;font-size:15px;letter-spacing:-.01em}
+  .sv-era{font-family:var(--mono);font-size:10px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap}
+  .sv-state{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;line-height:1.35}
+  .sv-state .st.up{color:var(--up)} .sv-state .st.down{color:var(--down)}
+  .sv-state .ms{color:var(--faint);font-weight:400}
+  .sv-body{padding:13px 17px 16px;display:flex;flex-direction:column;gap:13px}
+
+  .blk .bh{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.09em;color:var(--faint);margin-bottom:7px;display:flex;align-items:center;gap:7px}
+  .auth-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px}
+  .auth-session{background:rgba(227,160,8,.14);color:var(--amber);border:1px solid rgba(227,160,8,.35)}
+  .auth-oauth{background:var(--teal-wash);color:var(--teal);border:1px solid rgba(45,212,191,.35)}
+  .auth-apikey{background:rgba(167,139,250,.12);color:var(--violet);border:1px solid rgba(167,139,250,.35)}
+  .auth-flow{font-size:12px;color:var(--muted);line-height:1.6;margin-top:7px}
+  .auth-flow code{font-family:var(--mono);font-size:11px;color:var(--blue);background:var(--inset);padding:0 5px;border-radius:4px}
+
+  .ep{width:100%;border-collapse:collapse}
+  .ep td{padding:4.5px 0;border-bottom:1px dashed var(--line);vertical-align:top;font-size:12px}
+  .ep tr:last-child td{border-bottom:0}
+  .m{font-family:var(--mono);font-size:10px;font-weight:700;border-radius:4px;padding:1.5px 7px;margin-right:9px;white-space:nowrap}
+  .m.GET{background:rgba(45,212,191,.12);color:var(--teal)}
+  .m.POST{background:rgba(227,160,8,.14);color:var(--amber)}
+  .ep .path{font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+  .ep .desc{color:var(--faint);font-size:11px;text-align:right;white-space:nowrap;padding-left:10px}
+
+  .doc-badge{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:5px;display:inline-flex;gap:6px;align-items:center}
+  .doc-swagger{background:rgba(121,192,255,.12);color:var(--blue);border:1px solid rgba(121,192,255,.3)}
+  .doc-openapi{background:rgba(63,185,80,.12);color:var(--up);border:1px solid rgba(63,185,80,.3)}
+  .doc-none{background:rgba(248,81,73,.1);color:var(--coral);border:1px solid rgba(248,81,73,.3)}
+  .doc-url{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-left:8px}
+
+  .trap{
+    border:1px solid rgba(227,160,8,.3);background:rgba(227,160,8,.06);
+    border-radius:9px;padding:9px 12px;font-size:11.5px;line-height:1.6;color:#d8b45a;
+  }
+  .trap b{color:var(--amber)}
+
+  /* ── platform + CTA ── */
+  .bridge{
+    margin-top:14px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    background:linear-gradient(90deg,rgba(45,212,191,.07),transparent 55%),linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--teal-dim);border-radius:15px;padding:16px 20px;
+  }
+  .bridge .dot{background:var(--up);box-shadow:0 0 9px rgba(63,185,80,.8)}
+  .bridge .b-name{font-weight:800;font-size:15px}
+  .bridge .b-meta{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+  .bridge .b-meta b{color:var(--ink)}
+  .cta{
+    margin-left:auto;display:inline-flex;align-items:center;gap:9px;
+    background:var(--teal);color:#04231f;font-weight:800;font-size:13.5px;
+    padding:11px 20px;border-radius:11px;text-decoration:none;white-space:nowrap;
+    box-shadow:0 8px 24px -8px rgba(45,212,191,.5);transition:transform .15s,box-shadow .15s;
+  }
+  .cta:hover{transform:translateY(-2px);box-shadow:0 14px 30px -8px rgba(45,212,191,.6)}
+  .cta svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── live log ── */
+  .logwrap{margin:14px 0 40px;background:var(--inset);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .logbar{padding:9px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .logbar b{color:var(--teal)}
+  .logbar .clear{margin-left:auto;cursor:pointer;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:2px 10px;transition:color .15s}
+  .logbar .clear:hover{color:var(--ink)}
+  #log{height:230px;overflow-y:auto;padding:9px 15px;font-family:var(--mono);font-size:11.5px}
+  #log::-webkit-scrollbar{width:8px} #log::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+  .ln{padding:1.5px 0;white-space:pre-wrap;word-break:break-all;animation:fadein .3s}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .ln .ts{color:var(--faint)} .ln .sv-k{color:var(--blue);font-weight:700}
+  .ln .ok{color:var(--up);font-weight:700} .ln .bad{color:var(--down);font-weight:700}
+  .ln .dim{color:var(--muted)} .ln .cd{color:var(--amber)}
+
+  footer{padding:0 0 30px;font-family:var(--mono);font-size:10.5px;color:var(--faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .anim{animation:rise .5s cubic-bezier(.2,.7,.3,1) both}
+  @media(prefers-reduced-motion:reduce){.anim,.ln{animation:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <span class="badge-test">⚠ TEST CONSOLE — 제품 아님</span>
+    <div>
+      <div class="hd-title">Climax <span class="accent">스테이지 콘솔</span></div>
+      <div class="hd-sub">레거시 현황 브리핑 · 실시간 상태 — 변환 전에도 확인 가능</div>
+    </div>
+    <div class="hd-meta">
+      <span class="live"><span class="dot"></span><span id="streamState">connecting…</span></span>
+      <span>legacy <b id="upCount">–</b></span>
+      <span id="baseAddr"></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 시연 오프닝 프레이밍 -->
+  <div class="framing anim">
+    <h1>금융 폐쇄망 안, 세대도 인증도 문서도 제각각인 <em>3개의 레거시 시스템</em></h1>
+    <p>2009년식 세션 로그인부터 표준 OAuth2, 문서가 엑셀뿐인 시스템까지 — 실제 금융권에서 마주치는 이기종 레거시를 재현했다.
+       아래 현황을 확인한 뒤, Ember Link가 이들을 <b style="color:var(--ink)">MCP 서버로 변환</b>하는 과정을 시연한다.</p>
+    <p class="mono-path" id="framingBase"></p>
+  </div>
+
+  <!-- ① 레거시 프로필 -->
+  <div class="slabel anim"><span class="no">01</span> LEGACY SYSTEMS — 인증체계 · 내부 API · 문서상태 <span class="rule"></span></div>
+  <div class="cards" id="cards"><!-- JS 렌더 --></div>
+
+  <!-- ② 플랫폼 + CTA -->
+  <div class="slabel anim"><span class="no">02</span> CONVERSION PLATFORM <span class="rule"></span></div>
+  <div class="bridge anim" id="bridge">
+    <span class="dot" id="platDot"></span>
+    <span class="b-name">Ember Link 플랫폼</span>
+    <div class="b-meta" id="platMeta"><span>:8080</span></div>
+    <a class="cta" href="/" target="_blank" rel="noopener">
+      Ember Link에서 변환 시작
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </div>
+
+  <!-- ③ 라이브 로그 -->
+  <div class="slabel anim"><span class="no">03</span> LIVE PROBE LOG — 플랫폼 → 레거시 통신 <span class="rule"></span></div>
+  <div class="logwrap anim">
+    <div class="logbar">
+      <span><b>SSE</b> 5초 주기 핑 · 레거시 서버는 건드리지 않음(통신 결과만 기록)</span>
+      <span class="clear" onclick="document.getElementById('log').innerHTML=''">clear</span>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <footer>
+    <span>Ember Link — Stage Test Console</span>
+    <span>제품(플랫폼)과 별개의 테스트 도구 · /api/_debug/*</span>
+  </footer>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const AUTH_CLS = { "세션 쿠키": "auth-session", "OAuth2 CC": "auth-oauth", "X-API-KEY": "auth-apikey" };
+  const DOC_CLS = (doc) => doc?.startsWith("Swagger") ? "doc-swagger" : doc?.startsWith("OpenAPI") ? "doc-openapi" : "doc-none";
+  let rendered = false;
+
+  // ── 프로필 카드: 메타는 1회 렌더, 상태(dot·ms)만 매 폴링 갱신 ──
+  function renderCards(legacy) {
+    $("cards").innerHTML = legacy.map((l, i) => `
+      <div class="sv anim ${l.up ? "" : "down-state"}" id="sv-${l.key}" style="animation-delay:${i * 90}ms">
+        <div class="sv-hd">
+          <span class="dot ${l.up ? "up" : "down"}" id="dot-${l.key}"></span>
+          <span class="sv-name">${l.name}</span>
+          <span class="sv-era">${l.era || ""}</span>
+          <span class="sv-state"><span class="st ${l.up ? "up" : "down"}" id="st-${l.key}">${l.up ? "UP" : "DOWN"}</span><br>
+            <span class="ms" id="ms-${l.key}">${l.up ? l.ms + "ms · " + l.code : (l.error || "no response")}</span></span>
+        </div>
+        <div class="sv-body">
+          <div class="blk">
+            <div class="bh">AUTH<span class="auth-badge ${AUTH_CLS[l.auth] || ""}">${l.auth}</span></div>
+            <div class="auth-flow">${(l.auth_detail || "").replace(/(POST|GET) ([^\s(]+)/g, '<code>$1 $2</code>').replace(/(JSESSIONID|access_token|Bearer|X-API-KEY|client_id|client_secret)/g, '<code>$1</code>')}</div>
+          </div>
+          <div class="blk">
+            <div class="bh">ENDPOINTS <span style="color:var(--line2)">·</span> <span style="letter-spacing:0">${(l.endpoints || []).length}개</span></div>
+            <table class="ep">${(l.endpoints || []).map((e) => `
+              <tr><td><span class="m ${e.m}">${e.m}</span><span class="path">${e.p}</span></td><td class="desc">${e.d}</td></tr>`).join("")}
+            </table>
+          </div>
+          <div class="blk">
+            <div class="bh">SPEC / DOCS</div>
+            <span class="doc-badge ${DOC_CLS(l.doc)}">${l.doc || "-"}</span>${l.doc_url ? `<span class="doc-url">${l.doc_url}</span>` : ""}
+          </div>
+          ${l.note ? `<div class="trap">⚠ <b>시연 포인트</b> — ${l.note}</div>` : ""}
+        </div>
+      </div>`).join("");
+    rendered = true;
+  }
+  function updateCards(legacy) {
+    for (const l of legacy) {
+      const card = $("sv-" + l.key); if (!card) continue;
+      card.classList.toggle("down-state", !l.up);
+      $("dot-" + l.key).className = "dot " + (l.up ? "up" : "down");
+      const st = $("st-" + l.key); st.textContent = l.up ? "UP" : "DOWN"; st.className = "st " + (l.up ? "up" : "down");
+      $("ms-" + l.key).textContent = l.up ? l.ms + "ms · " + l.code : (l.error || "no response");
+    }
+  }
+
+  async function loadHealth() {
+    try {
+      const d = await (await fetch("/api/_debug/stage-health")).json();
+      const legacy = d.legacy || [];
+      const up = legacy.filter((l) => l.up).length;
+      const uc = $("upCount"); uc.textContent = up + "/" + legacy.length + " up";
+      uc.className = up === legacy.length ? "ok" : "bad";
+      $("baseAddr").textContent = d.base || "";
+      $("framingBase").textContent = "stage base: " + (d.base || "") + "  ·  probe interval: 5s";
+      const p = d.platform || {};
+      $("platDot").style.background = p.up ? "var(--up)" : "var(--down)";
+      $("platMeta").innerHTML = `<span>:8080</span><span>registry <b>${p.registry ?? "–"}</b></span><span>embedder <b>${p.embedder ?? "–"}</b></span>`;
+      rendered ? updateCards(legacy) : renderCards(legacy);
+    } catch (e) { /* 다음 폴링에서 재시도 */ }
+  }
+  loadHealth();
+  setInterval(loadHealth, 5000);
+
+  // ── SSE 라이브 로그 ──
+  function appendLog(l) {
+    const box = $("log");
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    const div = document.createElement("div");
+    div.className = "ln";
+    const state = l.up ? `<span class="ok">UP  </span>` : `<span class="bad">DOWN</span>`;
+    const tail = l.up ? `<span class="dim">${l.ms}ms</span> <span class="cd">${l.code}</span>` : `<span class="bad">${l.error || "no response"}</span>`;
+    div.innerHTML = `<span class="ts">[${l.ts}]</span> <span class="sv-k">${(l.key || "").toUpperCase().padEnd(4)}</span><span class="dim">:${l.port}</span> ${state} ${tail}`;
+    box.appendChild(div);
+    while (box.childElementCount > 500) box.removeChild(box.firstChild);
+    if (atBottom) box.scrollTop = box.scrollHeight;
+  }
+  function connect() {
+    const es = new EventSource("/api/_debug/stage-stream");
+    es.onopen = () => { $("streamState").textContent = "live"; };
+    es.onmessage = (e) => { try { appendLog(JSON.parse(e.data)); } catch (_) {} };
+    es.onerror = () => { $("streamState").textContent = "reconnecting…"; };
+  }
+  connect();
+</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ export default function GNB() {
 
   return (
     <nav className="sticky top-[50px] z-20 bg-white border-b-2 border-brand px-6">
-      <div className="max-w-[1440px] mx-auto flex items-center gap-1.5">
+      <div className="max-w-[1760px] mx-auto flex items-center gap-1.5">
         {items.map((item) => {
           const isActive =
             item.to !== '#' &&

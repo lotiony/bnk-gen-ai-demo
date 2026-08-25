@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmberLink 연결 서비스 — 하나의 MCP Pool, 세 개의 서비스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fa;--panel:#fff;--panel-2:#fafbfe;
+  --edge:#e2e8f3;--edge-2:#eef2f8;
+  --ink:#1a2237;--ink-dim:#5c6880;--ink-faint:#96a2b8;
+  --teal:#0fb5a0;--teal-deep:#0a8a7b;--teal-soft:#e7f8f5;
+  --s1:#e2620f;--s1-soft:#fdf0e6;
+  --s2:#12a05c;--s2-soft:#e8f7ef;
+  --s3:#2f6bd8;--s3-soft:#eaf1fd;
+  --red:#d84a4a;--green:#12a05c;
+  --mono:'IBM Plex Mono',monospace;--disp:'Chakra Petch','Pretendard Variable',sans-serif;--body:'Pretendard Variable',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);min-height:100vh}
+svg.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:-.12em;flex:none}
+.wrap{max-width:1520px;margin:0 auto;padding:0 20px 40px}
+
+/* ───────── 헤더 ───────── */
+.top{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:13px;padding:11px 20px;flex-wrap:wrap;
+  background:rgba(255,255,255,.92);border-bottom:1px solid var(--edge);backdrop-filter:blur(10px)}
+.brand .kicker{font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;color:var(--s1);font-weight:600;display:block}
+.brand h1{font-family:var(--disp);font-size:19px;font-weight:700;line-height:1.2;letter-spacing:-.01em}
+.brand h1 em{font-style:normal;color:var(--teal-deep)}
+.brand .lede{font-size:11.5px;color:var(--ink-dim);margin-top:3px}
+.brand .lede b{color:var(--ink);font-weight:700}
+.brand .lede .was{color:var(--ink-faint);text-decoration:line-through;text-decoration-color:#cdd6e4}
+
+/* 시연 진행 3단계 — 발표자·청중이 "지금 뭘 보는지" 잡아준다 */
+.steps{display:flex;align-items:center;gap:6px}
+.stp{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-faint);border:1px solid var(--edge);
+  background:#fff;border-radius:99px;padding:6px 11px;transition:all .3s}
+.stp.on{color:var(--teal-deep);border-color:var(--teal);background:var(--teal-soft)}
+.stp.done{color:var(--ink-dim);border-color:var(--edge);background:var(--panel-2)}
+.stp.done::before{content:"✓ ";color:var(--green);font-weight:700}
+
+/* 발표 모드 — 개발용 컨트롤/주석 숨김 */
+body.pres .steps,body.pres .note,body.pres #speedSeg,body.pres #notesBtn,
+body.pres #resetBtn,body.pres #connBtn,body.pres .ep .copy{display:none}
+body.pres .brand h1{font-size:22px}
+.ctrls{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{font-family:var(--disp);font-size:12.5px;font-weight:700;padding:9px 15px;border-radius:10px;border:1px solid var(--edge);
+  background:#fff;color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .18s}
+.btn:hover{border-color:var(--teal);color:var(--ink)}
+.btn svg{width:14px;height:14px}
+.btn.primary{border:none;color:#fff;background:linear-gradient(135deg,#17c9b2,var(--teal) 55%,var(--teal-deep));
+  box-shadow:0 6px 18px rgba(15,181,160,.32)}
+.btn.primary:hover{transform:translateY(-1px)}
+.btn.on{border-color:var(--s1);color:var(--s1);background:var(--s1-soft)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.seg{display:flex;border:1px solid var(--edge);border-radius:10px;overflow:hidden;background:#fff}
+.seg button{font-family:var(--mono);font-size:11px;font-weight:600;padding:9px 11px;border:none;background:none;color:var(--ink-faint);cursor:pointer}
+.seg button.on{background:var(--teal-soft);color:var(--teal-deep)}
+
+/* ═════════ POOL — 상단 단일 박스 ═════════ */
+.pool{position:relative;margin-top:18px;background:var(--panel);border:1px solid var(--edge);border-radius:20px;
+  box-shadow:0 10px 30px rgba(26,34,55,.06);overflow:hidden}
+.pool::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+  background:linear-gradient(90deg,var(--s1),var(--teal),var(--s3))}
+
+/* 1행 — 정체 + 상태 + 카운터 */
+.pool-head{display:flex;align-items:center;gap:14px;padding:15px 20px 13px;flex-wrap:wrap}
+.pool-id{display:flex;align-items:center;gap:11px}
+.pool-mark{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;color:#fff;font-size:19px;
+  background:linear-gradient(140deg,#17c9b2,var(--teal-deep));box-shadow:0 6px 16px rgba(15,181,160,.35)}
+.pool-id .t1{font-family:var(--disp);font-size:19px;font-weight:700;line-height:1.1}
+.pool-id .t2{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:2px}
+.pool-id .t2 b{color:var(--teal-deep)}
+.state{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;font-weight:600;
+  border-radius:99px;padding:6px 12px;border:1px solid var(--edge);color:var(--ink-faint);background:var(--panel-2)}
+.state .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.state.live{color:var(--teal-deep);border-color:rgba(15,181,160,.4);background:var(--teal-soft)}
+.state.live .dot{animation:pulse 1.8s infinite}
+.state.off{color:#b8791a;border-color:#f0dcb4;background:#fdf6e7}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(15,181,160,.45)}70%{box-shadow:0 0 0 6px rgba(15,181,160,0)}100%{box-shadow:0 0 0 0 rgba(15,181,160,0)}}
+.state input{border:none;outline:none;background:rgba(255,255,255,.7);border-radius:99px;padding:3px 9px;
+  font-family:var(--mono);font-size:10.5px;color:var(--teal-deep);width:186px}
+.counters{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.ct{border:1px solid var(--edge);border-radius:12px;padding:6px 13px;background:var(--panel-2);min-width:96px}
+.ct .k{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--ink-faint)}
+.ct .v{font-family:var(--disp);font-size:19px;font-weight:700;color:var(--ink);line-height:1.2}
+.ct.hi .v{color:var(--teal-deep)}
+.ct.zero .v{color:var(--s1)}
+
+/* 2행 — 실제 tool 칩 = Pool 내용물 */
+.pool-tools{padding:0 20px 12px}
+.ptitle{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+  color:var(--ink-faint);font-weight:600;margin-bottom:9px}
+.ptitle .legend{margin-left:auto;display:flex;gap:12px;letter-spacing:0;font-size:10px}
+.ptitle .legend span{display:inline-flex;align-items:center;gap:5px;color:var(--ink-dim)}
+.ptitle .legend i{width:8px;height:8px;border-radius:50%}
+.ptitle .legend .g1{background:var(--s1)}.ptitle .legend .g2{background:var(--s2)}.ptitle .legend .g3{background:var(--s3)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:flex;align-items:center;gap:8px;padding:6px 11px;border-radius:11px;border:1px solid var(--edge);
+  background:var(--panel-2);transition:all .3s}
+.chip .cid{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-dim)}
+.chip .m{font-size:8px;font-weight:700;border-radius:4px;padding:2px 5px;background:#eef2f8;color:var(--ink-faint)}
+.chip .dots{display:flex;gap:3px}
+.chip .dots i{width:8px;height:8px;border-radius:50%;background:#dfe5f0;transition:all .3s}
+.chip .dots i.on.d1{background:var(--s1);box-shadow:0 0 0 2px var(--s1-soft)}
+.chip .dots i.on.d2{background:var(--s2);box-shadow:0 0 0 2px var(--s2-soft)}
+.chip .dots i.on.d3{background:var(--s3);box-shadow:0 0 0 2px var(--s3-soft)}
+.chip.used{border-color:#cfe9e4;background:#fff}
+.chip.used .cid{color:var(--ink)}
+.chip.shared{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 3px 12px rgba(15,181,160,.18)}
+.chip.shared .cid{color:var(--teal-deep);font-weight:700}
+.chip.ping{animation:chipPing .55s}
+@keyframes chipPing{0%{transform:scale(1)}42%{transform:scale(1.09)}100%{transform:scale(1)}}
+
+/* 3행 — 공용 호출 로그 (같은 박스 안, 얇게) */
+.pool-log{border-top:1px dashed var(--edge);background:var(--panel-2);padding:9px 20px 11px}
+.pool-log .lh{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--ink-faint);font-weight:600}
+.pool-log .lh .rgt{margin-left:auto;letter-spacing:0;color:var(--ink-dim)}
+.loglist{margin-top:7px;max-height:96px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:10.5px}
+.loglist::-webkit-scrollbar{width:5px}.loglist::-webkit-scrollbar-thumb{background:#dde4ef;border-radius:9px}
+.logrow{display:flex;align-items:center;gap:8px;padding:5px 9px;border-radius:8px;background:#fff;border:1px solid var(--edge-2);
+  opacity:0;transform:translateX(-5px);animation:logIn .28s forwards}
+@keyframes logIn{to{opacity:1;transform:none}}
+.logrow .who{font-size:8.5px;font-weight:700;border-radius:99px;padding:2px 7px;flex:none}
+.logrow.s1 .who{color:var(--s1);background:var(--s1-soft)}
+.logrow.s2 .who{color:var(--s2);background:var(--s2-soft)}
+.logrow.s3 .who{color:var(--s3);background:var(--s3-soft)}
+.logrow .tool{color:var(--teal-deep);font-weight:600;flex:none}
+.logrow .arg{color:var(--ink-faint);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logrow .reuse{color:#fff;background:var(--teal);border-radius:99px;padding:2px 7px;font-size:8.5px;font-weight:700;flex:none}
+.logrow .lat{color:var(--green);font-size:9px;background:#eaf7f0;border-radius:99px;padding:2px 7px;flex:none}
+.logrow.err{border-color:#f3cccc;background:#fdf3f3}
+.logrow.err .lat{color:var(--red);background:#fbe6e6}
+.log-empty{color:var(--ink-faint);font-family:var(--mono);font-size:10.5px;padding:10px 2px;text-align:center}
+
+/* 엔드포인트 바 — 지금 붙어 있는 Pool 주소를 크게 */
+.ep-row{display:flex;align-items:center;gap:10px;padding:0 20px 13px;flex-wrap:wrap}
+.ep{display:flex;align-items:center;gap:10px;border:1px solid var(--edge);border-radius:13px;padding:8px 13px;background:var(--panel-2)}
+.ep .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--ink-faint);font-weight:700}
+.ep input{border:none;outline:none;background:none;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--teal-deep);width:208px}
+.ep .mcp{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink)}
+.ep .copy{border:1px solid var(--edge);background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;
+  font-family:var(--mono);font-size:9.5px;color:var(--ink-faint)}
+.ep .copy:hover{border-color:var(--teal);color:var(--teal-deep)}
+.ep-meta{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ep-meta .ok{color:var(--green);font-weight:700}
+.ep-meta .bad{color:var(--red);font-weight:700}
+.ep-meta b{color:var(--ink-dim)}
+
+/* ═════════ 커넥터 — Pool 에서 세 서비스로 ═════════ */
+.conn{position:relative;height:72px;margin:0 20px}
+.conn svg{width:100%;height:72px;overflow:visible}
+.conn .wire{fill:none;stroke:#d3dbe9;stroke-width:2.5;transition:stroke .3s}
+.conn .wire.s1.hot{stroke:var(--s1)}
+.conn .wire.s2.hot{stroke:var(--s2)}
+.conn .wire.s3.hot{stroke:var(--s3)}
+.conn .plug{fill:#fff;stroke:#d3dbe9;stroke-width:2.5;transition:all .3s}
+.conn .plug.s1.hot{stroke:var(--s1)}.conn .plug.s2.hot{stroke:var(--s2)}.conn .plug.s3.hot{stroke:var(--s3)}
+.conn .ptxt{font-family:var(--mono);font-size:10px;fill:var(--ink-faint)}
+.conn .ptxt.hot{font-weight:600}
+.conn .ptxt.s1.hot{fill:var(--s1)}.conn .ptxt.s2.hot{fill:var(--s2)}.conn .ptxt.s3.hot{fill:var(--s3)}
+
+/* ═════════ 서비스 3열 ═════════ */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;position:relative}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.svc-head{background:var(--panel);border:1px solid var(--edge);border-radius:15px;padding:12px 14px;position:relative;
+  box-shadow:0 6px 18px rgba(26,34,55,.05)}
+.svc-head::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0}
+.p1 .svc-head::before{background:var(--s1)}.p2 .svc-head::before{background:var(--s2)}.p3 .svc-head::before{background:var(--s3)}
+.svc-head .row1{display:flex;align-items:center;gap:10px}
+.svc-head .pav{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:17px;flex:none}
+.p1 .pav{color:var(--s1);background:var(--s1-soft)}.p2 .pav{color:var(--s2);background:var(--s2-soft)}.p3 .pav{color:var(--s3);background:var(--s3-soft)}
+.svc-head .nm{font-family:var(--disp);font-size:16.5px;font-weight:700;line-height:1.15}
+.svc-head .dept{font-size:10.5px;color:var(--ink-faint);font-family:var(--mono);margin-top:2px}
+.svc-head .prun{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:600;border:1px solid var(--edge);
+  background:#fff;color:var(--ink-dim);border-radius:9px;padding:6px 10px;cursor:pointer;flex:none}
+.svc-head .prun:hover{border-color:var(--teal);color:var(--teal-deep)}
+.svc-head .prun:disabled{opacity:.4;cursor:not-allowed}
+/* 동일 엔드포인트를 3열 모두 같은 문구로 노출 — "같은 Pool" 의 가장 단순한 증거 */
+.plugbar{display:flex;align-items:center;gap:7px;margin-top:10px;padding:6px 9px;border-radius:9px;
+  background:var(--panel-2);border:1px dashed var(--edge);font-family:var(--mono);font-size:9.5px;color:var(--ink-faint)}
+.plugbar .st{width:7px;height:7px;border-radius:50%;background:#cdd6e4;flex:none}
+.plugbar.on{border-style:solid;border-color:rgba(15,181,160,.4);background:var(--teal-soft);color:var(--teal-deep)}
+.plugbar.on .st{background:var(--teal)}
+.plugbar .u{margin-left:auto;color:var(--ink-faint)}
+.plugbar.on .u{color:var(--teal-deep);font-weight:600}
+
+/* MCP CALL FEED — 서비스가 실제로 던진 HTTP 호출이 차례로 쌓인다 */
+.feed{margin-top:9px;border:1px solid var(--edge);border-radius:11px;background:var(--panel-2);overflow:hidden}
+.feed .fh{display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid var(--edge);
+  font-family:var(--mono);font-size:8px;letter-spacing:.13em;color:var(--ink-faint);font-weight:700}
+.feed .fh .n{margin-left:auto;letter-spacing:0;font-size:9.5px}
+.feed .rows{max-height:118px;overflow-y:auto;padding:5px 6px;display:flex;flex-direction:column;gap:4px}
+.feed .rows::-webkit-scrollbar{width:4px}.feed .rows::-webkit-scrollbar-thumb{background:#dde4ef;border-radius:9px}
+.feed .idle{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);padding:7px 5px;text-align:center}
+.frow{border:1px solid var(--edge-2);border-radius:8px;background:#fff;padding:5px 8px;animation:rowIn .22s ease-out}
+@keyframes rowIn{from{opacity:0;transform:translateY(-4px)}}
+.frow .r1{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px}
+.frow .mth{font-size:8px;font-weight:700;border-radius:4px;padding:2px 5px;letter-spacing:.03em;color:#fff}
+.frow .mth.GET{background:#3b7dd8}.frow .mth.POST{background:#c9761a}
+.frow .mth.PATCH,.frow .mth.PUT{background:#7c6bff}.frow .mth.DELETE{background:#d84a4a}
+.frow .tn{font-weight:700;color:var(--ink)}
+.frow .ph{color:var(--ink-faint)}
+.frow .st{margin-left:auto;font-size:9px;font-weight:700;border-radius:99px;padding:2px 7px;background:#eef2f8;color:var(--ink-faint)}
+.frow .st.ok{background:#eaf7f0;color:var(--green)}
+.frow .st.bad{background:#fbe6e6;color:var(--red)}
+.frow .st.run{background:#eef2f8;color:var(--ink-faint)}
+.frow .lt{font-size:9px;color:var(--ink-faint);font-family:var(--mono)}
+.frow .r2{margin-top:3px;font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .r2 b{color:var(--ink-dim);font-weight:600}
+.frow.pending{opacity:.72}
+.p1 .frow.pending{border-color:var(--s1)}.p2 .frow.pending{border-color:var(--s2)}.p3 .frow.pending{border-color:var(--s3)}
+.frow.errrow{border-color:#f3cccc;background:#fdf3f3}
+
+.win{border-radius:15px;overflow:hidden;position:relative;display:flex;flex-direction:column;height:clamp(430px,55vh,590px);
+  border:1px solid var(--edge);box-shadow:0 10px 30px rgba(26,34,55,.09);transition:box-shadow .4s,border-color .4s}
+.win.awake{border-color:rgba(15,181,160,.55);box-shadow:0 10px 34px rgba(15,181,160,.18)}
+.fs-btn{position:absolute;top:8px;right:8px;z-index:14;width:25px;height:25px;border-radius:8px;cursor:pointer;
+  border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.8);color:#5c6880;display:grid;place-items:center;opacity:.65}
+.fs-btn:hover{opacity:1}.fs-btn svg{width:13px;height:13px}
+.win:fullscreen{height:100vh;border-radius:0}
+
+.boot{position:absolute;inset:0;z-index:13;background:rgba(255,255,255,.96);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;opacity:0;pointer-events:none;transition:opacity .4s}
+.boot.on{opacity:1}
+.boot .bcore{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:20px;
+  background:linear-gradient(140deg,#17c9b2,var(--teal-deep));box-shadow:0 8px 20px rgba(15,181,160,.35);animation:spin 5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.boot .btitle{font-family:var(--disp);font-size:13.5px;font-weight:700;color:var(--ink)}
+.boot .burl{font-family:var(--mono);font-size:10px;color:var(--teal-deep)}
+.boot .blist{font-family:var(--mono);font-size:10px;color:var(--ink-faint);display:flex;flex-direction:column;gap:3px;margin-top:3px}
+.boot .brow{opacity:0;transition:opacity .3s}.boot .brow.on{opacity:1}
+.boot .brow .bc{color:var(--green);font-weight:700}
+.boot .bbar{width:160px;height:3px;border-radius:9px;background:#e6ebf4;overflow:hidden;margin-top:6px}
+.boot .bbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),#17c9b2);transition:width 1s linear}
+
+.toast{position:absolute;top:10px;left:11px;right:42px;z-index:12;display:flex;align-items:center;gap:9px;padding:9px 12px;
+  border-radius:11px;background:#fff;border:1px solid rgba(15,181,160,.45);box-shadow:0 10px 26px rgba(26,34,55,.14);
+  font-size:11.5px;font-weight:600;color:var(--teal-deep);opacity:0;transform:translateY(-12px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.toast small{display:block;font-weight:400;color:var(--ink-faint);font-size:10px;margin-top:2px}
+.toast small b{color:var(--teal-deep);font-weight:700}
+
+/* ① 업무포털 */
+.win.portal{background:#fff;color:#1f2536}
+.portal .chrome{display:flex;align-items:center;gap:8px;background:#f1f3f8;padding:7px 11px;border-bottom:1px solid var(--edge)}
+.portal .chrome .dots{display:flex;gap:5px}
+.portal .chrome .dots i{width:10px;height:10px;border-radius:50%}
+.portal .chrome .dots i:nth-child(1){background:#f0857d}.portal .chrome .dots i:nth-child(2){background:#f4c05a}.portal .chrome .dots i:nth-child(3){background:#84c98a}
+.portal .chrome .url{flex:1;background:#fff;border-radius:99px;padding:5px 12px;font-family:var(--mono);font-size:10px;
+  color:var(--ink-faint);display:flex;align-items:center;gap:6px;border:1px solid var(--edge)}
+.portal .chrome .url svg{width:10px;height:10px}
+.portal .appbar{display:flex;align-items:center;gap:8px;padding:9px 13px;background:#fff;border-bottom:2px solid var(--s1)}
+.portal .appbar b{font-size:12px;font-weight:700}
+.portal .badge1{margin-left:auto;font-size:9px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--teal-soft);
+  color:var(--teal-deep);font-family:var(--mono);margin-right:24px}
+.portal .body{flex:1;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:9px;background:#fafbfe}
+.bubble{max-width:90%;padding:10px 12px;border-radius:14px;font-size:11.5px;line-height:1.6;opacity:0;animation:popIn .3s forwards}
+@keyframes popIn{to{opacity:1}}
+.portal .bubble.user{align-self:flex-end;background:var(--s1);color:#fff;border-bottom-right-radius:5px}
+.portal .bubble.bot{align-self:flex-start;background:#fff;border:1px solid var(--edge);border-bottom-left-radius:5px}
+.portal .bubble.ok{border-color:#bce6dc;background:#f2fbf9}
+.portal .bubble.bad{border-color:#f0c4c4;background:#fdf3f3;color:#a33}
+.portal .trace{align-self:flex-start;width:96%;background:#fff;border:1px solid var(--edge);border-radius:12px;
+  font-family:var(--mono);font-size:10px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;color:var(--ink-dim)}
+.portal .trace .step{display:flex;align-items:center;gap:6px;opacity:0;transform:translateX(-6px);transition:all .3s}
+.portal .trace .step.on{opacity:1;transform:none}
+.portal .trace .sig{color:var(--s1);font-weight:700;flex:none}
+.portal .trace .chk{color:var(--green);font-weight:700;margin-left:auto;flex:none}
+.portal .inputbar{display:flex;gap:8px;padding:9px 11px;background:#fff;border-top:1px solid var(--edge)}
+.portal .inputbar input{flex:1;border:1.5px solid var(--edge);border-radius:99px;padding:8px 14px;font-size:11.5px;
+  font-family:var(--body);outline:none;background:#fafbfe;color:var(--ink)}
+.portal .inputbar button{width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;flex:none;background:var(--s1);color:#fff;display:grid;place-items:center}
+.portal .inputbar button svg{width:14px;height:14px}
+
+/* ② 터미널 — 실제 터미널이라 어둡게 유지 */
+.win.mac{background:#1b1d26}
+.mac .titlebar{display:flex;align-items:center;padding:8px 13px;background:#262933;border-bottom:1px solid #14161d}
+.mac .lights{display:flex;gap:6px}
+.mac .lights i{width:11px;height:11px;border-radius:50%}
+.mac .lights i:nth-child(1){background:#ff5f57}.mac .lights i:nth-child(2){background:#febc2e}.mac .lights i:nth-child(3){background:#28c840}
+.mac .tt{flex:1;text-align:center;font-family:var(--mono);font-size:10.5px;color:#8b93a7}
+.mac .badge2{font-family:var(--mono);font-size:9px;font-weight:600;padding:3px 9px;border-radius:99px;color:#5fe3cd;background:rgba(15,181,160,.18);margin-right:24px}
+.mac .body{flex:1;overflow-y:auto;padding:13px 15px}
+.term{font-family:var(--mono);font-size:10.5px;line-height:1.75;color:#d3d8e6}
+.term .ln{opacity:0;transform:translateY(3px);transition:all .22s;white-space:pre-wrap;word-break:break-word}
+.term .ln.on{opacity:1;transform:none}
+.term .p{color:#ffb43a}.term .tool{color:#5fe3cd}.term .dim{color:#71788c}.term .ok{color:#6ee7a0}
+.term .code{color:#a5b4fc}.term .bad{color:#ff8a8a}
+.term .box{border:1px solid #2f333f;border-radius:9px;padding:8px 10px;margin:5px 0;background:#14161d;line-height:1.7}
+.mac .inputbar{display:flex;align-items:center;gap:8px;padding:10px 15px;background:#14161d;border-top:1px solid #2f333f;font-family:var(--mono)}
+.mac .inputbar .pp{color:#ffb43a;font-size:12px;font-weight:600}
+.mac .inputbar input{flex:1;background:none;border:none;outline:none;color:#d3d8e6;font-family:var(--mono);font-size:10.5px}
+
+/* ③ 상담 어시스트 */
+.win.call{background:#fff;color:#1f2536}
+.call .callbar{display:flex;align-items:center;gap:10px;padding:10px 13px;background:#2f4470;color:#fff}
+.call .callbar .avatar{width:29px;height:29px;border-radius:50%;background:#4a5f92;display:grid;place-items:center;flex:none;color:#d6e0f6}
+.call .callbar .avatar svg{width:15px;height:15px}
+.call .callbar .who b{font-size:12px;display:block}
+.call .callbar .who span{font-size:9.5px;color:#a8b6d6;font-family:var(--mono)}
+.call .wave{display:flex;align-items:center;gap:2.5px;height:17px;margin-left:auto}
+.call .wave i{width:3px;border-radius:2px;background:#5fe3cd;animation:wv .9s ease-in-out infinite}
+.call .wave i:nth-child(1){height:6px}.call .wave i:nth-child(2){height:13px;animation-delay:.15s}.call .wave i:nth-child(3){height:9px;animation-delay:.3s}
+.call .wave i:nth-child(4){height:15px;animation-delay:.45s}.call .wave i:nth-child(5){height:7px;animation-delay:.6s}
+@keyframes wv{50%{transform:scaleY(.4)}}
+.call .timer{font-family:var(--mono);font-size:11px;color:#cdd8ef;margin-right:24px}
+.call .body{flex:1;overflow-y:auto;padding:11px 13px;display:flex;flex-direction:column;gap:9px;background:#fafbfe}
+.call .transcript{background:#fff;border:1px solid var(--edge);border-radius:12px;padding:9px 12px;display:flex;flex-direction:column;gap:6px;min-height:40px}
+.call .transcript .tl{font-size:11px;line-height:1.5;opacity:0;transform:translateY(3px);transition:all .28s}
+.call .transcript .tl.on{opacity:1;transform:none}
+.call .transcript .spk{font-weight:700;font-size:9.5px;font-family:var(--mono);margin-right:5px}
+.call .transcript .cust .spk{color:#b23f3d}.call .transcript .agnt .spk{color:#2f4470}
+.call .sect{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--ink-faint);font-weight:600}
+.acard{background:#fff;border:1px solid var(--edge);border-radius:12px;padding:9px 12px;font-size:11px;transition:all .35s;position:relative}
+.acard .ah{display:flex;align-items:center;gap:6px;font-weight:700;font-size:10.5px;margin-bottom:5px}
+.acard .ah svg{width:13px;height:13px;color:#2f4470}
+.acard .ah .tid{margin-left:auto;font-family:var(--mono);font-size:8.5px;color:var(--ink-faint);font-weight:600}
+.acard .ab{color:var(--ink-dim);line-height:1.6}
+.acard.dead{border-style:dashed}.acard.dead .ab{color:var(--ink-faint)}
+.acard.fill{border-color:#a9e2d8;box-shadow:0 3px 12px rgba(15,181,160,.14)}
+.acard .lat{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:8.5px;color:var(--green);
+  background:#eaf7f0;border-radius:99px;padding:2px 7px;font-weight:700;opacity:0;transition:opacity .3s}
+.acard.fill .lat{opacity:1}
+.acard .hl{color:var(--s1);font-weight:700}
+.autorun-tag{align-self:center;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--s1);
+  border:1px dashed var(--s1);border-radius:99px;padding:3px 10px;background:var(--s1-soft);opacity:0;transition:opacity .3s}
+.autorun-tag.show{opacity:1}
+
+/* 시연 종료 후 결과 요약 — 발표 마무리 멘트가 화면에 그대로 뜬다 */
+.verdict{margin-top:20px;border:1.5px solid var(--teal);border-radius:16px;background:linear-gradient(180deg,#f2fbf9,#fff);
+  padding:14px 18px;display:none;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 10px 28px rgba(15,181,160,.14)}
+.verdict.show{display:flex;animation:vIn .35s ease-out}
+@keyframes vIn{from{opacity:0;transform:translateY(6px)}}
+.verdict .vk{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--teal-deep);font-weight:700;
+  border:1px solid var(--teal);border-radius:99px;padding:5px 11px;flex:none}
+.verdict .vstats{display:flex;gap:18px;flex-wrap:wrap}
+.verdict .vs .k{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--ink-faint)}
+.verdict .vs .v{font-family:var(--disp);font-size:20px;font-weight:700;color:var(--ink);line-height:1.2}
+.verdict .vs.hi .v{color:var(--teal-deep)}
+.verdict .vs.zero .v{color:var(--s1)}
+.verdict .vmsg{margin-left:auto;font-size:12.5px;color:var(--ink-dim);text-align:right;line-height:1.6}
+.verdict .vmsg b{color:var(--ink);font-weight:700}
+
+.closing{margin-top:18px;text-align:center;font-size:13px;color:var(--ink-dim);line-height:1.85}
+.closing b{color:var(--teal-deep)}
+.closing .k{color:var(--ink-faint);margin:0 6px}
+.closing .sub{display:block;font-size:11.5px;color:var(--ink-faint);margin-top:2px}
+
+/* 기획 주석 */
+.note{position:absolute;z-index:45;display:none}
+body.notes .note{display:block}
+.note .pin{width:21px;height:21px;border-radius:50%;background:var(--s1);color:#fff;font-family:var(--mono);font-size:10.5px;
+  font-weight:700;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 4px var(--s1-soft)}
+.note .card{position:absolute;top:26px;left:-8px;width:276px;background:#fff;border:1px solid var(--s1);border-radius:12px;
+  padding:10px 12px;font-size:11.5px;line-height:1.65;color:var(--ink);box-shadow:0 14px 34px rgba(26,34,55,.18);opacity:0;pointer-events:none;transition:opacity .2s}
+.note .card b{color:var(--s1);display:block;font-size:10.5px;font-family:var(--mono);margin-bottom:4px}
+.note:hover .card{opacity:1}
+.note.left .card{left:auto;right:-8px}
+
+@media(max-width:1150px){
+  .grid{grid-template-columns:1fr}
+  .conn{display:none}
+  .counters{width:100%;margin-left:0}
+}
+/* ══════════════════════════════════════════════════════════════
+   덱 시연용 축약 (IR 덱 6단계 임베드)
+   원본 요소를 지우지 않고 감춘다 — 스크립트가 id 로 잡고 있어
+   DOM 에서 빼면 동작이 깨진다.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ① 헤더 — 실행 버튼 하나만 */
+.top .brand,
+.top .steps,
+.top #speedSeg,
+.top #notesBtn,
+.top #presBtn,
+.top #resetBtn{display:none !important}
+.top{display:none !important}                    /* 버튼을 Pool 안으로 옮겨 헤더 자체가 불필요 */
+
+/* ② Pool — 로고 박스만 */
+.pool .pool-head .state,
+.pool .pool-head .counters,
+.pool .pool-id .t2,
+.pool .ep-row,
+.pool .pool-tools,
+.pool .pool-log,
+.pool .note,
+.conn .note{display:none !important}
+/* Pool = 짙은 박스 + 흰 로고 + 실행 버튼.
+   높이는 아래 서비스 카드 헤더와 비슷하게 맞춘다. */
+.pool{margin-top:18px;background:#141b2e;border-color:#141b2e;
+  /* 아래 grid 가 repeat(3,1fr)/gap:20px 이므로 한 칼럼과 같은 폭 */
+  width:calc((100% - 40px)/3);margin-left:auto;margin-right:auto}
+.pool::before{display:none}                      /* 상단 그라데이션 바 제거 */
+.pool .pool-head{justify-content:center;align-items:center;gap:20px;padding:13px 20px}
+.pool .pool-mark{width:0;height:0;padding:0;margin:0;overflow:hidden;border:0}
+.pool .pool-id{align-items:center}
+.pool .pool-id .t1{display:block;font-size:0;line-height:0}
+.pool .pool-id .t1::before{
+  content:"";width:210px;height:38px;display:block;   /* 태그라인 없는 컴팩트 로고 */
+  background:url("EmberLink_compact_onDark.png") center/contain no-repeat}
+.pool #runAllBtn{position:static;align-self:center;font-size:12.5px;padding:8px 14px;border-radius:9px}
+.pool #runAllBtn .ic{width:13px;height:13px}
+/* 하단 마무리 문구 — 발표에서는 말로 하는 내용이라 화면에서 뺀다 */
+.closing{display:none !important}
+/* 카드에서 뺄 것 — 엔드포인트 줄과 개별 실행 버튼 */
+.svc-head .plugbar,
+.svc-head .prun{display:none !important}
+/* 서비스 이름은 멀리서도 읽혀야 한다 */
+.svc-head .nm{font-size:22px !important}
+.svc-head .dept{font-size:12px !important;margin-top:3px}
+.svc-head .pav{width:40px;height:40px;font-size:19px}
+
+/* ③ 연결선 — 데이터가 흐르는 선.
+   기본 stroke 가 #d3dbe9 라 대비가 낮아 흐름이 안 보인다. 색과 두께를 올리되
+   .wire.s1.hot 계열이 우선순위가 높아, 실행 중 서비스 색은 그대로 살아난다. */
+/* 선과 패킷은 '동시 실행' 을 누른 뒤에만 움직인다. 대기 중에는 정지된 점선. */
+.conn .wire{stroke-width:3.2;stroke-dasharray:9 13}
+body.pkt-run .conn .wire{animation:wireFlow 1.15s linear infinite}
+.conn .pkt{display:none}
+body.pkt-run .conn .pkt{display:block}
+.conn .wire.s1{stroke:var(--s1)}
+.conn .wire.s2{stroke:var(--s2)}
+.conn .wire.s3{stroke:var(--s3)}
+/* SVG circle 은 preserveAspectRatio="none" 때문에 가로로 늘어나 타원이 된다.
+   숨기고 같은 자리에 CSS 로 정원을 찍는다. */
+.conn .plug{display:none}
+/* EmberLink 에서 각 서비스로 내려가는 패킷. viewBox 가 1200x104 를 실제 폭x72 로
+   비균등 확대하므로 원을 그리면 타원이 된다 — ellipse 로 두고 rx·ry 를 JS 가 보정한다. */
+.conn .pkt.k1{fill:var(--s1)}
+.conn .pkt.k2{fill:var(--s2)}
+.conn .pkt.k3{fill:var(--s3)}
+.conn .dot-plug{position:absolute;bottom:-3px;width:11px;height:11px;border-radius:50%;
+  background:#fff;transform:translateX(-50%);animation:plugPulse 2.1s ease-in-out infinite}
+.conn .dot-plug{animation:none}
+body.pkt-run .conn .dot-plug{animation:plugPulse 2.1s ease-in-out infinite}
+.conn .dot-plug.d1{left:16.67%;border:3px solid var(--s1)}
+.conn .dot-plug.d2{left:50%;   border:3px solid var(--s2);animation-delay:-.7s}
+.conn .dot-plug.d3{left:83.33%;border:3px solid var(--s3);animation-delay:-1.4s}
+@keyframes plugPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.18)}}
+
+/* 서비스 카드 액센트를 왼쪽 → 상단으로. 좌측이면 둥근 모서리에서 잘린다. */
+/* 카드 폭을 꽉 채우되, 카드의 overflow 로 둥근 모서리에 맞춰 깎이게 한다.
+   안쪽으로 넣으면 양 끝이 비고, 각지게 두면 모서리 밖으로 삐져나온다. */
+.svc-head{overflow:hidden}
+.svc-head::before{left:0 !important;right:0;top:0 !important;bottom:auto !important;
+  width:auto !important;height:3px;border-radius:0}
+@keyframes wireFlow{to{stroke-dashoffset:-44}}
+.conn .wire.s1{animation-delay:-.38s}
+.conn .wire.s3{animation-delay:-.76s}
+@media (prefers-reduced-motion:reduce){
+  .conn .wire,.conn .dot-plug{animation:none}
+  .conn .wire{stroke-dasharray:none}
+}
+</style>
+</head>
+<body>
+
+<svg style="display:none">
+  <symbol id="ic-spark" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z"/></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></symbol>
+  <symbol id="ic-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
+  <symbol id="ic-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+  <symbol id="ic-headset" viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 16a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2ZM3 16a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2Z"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></symbol>
+  <symbol id="ic-note" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="brand">
+    <span class="kicker">중간보고 마지막 장표 · SO WHAT</span>
+    <h1>EmberLink를 구축하면 — <em>새 AI 서비스는 '연결'만으로 만들어진다</em></h1>
+    <div class="lede"><span class="was">서비스마다 레거시 API 개별 연동 · 본부별 6개월</span>
+      → 지금은 <b>Pool 1개에 연결</b>, 신규 백엔드 <b>0줄</b></div>
+  </div>
+  <div class="steps" id="steps">
+    <span class="stp on" data-s="1">① Pool 확인</span>
+    <span class="stp" data-s="2">② 3개 서비스 동시 실행</span>
+    <span class="stp" data-s="3">③ 공유 tool 확인</span>
+  </div>
+  <div class="ctrls">
+    <div class="seg" id="speedSeg">
+      <button data-sp="1.5">0.7x</button><button data-sp="1" class="on">1x</button><button data-sp="0.5">2x</button>
+    </div>
+    <button class="btn" id="notesBtn"><svg class="ic"><use href="#ic-note"/></svg>기획 의도</button>
+    <button class="btn" id="presBtn">발표 모드</button>
+    <button class="btn" id="resetBtn">리셋</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ══════ 상단 단일 박스: MCP POOL ══════ -->
+  <section class="pool">
+    <div class="pool-head">
+      <div class="pool-id">
+        <div class="pool-mark"><svg class="ic"><use href="#ic-spark"/></svg></div>
+        <div>
+          <div class="t1">EmberLink MCP Pool</div>
+          <div class="t2">meta-tool <b>search_apis</b> · <b>describe_api</b> · <b>invoke_api</b> — 이 3개만 노출</div>
+        </div>
+      </div>
+      <button class="btn primary" id="runAllBtn"><svg class="ic"><use href="#ic-play"/></svg>동시 실행</button>
+      <div class="state" id="state"><span class="dot"></span><span id="stateTxt">확인 중</span></div>
+      <div class="counters">
+        <div class="ct"><div class="k">TOOL CALLS</div><div class="v" id="kpiCalls">0</div></div>
+        <div class="ct"><div class="k">AVG LATENCY</div><div class="v" id="kpiLat">—</div></div>
+        <div class="ct hi"><div class="k">SHARED HITS</div><div class="v" id="kpiReuse">0</div></div>
+        <div class="ct zero"><div class="k">신규 백엔드</div><div class="v">0줄</div></div>
+      </div>
+      <div class="note" style="top:14px;left:14px"><div class="pin">1</div>
+        <div class="card"><b>상단 = 박스 하나</b>Pool 정체 · 상태 · 내용물(tool) · 호출 로그를 <u>한 박스</u>에 넣었다. 아래 세 서비스는 이 박스에서 내려오는 선으로만 연결된다 — "위에 하나, 아래 셋" 외에는 읽을 게 없게.</div></div>
+    </div>
+
+    <!-- 지금 붙어 있는 Pool 엔드포인트 — 세 서비스가 공통으로 바라보는 주소 -->
+    <div class="ep-row">
+      <div class="ep"><span class="lbl">REST ENDPOINT</span>
+        <input id="poolUrl" value="http://127.0.0.1:8080" spellcheck="false">
+        <button class="copy" data-copy="rest">복사</button></div>
+      <div class="ep"><span class="lbl">MCP ENDPOINT</span>
+        <span class="mcp" id="mcpEp">mcp://…</span>
+        <button class="copy" data-copy="mcp">복사</button></div>
+      <button class="btn" id="connBtn" style="padding:8px 13px"><svg class="ic"><use href="#ic-refresh"/></svg>재연결</button>
+      <div class="ep-meta" id="epMeta">연결 확인 중…</div>
+      <div class="note left" style="top:-6px;right:14px"><div class="pin">2</div>
+        <div class="card"><b>엔드포인트 명시</b>화면 어디에도 "그림"만 있으면 발표에서 의심받는다. 실제 붙은 주소 + <u>방금 받은 응답 메타</u>(200 · tool 수 · 인덱스 종류)를 같이 찍어 두면 라이브라는 걸 따로 설명할 필요가 없다.</div></div>
+    </div>
+
+    <div class="pool-tools">
+      <div class="ptitle">POOL 안의 실제 MCP TOOL — <span id="toolCnt" style="color:var(--teal-deep)">–</span>개
+        <span class="legend">
+          <span><i class="g1"></i>보상접수 데스크</span><span><i class="g2"></i>API 코파일럿</span><span><i class="g3"></i>상담 어시스트</span>
+        </span>
+      </div>
+      <div class="chips" id="chips"><div class="log-empty">Pool 연결 확인 중…</div></div>
+      <div class="note" style="top:0;right:14px"><div class="pin">3</div>
+        <div class="card"><b>같은 tool을 집는 장면</b>어떤 서비스가 tool을 호출하면 그 칩에 서비스 색 점이 <u>박힌다</u>. 두 개 이상 박히면 칩이 청록으로 채워진다 = 같은 자산을 나눠 쓰는 중. 데모가 끝나도 흔적이 남는다.</div></div>
+    </div>
+
+    <div class="pool-log">
+      <div class="lh">공용 호출 로그 — 세 서비스가 한 스트림에 섞여 찍힌다
+        <span class="rgt" id="logCount">0 calls</span></div>
+      <div class="loglist" id="logList">
+        <div class="log-empty" id="logEmpty">호출 없음 — 우측 상단 「3개 서비스 동시 실행」</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ 커넥터: Pool → 3 서비스 ══════ -->
+  <div class="conn">
+    <svg id="connSvg" viewBox="0 0 1200 104" preserveAspectRatio="none">
+      <path id="w1" class="wire s1" d="M600,0 C600,58 200,42 200,100"/>
+      <path id="w2" class="wire s2" d="M600,0 L600,100"/>
+      <path id="w3" class="wire s3" d="M600,0 C600,58 1000,42 1000,100"/>
+      <circle id="pg1" class="plug s1" cx="200" cy="100" r="6"/>
+      <circle id="pg2" class="plug s2" cx="600" cy="100" r="6"/>
+      <circle id="pg3" class="plug s3" cx="1000" cy="100" r="6"/>
+      <ellipse class="pkt k1" rx="5" ry="5"><animateMotion dur="2.1s" repeatCount="indefinite" begin="0s"><mpath href="#w1"/></animateMotion></ellipse>
+      <ellipse class="pkt k2" rx="5" ry="5"><animateMotion dur="2.1s" repeatCount="indefinite" begin="-0.7s"><mpath href="#w2"/></animateMotion></ellipse>
+      <ellipse class="pkt k3" rx="5" ry="5"><animateMotion dur="2.1s" repeatCount="indefinite" begin="-1.4s"><mpath href="#w3"/></animateMotion></ellipse>
+    </svg>
+    <i class="dot-plug d1"></i><i class="dot-plug d2"></i><i class="dot-plug d3"></i>
+    <div class="note" style="top:8px;left:calc(50% - 12px)"><div class="pin">4</div>
+      <div class="card"><b>선 3개, 출발점 1개</b>세 선이 <u>같은 지점</u>에서 갈라진다. 호출 중인 서비스의 선만 색으로 켜진다 — 구조만 말하고, 무슨 tool을 썼는지는 아래 각 서비스의 CALL FEED 가 사실 그대로 적는다.</div></div>
+  </div>
+
+  <!-- ══════ 서비스 3열 ══════ -->
+  <div class="grid">
+    <!-- ① -->
+    <div class="col p1">
+      <div class="svc-head">
+        <div class="row1">
+          <div class="pav"><svg class="ic"><use href="#ic-doc"/></svg></div>
+          <div><div class="nm">AI 보상접수 데스크</div><div class="dept">보상지원 본부 · 사내 업무포털</div></div>
+          <button class="prun" data-svc="1">▶ 실행</button>
+        </div>
+        <div class="plugbar" id="pb1"><span class="st"></span><span id="pu1">mcp://…</span><span class="u" id="u1">tool —</span></div>
+        <div class="feed"><div class="fh">MCP CALL FEED<span class="n" id="fn1">0</span></div>
+          <div class="rows" id="fr1"><div class="idle">호출 대기</div></div></div>
+      </div>
+      <section class="win portal" id="c1">
+        <button class="fs-btn" data-fs="c1"><svg class="ic"><use href="#ic-expand"/></svg></button>
+        <div class="boot" id="boot1"><div class="bcore"><svg class="ic"><use href="#ic-spark"/></svg></div>
+          <div class="btitle">MCP Pool 연결 중</div><div class="burl" id="burl1"></div>
+          <div class="blist"><div class="brow"><span class="bc">✓</span> search_apis</div>
+            <div class="brow"><span class="bc">✓</span> describe_api</div>
+            <div class="brow"><span class="bc">✓</span> invoke_api</div></div>
+          <div class="bbar"><i></i></div></div>
+        <div class="toast" id="t1"><svg class="ic"><use href="#ic-spark"/></svg>
+          <div>EmberLink MCP Pool 연결됨<small>도구 <b id="tc1">–</b>개 · 세 서비스 공용</small></div></div>
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div>
+          <div class="url"><svg class="ic"><use href="#ic-lock"/></svg> portal.kt-ins.co.kr/ai-desk</div></div>
+        <div class="appbar"><b>업무포털 AI 어시스턴트</b><div class="badge1">MCP 연결됨</div></div>
+        <div class="body" id="chat"></div>
+        <div class="inputbar"><input id="inp1" placeholder="업무를 요청하세요…"><button><svg class="ic"><use href="#ic-send"/></svg></button></div>
+      </section>
+    </div>
+
+    <!-- ② -->
+    <div class="col p2">
+      <div class="svc-head">
+        <div class="row1">
+          <div class="pav"><svg class="ic"><use href="#ic-code"/></svg></div>
+          <div><div class="nm">사내 API 코파일럿</div><div class="dept">IT개발 본부 · Claude Code</div></div>
+          <button class="prun" data-svc="2">▶ 실행</button>
+        </div>
+        <div class="plugbar" id="pb2"><span class="st"></span><span id="pu2">mcp://…</span><span class="u" id="u2">tool —</span></div>
+        <div class="feed"><div class="fh">MCP CALL FEED<span class="n" id="fn2">0</span></div>
+          <div class="rows" id="fr2"><div class="idle">호출 대기</div></div></div>
+      </div>
+      <section class="win mac" id="c2">
+        <button class="fs-btn" data-fs="c2"><svg class="ic"><use href="#ic-expand"/></svg></button>
+        <div class="boot" id="boot2"><div class="bcore"><svg class="ic"><use href="#ic-spark"/></svg></div>
+          <div class="btitle">MCP Pool 연결 중</div><div class="burl">claude mcp add emberlink</div>
+          <div class="blist"><div class="brow"><span class="bc">✓</span> search_apis</div>
+            <div class="brow"><span class="bc">✓</span> describe_api</div>
+            <div class="brow"><span class="bc">✓</span> invoke_api</div></div>
+          <div class="bbar"><i></i></div></div>
+        <div class="toast" id="t2"><svg class="ic"><use href="#ic-spark"/></svg>
+          <div>MCP server <b>"emberlink"</b> 연결됨<small>#1·#3 과 <b>동일 엔드포인트</b> · <b id="tc2">–</b> APIs</small></div></div>
+        <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+          <div class="tt">claude · ~/claims-batch</div><div class="badge2">emberlink ✓</div></div>
+        <div class="body"><div class="term" id="term"></div></div>
+        <div class="inputbar"><span class="pp">❯</span><input id="inp2" placeholder="Ask Claude anything…"></div>
+      </section>
+    </div>
+
+    <!-- ③ -->
+    <div class="col p3">
+      <div class="svc-head">
+        <div class="row1">
+          <div class="pav"><svg class="ic"><use href="#ic-headset"/></svg></div>
+          <div><div class="nm">실시간 상담 어시스트</div><div class="dept">고객센터 본부 · 상담원 화면</div></div>
+          <button class="prun" data-svc="3">▶ 실행</button>
+        </div>
+        <div class="plugbar" id="pb3"><span class="st"></span><span id="pu3">mcp://…</span><span class="u" id="u3">tool —</span></div>
+        <div class="feed"><div class="fh">MCP CALL FEED<span class="n" id="fn3">0</span></div>
+          <div class="rows" id="fr3"><div class="idle">호출 대기</div></div></div>
+      </div>
+      <section class="win call" id="c3">
+        <button class="fs-btn" data-fs="c3"><svg class="ic"><use href="#ic-expand"/></svg></button>
+        <div class="boot" id="boot3"><div class="bcore"><svg class="ic"><use href="#ic-spark"/></svg></div>
+          <div class="btitle">MCP Pool 연결 중</div><div class="burl" id="burl3"></div>
+          <div class="blist"><div class="brow"><span class="bc">✓</span> search_apis</div>
+            <div class="brow"><span class="bc">✓</span> describe_api</div>
+            <div class="brow"><span class="bc">✓</span> invoke_api</div></div>
+          <div class="bbar"><i></i></div></div>
+        <div class="toast" id="t3"><svg class="ic"><use href="#ic-spark"/></svg>
+          <div>EmberLink MCP Pool 연결됨<small>상담 컨텍스트 <b>자동 조회</b> 활성화</small></div></div>
+        <div class="callbar"><div class="avatar"><svg class="ic"><use href="#ic-phone"/></svg></div>
+          <div class="who"><b>고객 김민수</b><span>계약 C-2024-0001 · 자동차보험</span></div>
+          <div class="wave"><i></i><i></i><i></i><i></i><i></i></div><div class="timer" id="timer">00:41</div></div>
+        <div class="body">
+          <div class="sect">LIVE TRANSCRIPT</div>
+          <div class="transcript" id="ts"></div>
+          <div class="sect">AI ASSIST</div>
+          <div class="autorun-tag" id="autoTag">자동 조회 — 상담원 개입 없음</div>
+          <div class="acard dead" id="a1"><div class="ah"><svg class="ic"><use href="#ic-user"/></svg> 계약 정보<span class="tid" id="a1t">getContract</span></div><div class="ab" id="a1b">조회 대기…</div><div class="lat" id="a1l"></div></div>
+          <div class="acard dead" id="a2"><div class="ah"><svg class="ic"><use href="#ic-doc"/></svg> 해지환급금<span class="tid" id="a2t">getSurrenderValue</span></div><div class="ab" id="a2b">조회 대기…</div><div class="lat" id="a2l"></div></div>
+          <div class="acard dead" id="a3"><div class="ah"><svg class="ic"><use href="#ic-bulb"/></svg> 보험료 재산출<span class="tid" id="a3t">calcPremium</span></div><div class="ab" id="a3b">대기…</div><div class="lat" id="a3l"></div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict">
+    <span class="vk">시연 결과</span>
+    <div class="vstats">
+      <div class="vs"><div class="k">SERVICES</div><div class="v">3<span style="font-size:12px;color:#96a2b8">개 동시</span></div></div>
+      <div class="vs"><div class="k">MCP CALLS</div><div class="v" id="vCalls">–</div></div>
+      <div class="vs hi"><div class="k">SHARED TOOLS</div><div class="v" id="vShared">–</div></div>
+      <div class="vs"><div class="k">ELAPSED</div><div class="v" id="vElapsed">–</div></div>
+      <div class="vs zero"><div class="k">신규 백엔드</div><div class="v">0줄</div></div>
+    </div>
+    <div class="vmsg">세 서비스가 <b>같은 Pool·같은 tool</b>을 그대로 재사용했습니다.<br>
+      네 번째 서비스도 <b>연결만</b> 하면 오늘 안에 뜹니다.</div>
+  </div>
+
+  <div class="closing">
+    세 서비스 모두 <b>같은 Pool 주소</b>에 붙었고 <span class="k">·</span> <b>meta-tool 3개</b>만 썼고 <span class="k">·</span> 백엔드 신규 개발은 <b>0줄</b>
+    <span class="sub">네 번째 서비스가 필요하면? 새 TF도, 새 통합도 없이 — 같은 Pool URL만 주면 된다.</span>
+  </div>
+</div>
+
+<script>
+/* 커넥터 패킷 반지름 보정 — SVG 가 preserveAspectRatio="none" 이라 x·y 배율이 다르다.
+   화면상 원으로 보이려면 viewBox 반지름을 배율의 역수로 잡아야 한다. */
+(function(){
+  var R = 5;                                   // 화면상 원하는 반지름(px)
+  function fit(){
+    var svg = document.getElementById('connSvg');
+    if(!svg) return;
+    var w = svg.clientWidth, h = svg.clientHeight;
+    if(!w || !h) return;
+    var rx = R / (w/1200), ry = R / (h/104);
+    svg.querySelectorAll('.pkt').forEach(function(e){
+      e.setAttribute('rx', rx.toFixed(2));
+      e.setAttribute('ry', ry.toFixed(2));
+    });
+  }
+  addEventListener('resize', fit);
+  // '동시 실행' 을 누른 뒤부터 선·패킷이 움직이게 한다
+  document.addEventListener('DOMContentLoaded', function(){
+    var b = document.getElementById('runAllBtn');
+    if(b) b.addEventListener('click', function(){ document.body.classList.add('pkt-run'); });
+    // 리셋(원본의 R 키 · 리셋 버튼)에도 선·패킷을 함께 멈춘다.
+    // resetAll 은 원본 스크립트 것이라 여기서 상태 클래스만 따로 걷어낸다.
+    var stop = function(){ document.body.classList.remove('pkt-run'); };
+    var r = document.getElementById('resetBtn');
+    if(r) r.addEventListener('click', stop);
+    addEventListener('keydown', function(e){
+      if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+      if(e.key === 'r' || e.key === 'R') stop();
+    });
+  });
+  addEventListener('load', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){
+    document.addEventListener('DOMContentLoaded', function(){
+      document.querySelectorAll('.conn .pkt').forEach(function(e){ e.remove(); });
+    });
+  }
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   실제 EmberLink 백엔드(REST)에 붙어 동작한다.
+     GET  /api/registry/stats           GET  /api/apis?query=   → search_apis
+     GET  /api/apis/{tool_id}  → describe_api
+     POST /api/apis/{tool_id}/invoke    → invoke_api
+   백엔드가 없으면 OFFLINE 폴백(캡처해 둔 실응답 재생)으로 시연은 계속된다.
+   ═══════════════════════════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+let SPEED=1, LIVE=false;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms*SPEED));
+const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+let calls=0, latSum=0, reuseHits=0;
+const usedBy={};                                  // tool_id → Set(서비스번호)
+const SVC={1:'보상접수',2:'코파일럿',3:'상담어시스트'};
+const base=()=>$('poolUrl').value.trim().replace(/\/+$/,'');
+
+async function jget(p){const r=await fetch(base()+p);if(!r.ok)throw new Error(p+' → '+r.status);return r.json()}
+async function jpost(p,b){
+  const r=await fetch(base()+p,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)});
+  if(!r.ok)throw new Error(p+' → '+r.status);return r.json();
+}
+
+/* OFFLINE 폴백 — 실제 백엔드에서 받아 둔 응답 */
+const OFF_TOOLS=[
+  {tool_id:'getCustomer',method:'GET'},{tool_id:'getProduct',method:'POST'},{tool_id:'getCoverage',method:'GET'},
+  {tool_id:'calcPremium',method:'POST'},{tool_id:'ragSearch',method:'POST'},{tool_id:'getProposal',method:'GET'},
+  {tool_id:'getContract',method:'GET'},{tool_id:'reportAccident',method:'POST'},{tool_id:'fileClaim',method:'POST'},
+  {tool_id:'getClaimStatus',method:'POST'},{tool_id:'getSurrenderValue',method:'GET'},{tool_id:'health',method:'GET'}];
+const OFF_FIELDS={
+  reportAccident:[{name:'contractNo',loc:'body',type:'string',required:true},{name:'accidentDate',loc:'body',type:'string',required:true},{name:'description',loc:'body',type:'string',required:false}],
+  getClaimStatus:[{name:'claimId',loc:'body',type:'string',required:true},{name:'includeHistory',loc:'body',type:'boolean',required:false}],
+  getContract:[{name:'contractNo',loc:'query',type:'string',required:true}],
+  getSurrenderValue:[{name:'contractNo',loc:'query',type:'string',required:true}],
+  calcPremium:[{name:'productCode',loc:'body',type:'string',required:true},{name:'age',loc:'body',type:'integer',required:true},{name:'gender',loc:'body',type:'string',required:true}]};
+const OFF_BODY={
+  reportAccident:{accidentId:'ACC-2026-0451',status:'접수완료'},
+  getClaimStatus:{claimId:'CLM-2026-0001',status:'지급심사중',paidAmount:0},
+  getContract:{contractNo:'C-2024-0001',status:'정상',insured:'김민수',premium:32000},
+  getSurrenderValue:{contractNo:'C-2024-0001',surrenderValue:145000},
+  calcPremium:{productCode:'P-AUTO-01',monthlyPremium:28500,currency:'KRW'}};
+const OFF_PATH={reportAccident:'/tools/t40',getClaimStatus:'/tools/t55',getContract:'/tools/t31',
+  getSurrenderValue:'/tools/t60',calcPremium:'/tools/t12'};
+
+/* describe 가 준 실제 field 이름에 맞춰 인자 조립 */
+const ARGV={contractNo:'C-2024-0001',claimId:'CLM-2026-0001',customerId:'CU-1024',productCode:'P-AUTO-01',
+  proposalNo:'PR-2026-0007',accidentDate:new Date().toISOString().slice(0,10),description:'자동차 추돌 사고 접수',
+  claimType:'자동차',amount:1200000,age:41,gender:'M',includeHistory:true,includeRider:false,
+  uiInfoId:'UI-CLAIM-01',query:'자기부담금',topK:3,coverageType:''};
+function buildArgs(desc){
+  const args={},body={};
+  for(const f of (desc.fields||[])){
+    let v=ARGV[f.name];
+    if(v===undefined)v=(f.type==='integer'||f.type==='number')?1:(f.type==='boolean'?true:'SAMPLE');
+    (f.loc==='body'?body:args)[f.name]=v;
+  }
+  if(Object.keys(body).length)args.body=body;
+  return args;
+}
+const preview=a=>Object.entries(a.body||a).map(([k,v])=>`${k}=${v}`).slice(0,2).join(', ');
+
+const PHASE={search_apis:'search_apis',describe_api:'describe_api',invoke_api:'invoke_api'};
+function wireHot(svc,on){['w','pg'].forEach(p=>$(p+svc)?.classList.toggle('hot',on))}
+
+/* MCP CALL FEED — 그 서비스가 실제로 던진 HTTP 호출을 순서대로 적는다.
+   method / endpoint / tool / status / latency 전부 실제 값. */
+const feedN={1:0,2:0,3:0};
+function feedStart(svc,{method,url,tool,phase}){
+  const box=$('fr'+svc);
+  box.querySelector('.idle')?.remove();
+  const el=document.createElement('div');
+  el.className='frow pending';
+  el.innerHTML=`<div class="r1"><span class="mth ${esc(method)}">${esc(method)}</span>`+
+    `<span class="tn">${esc(tool)}</span><span class="ph">${esc(phase)}</span>`+
+    `<span class="st run">…</span></div><div class="r2">${esc(url)}</div>`;
+  box.appendChild(el);box.scrollTop=1e5;
+  feedN[svc]++;$('fn'+svc).textContent=feedN[svc];
+  return {end(status,dt,err,note){
+    el.classList.remove('pending');
+    if(err)el.classList.add('errrow');
+    const st=el.querySelector('.st');
+    st.className='st '+(err?'bad':'ok');
+    st.textContent=err?'ERR':status;
+    el.querySelector('.r1').insertAdjacentHTML('beforeend',`<span class="lt">${dt.toFixed(2)}s</span>`);
+    if(note)el.querySelector('.r2').insertAdjacentHTML('beforeend',` · <b>${esc(note)}</b>`);
+    box.scrollTop=1e5;
+  }};
+}
+
+/* ── 로그 / 칩 ── */
+function logCall(svc,tool,arg,dt,toolId,err){
+  $('logEmpty')?.remove();
+  const shared=toolId&&usedBy[toolId]&&!usedBy[toolId].has(svc);
+  if(shared)reuseHits++;
+  const row=document.createElement('div');
+  row.className='logrow s'+svc+(err?' err':'');
+  row.innerHTML=`<span class="who">${SVC[svc]}</span><span class="tool">${tool}</span>`+
+    `<span class="arg">${esc(err?err.message:arg)}</span>`+
+    (shared?'<span class="reuse">♻ 재사용</span>':'')+
+    `<span class="lat">${err?'ERR':dt.toFixed(2)+'s'}</span>`;
+  const list=$('logList');list.appendChild(row);list.scrollTop=list.scrollHeight;
+  calls++;latSum+=dt;
+  $('kpiCalls').textContent=calls;
+  $('kpiLat').textContent=(latSum/calls).toFixed(2)+'s';
+  $('kpiReuse').textContent=reuseHits;
+  $('logCount').textContent=calls+' calls';
+}
+function markTool(svc,toolId){
+  (usedBy[toolId]=usedBy[toolId]||new Set()).add(svc);
+  const chip=document.querySelector(`.chip[data-t="${toolId}"]`);
+  if(chip){
+    chip.classList.add('used','ping');
+    setTimeout(()=>chip.classList.remove('ping'),560);
+    chip.querySelector('.d'+svc)?.classList.add('on');
+    if(usedBy[toolId].size>1)chip.classList.add('shared');
+  }
+  renderUses();
+}
+function renderUses(){
+  for(const svc of [1,2,3]){
+    const mine=Object.entries(usedBy).filter(([,s])=>s.has(svc));
+    const sh=mine.filter(([,s])=>s.size>1).length;
+    $('u'+svc).textContent=mine.length
+      ? `tool ${mine.length}개${sh?` · 공유 ${sh}개 ♻`:''}`
+      : 'tool —';
+  }
+}
+
+/* ── 측정 래퍼: 모든 MCP 호출이 여기를 지난다 ── */
+async function step(svc,tool,label,toolId,fn,meta){
+  wireHot(svc,true);
+  const fd=feedStart(svc,{method:meta.method,url:meta.url,
+    tool:meta.tool||toolId||'-',phase:meta.phase||PHASE[tool]||tool});
+  const t0=performance.now();
+  let out,err=null;
+  try{out=await fn()}catch(e){err=e}
+  const dt=(performance.now()-t0)/1000;
+  fd.end(err?0:(meta.status?meta.status(out):200),dt,err,
+    err?err.message:(meta.note?meta.note(out):''));
+  logCall(svc,tool,label,dt,toolId,err);
+  wireHot(svc,false);
+  if(err)throw err;
+  if(toolId)markTool(svc,toolId);
+  return {out,dt};
+}
+async function doSearch(svc,q,prefer){
+  const path='/api/apis?query='+encodeURIComponent(q)+'&top_k=5';
+  const {out}=await step(svc,'search_apis',`"${q}"`,null,async()=>{
+    if(LIVE)return jget(path);
+    await sleep(340);
+    const rest=OFF_TOOLS.filter(t=>t.tool_id!==prefer).slice(0,4);
+    return {results:[{tool_id:prefer,method:'POST'},...rest].map((t,i)=>({...t,score:+(0.05-i*0.004).toFixed(4)}))};
+  },{method:'GET',url:base()+path,tool:'search_apis',phase:`query "${q}"`,
+     note:o=>{const r=o.results||[];return `${r.length} hit · top ${r[0]?.tool_id||'-'}${r[0]?.score!=null?' ('+r[0].score+')':''}`}});
+  const res=out.results||[];
+  const pick=res.find(r=>r.tool_id===prefer)||res[0];
+  if(!pick)throw new Error('검색 결과 없음: '+q);
+  return {res,pick};
+}
+async function doDescribe(svc,id){
+  const path='/api/apis/'+encodeURIComponent(id);
+  const {out}=await step(svc,'describe_api',id,id,async()=>{
+    if(LIVE)return jget(path);
+    await sleep(270);
+    return {tool_id:id,fields:OFF_FIELDS[id]||[],method:(OFF_TOOLS.find(t=>t.tool_id===id)||{}).method||'POST',
+            path:OFF_PATH[id]||'/tools/mock',base_url:base()+'/mock'};
+  },{method:'GET',url:base()+path,tool:id,
+     note:o=>`${o.method} ${o.path} · 필드 ${(o.fields||[]).length}개`});
+  return out;
+}
+async function doInvoke(svc,id,desc){
+  const args=buildArgs(desc);
+  /* 피드에는 게이트웨이가 아니라 실제로 때리는 upstream 주소를 적는다 */
+  const upstream=(desc.base_url||base()+'/mock')+(desc.path||'');
+  const {out,dt}=await step(svc,'invoke_api',`${id}(${preview(args)})`,id,async()=>{
+    if(LIVE)return jpost(`/api/apis/${encodeURIComponent(id)}/invoke`,{arguments:args,allow_mutating:true});
+    await sleep(580);
+    return {status:200,body:OFF_BODY[id]||{ok:true}};
+  },{method:desc.method||'POST',url:upstream,tool:id,
+     status:o=>o.status||200,
+     note:o=>Object.entries(o.body||{}).slice(0,2).map(([k,v])=>`${k}=${v}`).join(' · ')});
+  return {args,resp:out,body:out.body||out,dt};
+}
+
+/* ── 연결 ── */
+async function connect(){
+  const st=$('state');st.className='state';$('stateTxt').textContent='확인 중';
+  $('epMeta').textContent='연결 확인 중…';
+  let n=OFF_TOOLS.length, tools=OFF_TOOLS;
+  const t0=performance.now();
+  try{
+    const s=await jget('/api/registry/stats');
+    const rt=Math.round(performance.now()-t0);
+    LIVE=true;n=s.count;
+    st.classList.add('live');$('stateTxt').textContent='LIVE';
+    /* 방금 받은 실제 응답 메타를 그대로 노출 — 라이브라는 증거 */
+    $('epMeta').innerHTML=`GET /api/registry/stats <span class="ok">→ 200 OK</span> · `+
+      `tools <b>${s.count}</b> · index <b>${esc(s.index||'-')}</b> · embedder <b>${esc(s.embedder||'-')}</b> · <b>${rt}ms</b>`;
+    tools=(await jget('/api/apis')).results||OFF_TOOLS;
+  }catch(e){
+    LIVE=false;
+    st.classList.add('off');$('stateTxt').textContent='OFFLINE(재생)';
+    $('epMeta').innerHTML=`GET /api/registry/stats <span class="bad">→ 연결 실패</span> · 캡처해 둔 실응답으로 재생합니다`;
+  }
+  $('toolCnt').textContent=n;$('tc1').textContent=n;$('tc2').textContent=n;
+  renderChips(tools);
+  const url=base().replace(/^https?:\/\//,'');
+  $('mcpEp').textContent='mcp://'+url+'/mcp';
+  [1,2,3].forEach(i=>{
+    $('pu'+i).textContent='mcp://'+url+'/mcp';
+    $('pb'+i).classList.toggle('on',LIVE);
+  });
+  $('burl1').textContent=$('burl3').textContent=base()+'/api';
+}
+function renderChips(tools){
+  $('chips').innerHTML=tools.map(t=>`
+    <div class="chip" data-t="${t.tool_id}">
+      <span class="m">${t.method}</span><span class="cid">${t.tool_id}</span>
+      <span class="dots"><i class="d1"></i><i class="d2"></i><i class="d3"></i></span>
+    </div>`).join('');
+}
+
+/* ── 부팅 ── */
+async function boot(n){
+  const b=$('boot'+n);b.classList.add('on');
+  b.querySelectorAll('.brow').forEach(r=>r.classList.remove('on'));
+  b.querySelector('.bbar i').style.width='0';
+  await sleep(110);b.querySelector('.bbar i').style.width='100%';
+  for(const r of b.querySelectorAll('.brow')){await sleep(240);r.classList.add('on')}
+  await sleep(320);b.classList.remove('on');
+  $('c'+n).classList.add('awake');
+  const t=$('t'+n);t.classList.add('show');await sleep(1700);t.classList.remove('show');
+}
+async function typeInto(id,text){const el=$(id);el.value='';for(const ch of text){el.value+=ch;await sleep(17)}await sleep(200);el.value=''}
+
+/* ══ ① 보상접수 데스크 ══ */
+function bub(cls,html){const d=document.createElement('div');d.className='bubble '+cls;d.innerHTML=html;
+  $('chat').appendChild(d);$('chat').scrollTop=1e5;return d}
+async function runSvc1(){
+  $('chat').innerHTML='';
+  await boot(1);
+  const q='계약 C-2024-0001 사고 접수하고, 청구 진행상태까지 확인해줘';
+  await typeInto('inp1',q);bub('user',q);await sleep(360);
+
+  const tr=document.createElement('div');tr.className='trace';$('chat').appendChild(tr);
+  const line=(t,d)=>{const e=document.createElement('div');e.className='step';
+    e.innerHTML=`<span class="sig">${t}</span><span>${esc(d)}</span><span class="chk">✓</span>`;
+    tr.appendChild(e);requestAnimationFrame(()=>e.classList.add('on'));$('chat').scrollTop=1e5};
+  try{
+    const s1=await doSearch(1,'사고 접수','reportAccident');
+    line('search_apis',`"사고 접수" → ${s1.res.length}건 · top ${s1.pick.tool_id}`);
+    const d1=await doDescribe(1,s1.pick.tool_id);
+    line('describe_api',`${d1.tool_id} · 필드 ${d1.fields.length}개`);
+    const i1=await doInvoke(1,s1.pick.tool_id,d1);
+    line('invoke_api',`${d1.method} ${d1.path} → ${i1.resp.status||200}`);
+
+    const s2=await doSearch(1,'보험금 청구상태 조회','getClaimStatus');
+    line('search_apis',`"청구상태" → top ${s2.pick.tool_id}`);
+    const d2=await doDescribe(1,s2.pick.tool_id);
+    const i2=await doInvoke(1,s2.pick.tool_id,d2);
+    line('invoke_api',`${d2.method} ${d2.path} → ${i2.resp.status||200}`);
+
+    await sleep(260);
+    bub('bot ok',`접수 완료했습니다.<br>
+      · 사고접수번호 <b>${esc(i1.body.accidentId??'-')}</b> — ${esc(i1.body.status??'-')}<br>
+      · 청구 <b>${esc(i2.body.claimId??'-')}</b> 상태 <b>${esc(i2.body.status??'-')}</b> · 지급액 ${esc(i2.body.paidAmount??0)}원<br>
+      <span style="font-size:10.5px;color:#96a2b8">MCP tool ${LIVE?'실호출':'(offline 재생)'} 6건 · 신규 백엔드 개발 0줄</span>`);
+  }catch(e){bub('bot bad','호출 실패: '+esc(e.message))}
+}
+
+/* ══ ② API 코파일럿 ══ */
+function tln(html){const d=document.createElement('div');d.className='ln';d.innerHTML=html;
+  $('term').appendChild(d);requestAnimationFrame(()=>d.classList.add('on'));$('term').parentElement.scrollTop=1e5}
+async function runSvc2(){
+  $('term').innerHTML='';
+  await boot(2);
+  const q='어제 접수된 청구 건 상태를 야간배치로 동기화하는 스크립트 짜줘';
+  await typeInto('inp2',q);
+  tln('<span class="p">❯</span> '+esc(q));await sleep(320);
+  tln('<span class="dim">사내 API 탐색 중… (mcp: emberlink — #1·#3 과 같은 Pool)</span>');
+  try{
+    const s=await doSearch(2,'보험금 청구상태 조회','getClaimStatus');
+    tln('<span class="tool">● search_apis</span> <span class="dim">→ '+s.res.length+' hit: '+esc(s.res.map(r=>r.tool_id).join(', '))+'</span>');
+    const d=await doDescribe(2,s.pick.tool_id);
+    tln('<span class="tool">● describe_api</span> <span class="dim">'+esc(d.tool_id)+' — '+
+        esc((d.fields||[]).map(f=>f.name+':'+f.type+(f.required?'*':'')).join(', '))+'</span>');
+    const c=await doSearch(2,'계약 조회','getContract');
+    const cd=await doDescribe(2,c.pick.tool_id);
+    tln('<span class="tool">● describe_api</span> <span class="dim">'+esc(cd.tool_id)+' — 계약 메타 조인용</span>');
+
+    const argLine=(d.fields||[]).map(f=>`${f.name}=${JSON.stringify(ARGV[f.name]??'…')}`).join(', ');
+    tln(`<div class="box"><span class="dim"># sync_claims.py — Pool 명세 그대로 자동 생성</span>
+<span class="code">from</span> emberlink <span class="code">import</span> pool
+<span class="code">for</span> c <span class="code">in</span> db.claims_of(<span class="ok">"yesterday"</span>):
+    st = pool.call(<span class="ok">"${esc(d.tool_id)}"</span>, ${esc(argLine)})
+    db.upsert(c.no, st[<span class="ok">"status"</span>])
+    meta = pool.call(<span class="ok">"${esc(cd.tool_id)}"</span>, contractNo=c.contract_no)</div>`);
+    const inv=await doInvoke(2,d.tool_id,d);
+    tln('<span class="tool">● invoke_api</span> <span class="dim">dry-run →</span> <span class="ok">'+esc(JSON.stringify(inv.body))+'</span>');
+    tln('<span class="ok">✓ 완료</span> <span class="dim">— 검색·명세·호출테스트 끝. 쓴 tool 은 옆 서비스가 쓰던 것과 동일합니다.</span>');
+  }catch(e){tln('<span class="bad">✗ '+esc(e.message)+'</span>')}
+}
+
+/* ══ ③ 상담 어시스트 ══ */
+function tsl(who,txt){const d=document.createElement('div');d.className='tl '+who;
+  d.innerHTML=`<span class="spk">${who==='cust'?'고객':'상담원'}</span>${esc(txt)}`;
+  $('ts').appendChild(d);requestAnimationFrame(()=>d.classList.add('on'));$('ts').scrollTop=1e5}
+function fillCard(n,tool,html,dt){
+  $('a'+n).classList.remove('dead');$('a'+n).classList.add('fill');
+  $('a'+n+'t').textContent=tool;$('a'+n+'b').innerHTML=html;$('a'+n+'l').textContent=dt.toFixed(2)+'s';
+}
+async function runSvc3(){
+  $('ts').innerHTML='';
+  [1,2,3].forEach(n=>{$('a'+n).classList.add('dead');$('a'+n).classList.remove('fill');$('a'+n+'b').textContent='조회 대기…';$('a'+n+'l').textContent=''});
+  $('autoTag').classList.remove('show');
+  await boot(3);
+  tsl('agnt','네 고객님, 무엇을 도와드릴까요?');await sleep(620);
+  tsl('cust','제 계약 상태랑, 지금 해지하면 얼마 받는지 알고 싶어요.');await sleep(340);
+  $('autoTag').classList.add('show');
+  try{
+    const s1=await doSearch(3,'계약 조회','getContract');
+    const d1=await doDescribe(3,s1.pick.tool_id);
+    const i1=await doInvoke(3,s1.pick.tool_id,d1);
+    fillCard(1,d1.tool_id,`계약 <b>${esc(i1.body.contractNo??'-')}</b> · 상태 <span class="hl">${esc(i1.body.status??'-')}</span> · 피보험자 ${esc(i1.body.insured??'-')} · 보험료 ${esc(i1.body.premium??'-')}원`,i1.dt);
+    await sleep(260);
+    const s2=await doSearch(3,'해지환급금','getSurrenderValue');
+    const d2=await doDescribe(3,s2.pick.tool_id);
+    const i2=await doInvoke(3,s2.pick.tool_id,d2);
+    fillCard(2,d2.tool_id,`해지환급금 <span class="hl">${Number(i2.body.surrenderValue??0).toLocaleString()}원</span>`,i2.dt);
+    await sleep(260);
+    tsl('cust','유지하면 보험료는 얼마죠?');await sleep(420);
+    const s3=await doSearch(3,'보험료 계산','calcPremium');
+    const d3=await doDescribe(3,s3.pick.tool_id);
+    const i3=await doInvoke(3,s3.pick.tool_id,d3);
+    fillCard(3,d3.tool_id,`월 보험료 <span class="hl">${Number(i3.body.monthlyPremium??0).toLocaleString()}${esc(i3.body.currency??'')}</span><br>
+      <span style="font-size:10px;color:#96a2b8">상담원이 그대로 읽으면 되는 문장</span>`,i3.dt);
+    await sleep(260);
+    tsl('agnt','계약은 정상이고, 해지환급금과 유지 시 보험료 모두 확인해 드렸습니다.');
+  }catch(e){tsl('agnt','조회 실패 — '+e.message)}
+}
+
+/* ── 컨트롤 ── */
+const RUN={1:runSvc1,2:runSvc2,3:runSvc3};
+const setBusy=b=>{document.querySelectorAll('.prun').forEach(el=>el.disabled=b);$('runAllBtn').disabled=b};
+
+/* 발표 진행 표시 — ① Pool 확인 → ② 동시 실행 → ③ 공유 tool 확인 */
+function setStep(n){
+  document.querySelectorAll('.stp').forEach(el=>{
+    const s=+el.dataset.s;
+    el.classList.toggle('on',s===n);
+    el.classList.toggle('done',s<n);
+  });
+}
+function showVerdict(sec){
+  $('vCalls').textContent=calls+'건';
+  $('vShared').textContent=Object.values(usedBy).filter(s=>s.size>1).length+'개';
+  $('vElapsed').textContent=sec.toFixed(1)+'s';
+  $('verdict').classList.add('show');
+}
+async function runOne(n){setBusy(true);setStep(2);try{await RUN[n]()}finally{setBusy(false)}}
+async function runAll(){
+  setBusy(true);resetAll();setStep(2);
+  const t0=performance.now();
+  try{await Promise.all([runSvc1(),runSvc2(),runSvc3()])}
+  finally{setBusy(false);showVerdict((performance.now()-t0)/1000);setStep(3)}
+}
+function resetAll(){
+  calls=0;latSum=0;reuseHits=0;
+  for(const k in usedBy)delete usedBy[k];
+  $('kpiCalls').textContent='0';$('kpiLat').textContent='—';$('kpiReuse').textContent='0';$('logCount').textContent='0 calls';
+  $('logList').innerHTML='<div class="log-empty" id="logEmpty">호출 없음 — 우측 상단 「3개 서비스 동시 실행」</div>';
+  document.querySelectorAll('.chip').forEach(c=>{c.classList.remove('used','shared');
+    c.querySelectorAll('.dots i').forEach(i=>i.classList.remove('on'))});
+  $('chat').innerHTML='';$('term').innerHTML='';$('ts').innerHTML='';
+  [1,2,3].forEach(n=>{$('a'+n).classList.add('dead');$('a'+n).classList.remove('fill');
+    $('a'+n+'b').textContent='조회 대기…';$('a'+n+'l').textContent='';
+    $('c'+n).classList.remove('awake');wireHot(n,false);
+    feedN[n]=0;$('fn'+n).textContent='0';
+    $('fr'+n).innerHTML='<div class="idle">호출 대기</div>'});
+  $('autoTag').classList.remove('show');
+  $('verdict').classList.remove('show');
+  setStep(1);
+  renderUses();
+}
+
+document.querySelectorAll('.prun').forEach(b=>b.onclick=()=>runOne(+b.dataset.svc));
+$('runAllBtn').onclick=runAll;
+$('resetBtn').onclick=resetAll;
+$('connBtn').onclick=connect;
+$('poolUrl').onchange=connect;
+document.querySelectorAll('.ep .copy').forEach(b=>b.onclick=async()=>{
+  const txt=b.dataset.copy==='mcp'?$('mcpEp').textContent:base();
+  try{await navigator.clipboard.writeText(txt);const o=b.textContent;b.textContent='복사됨';setTimeout(()=>b.textContent=o,1200)}
+  catch{b.textContent='실패'}
+});
+$('notesBtn').onclick=e=>{document.body.classList.toggle('notes');e.currentTarget.classList.toggle('on')};
+const togglePres=()=>{document.body.classList.toggle('pres');$('presBtn').classList.toggle('on')};
+$('presBtn').onclick=togglePres;
+/* 발표용 키: Space 실행 · R 리셋 · P 발표모드 */
+addEventListener('keydown',e=>{
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName))return;
+  if(e.code==='Space'){e.preventDefault();if(!$('runAllBtn').disabled)runAll()}
+  else if(e.key==='r'||e.key==='R')resetAll();
+  else if(e.key==='p'||e.key==='P')togglePres();
+});
+$('speedSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  $('speedSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');SPEED=+b.dataset.sp};
+document.querySelectorAll('.fs-btn').forEach(b=>b.onclick=()=>{
+  const el=$(b.dataset.fs);document.fullscreenElement?document.exitFullscreen():el.requestFullscreen?.()});
+
+let sec=41;setInterval(()=>{sec++;$('timer').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')},1000);
+
+renderUses();
+connect();
+
+/* ── 자가 점검 ── */
+(function selfCheck(){
+  const a=buildArgs({fields:[{name:'contractNo',loc:'query',type:'string'},{name:'age',loc:'body',type:'integer'}]});
+  console.assert(a.contractNo==='C-2024-0001'&&a.body.age===41,'buildArgs: loc 별 query/body 분리');
+  const b=buildArgs({fields:[{name:'unknownField',loc:'body',type:'integer'}]});
+  console.assert(b.body.unknownField===1,'buildArgs: 모르는 필드는 타입 기본값');
+  usedBy.__t=new Set([1]);usedBy.__t.add(2);
+  console.assert([...usedBy.__t].length===2,'공유 판정은 서비스 2개 이상일 때만');
+  delete usedBy.__t;
+})();
+</script>
+</body>
+</html>

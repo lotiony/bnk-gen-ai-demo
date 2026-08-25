@@ -39,7 +39,7 @@ export default function ProjectDetailPage() {
   // 프로젝트는 참여자만 열람 가능. 목록에서 걸러진 건 URL로도 못 들어온다.
   if (persona && !canViewProject(persona, projectId ?? project.id)) {
     return (
-      <div className="max-w-[1440px] mx-auto px-6 py-6">
+      <div className="max-w-[1760px] mx-auto px-6 py-6">
         <Crumb items={[{ label: '프로젝트', to: '/projects' }, { label: '열람 권한 없음' }]} />
         <div className="card px-6 py-10 text-center">
           <div className="text-[32px] mb-2">🔒</div>
@@ -61,7 +61,7 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="max-w-[1440px] mx-auto px-6 pt-[18px] pb-[60px]">
+    <div className="max-w-[1760px] mx-auto px-6 pt-[18px] pb-[60px]">
       {/* Breadcrumb */}
       <Crumb
         items={[

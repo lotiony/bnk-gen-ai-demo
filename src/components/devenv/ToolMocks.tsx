@@ -30,7 +30,7 @@ function ToolModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-[1400px]" style={{ height: '92vh' }}>
+      <div className="relative w-full max-w-[1760px]" style={{ height: '92vh' }}>
         <button
           type="button"
           onClick={onClose}

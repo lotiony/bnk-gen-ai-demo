@@ -19,7 +19,7 @@ export default function ComponentTaskPage() {
 
   if (!comp) {
     return (
-      <div className="max-w-[1120px] mx-auto px-6 py-16 text-center">
+      <div className="max-w-[1400px] mx-auto px-6 py-16 text-center">
         <div className="text-[26px] mb-2">🔗</div>
         <div className="text-[13px] font-extrabold text-ink mb-1">컴포넌트를 찾을 수 없습니다</div>
         <Link to={`/projects/${pid}`} className="text-[11.5px] text-info font-bold hover:underline">
@@ -30,7 +30,7 @@ export default function ComponentTaskPage() {
   }
 
   return (
-    <div className="max-w-[1120px] mx-auto px-6 py-6">
+    <div className="max-w-[1400px] mx-auto px-6 py-6">
       <Crumb
         items={[
           { label: '홈', to: '/' },

@@ -144,7 +144,7 @@ export default function DatabaseTaskPage() {
   const [accounts, setAccounts] = useState<Account[]>(ACCOUNTS_SEED);
 
   return (
-    <div className="max-w-[1120px] mx-auto px-6 py-6">
+    <div className="max-w-[1400px] mx-auto px-6 py-6">
       <Crumb
         items={[
           { label: '홈', to: '/' },

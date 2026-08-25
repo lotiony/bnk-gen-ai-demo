@@ -52,7 +52,7 @@ export default function SearchPipelineDetailPage() {
   const passedAll = task.metrics.every((m) => m.passed === true);
 
   return (
-    <div className="max-w-[1280px] mx-auto px-8 pt-3.5 pb-14">
+    <div className="max-w-[1600px] mx-auto px-8 pt-3.5 pb-14">
       <Crumb
         items={[
           { label: '홈', to: '/' },
@@ -343,7 +343,7 @@ function IndexesTab({ task }: { task: PipelineTask }) {
       {/* Fixed action bar — 변경 있을 때만 노출 */}
       {totalChanges > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t-2 border-brand-dark shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
-          <div className="max-w-[1280px] mx-auto px-8 py-3 flex items-center gap-3.5">
+          <div className="max-w-[1600px] mx-auto px-8 py-3 flex items-center gap-3.5">
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-extrabold text-ink mb-1">
                 지식파이프라인 배포 변경 사항

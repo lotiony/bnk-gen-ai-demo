@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Signing in…</title>
+  </head>
+  <body>
+    <!--
+      MSAL 팝업 redirect 전용 페이지. 이름은 auth-blank 지만 실제로는 비어 있지 않고
+      redirect bridge 스크립트를 실행한다 — MSAL v5 는 이 페이지가 부모 창으로
+      응답을 broadcast 해줘야만 로그인이 완료된다(자세한 내용은 src/auth-redirect.js).
+      파일명을 유지하는 이유: Entra App Registration(EmberLink-Climax-SPA)의 SPA
+      redirect URI 에 각 origin 별 /auth-blank.html 이 이미 등록되어 있어, 이름을
+      바꾸면 Entra 설정을 함께 고쳐야 한다.
+    -->
+    <p id="msg">로그인 처리 중…</p>
+    <script type="module" src="/src/auth-redirect.js"></script>
+  </body>
+</html>
