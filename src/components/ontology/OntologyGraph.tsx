@@ -589,12 +589,6 @@ function Canvas({
         onWheel={wheel}
       >
         <defs>
-          <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill={BRAND} />
-          </marker>
-          <marker id="ard" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="#C2C7CD" />
-          </marker>
           <marker id="aradd" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L8,4 L0,8 Z" fill={ADD} />
           </marker>
@@ -631,8 +625,9 @@ function Canvas({
           const op = trav ? (on ? 0.9 : 0.16) : dimming ? (live ? 1 : 0.07) : on ? 0.9 : 0.55;
           // 강조된 엣지는 라벨을 필로 띄운다.
           const hot = !trav && dimming && live;
-          // 선 색 = 출발 클래스 색. 질의 점등만 브랜드 레드로 덮는다.
-          const eCol = on ? BRAND : clsColor(r.domain);
+          // 선 색 = 출발 클래스 색. 점등 여부는 색이 아니라 굵기·후광·화살촉으로
+          // 구분한다 — 레드로 덮으면 어느 클래스에서 나온 선인지가 사라진다.
+          const eCol = clsColor(r.domain);
           const strong = on || hot;
           return (
             <motion.g
@@ -794,7 +789,7 @@ function Canvas({
                 initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ duration: reduce ? 0 : 0.2, delay: eDelay }}>
                 <path d={g.d} fill="none" stroke={eCol} strokeOpacity={0.16} strokeWidth={6} strokeLinecap="round" />
-                <motion.path d={g.d} fill="none" stroke={eCol} strokeWidth={1.9} markerEnd="url(#ar)"
+                <motion.path d={g.d} fill="none" stroke={eCol} strokeWidth={1.9} markerEnd={`url(#${arrowId(eCol)})`}
                   initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.5, delay: eDelay, ease: 'easeOut' }} />
                 {!reduce && (
                   <circle r={2.8} fill={eCol} style={{ filter: `drop-shadow(0 0 5px ${eCol}) drop-shadow(0 0 9px ${eCol})` }}>
@@ -824,7 +819,8 @@ function Canvas({
           const on = activeClasses.includes(c.name);
           const hub = hubs.includes(c.name);
           const t = Math.sqrt((deg[c.name] ?? 0) / maxDeg);
-          const base = on ? BRAND : hub ? CORE : HIER;
+          // 클래스는 언제나 제 색을 유지한다. 점등은 맥동 링·테두리 굵기로만.
+          const base = hub ? CORE : HIER;
           const sel = selectedClass === c.name;
           return (
             <motion.g key={c.uri}
@@ -917,10 +913,9 @@ function Canvas({
           trav.colAt
             .filter((c) => c.repeat && reached(c.hop))
             .map((c) => {
-              const on = activeClasses.includes(c.cls);
               const hub = hubs.includes(c.cls);
               const t = Math.sqrt((deg[c.cls] ?? 0) / maxDeg);
-              const base = on ? BRAND : hub ? CORE : HIER;
+              const base = hub ? CORE : HIER;
               return (
                 <motion.g
                   key={`rh-${c.hop}`}
@@ -1037,7 +1032,7 @@ function Canvas({
         {trav && (
           <>
             <span className="inline-flex items-center gap-1">
-              <i className="w-[9px] h-[9px] rounded-full" style={{ border: `1.5px solid ${BRAND}`, background: BRAND + '2a' }} />확정
+              <i className="w-[9px] h-[9px] rounded-full" style={{ border: `1.5px solid ${HIER}`, background: HIER + '2a' }} />확정
             </span>
             <span className="inline-flex items-center gap-1">
               <i className="w-[9px] h-[9px] rounded-full" style={{ border: '1.5px dashed #8E979F' }} />후보(조회됨·미채택)
