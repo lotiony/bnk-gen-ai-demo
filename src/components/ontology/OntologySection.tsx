@@ -246,7 +246,7 @@ function MappingView() {
       <div className="border border-line-soft rounded overflow-hidden">
         <div className="max-h-[230px] overflow-y-auto">
           <table className="w-full text-[11.5px]">
-            <thead className="bg-surface-soft sticky top-0">
+            <thead className="bg-surface-soft sticky top-0 z-10">
               <tr className="text-ink-mid">
                 <th className="text-left font-bold py-2 px-3 w-[70px]">종류</th>
                 <th className="text-left font-bold py-2 px-3">온톨로지 대상</th>
@@ -396,7 +396,7 @@ function QueryView() {
             </button>
 
             {qOpen && (
-              <div className="absolute right-0 top-[42px] z-30 w-[420px] bg-white border border-line rounded shadow-xl overflow-hidden">
+              <div className="absolute right-0 top-[42px] z-30 w-[600px] bg-white border border-line rounded shadow-xl overflow-hidden">
                 <div className="px-3 py-2 border-b border-line-soft bg-surface text-[10px] font-extrabold text-ink-mid">
                   시연 시나리오 <span className="text-brand">{SCENARIOS.length}</span>
                 </div>
@@ -412,12 +412,12 @@ function QueryView() {
                           if (!cur) reset(sc);
                         }}
                         className={cn(
-                          'w-full flex items-start gap-2 px-3 py-2 text-left',
+                          'w-full flex items-center gap-2 px-3 py-2 text-left',
                           cur ? 'bg-brand-bg' : 'hover:bg-surface',
                         )}
                       >
-                        <span className="pill bg-brand-tint text-brand border border-brand-tint flex-shrink-0 mt-[1px]">{sc.tag}</span>
-                        <span className={cn('flex-1 min-w-0 text-[11.5px] leading-snug', cur ? 'font-extrabold text-ink' : 'font-semibold text-ink-dark')}>
+                        <span className="pill bg-brand-tint text-brand border border-brand-tint flex-shrink-0">{sc.tag}</span>
+                        <span className={cn('flex-1 min-w-0 text-[11.5px] whitespace-nowrap truncate', cur ? 'font-extrabold text-ink' : 'font-semibold text-ink-dark')}>
                           {sc.question}
                         </span>
                         {cur && <span className="text-brand text-[11px] font-extrabold flex-shrink-0">✓</span>}
@@ -429,9 +429,9 @@ function QueryView() {
                     준비 중 · 동일 온톨로지로 확장 가능한 질의
                   </div>
                   {EXTRA_QUESTIONS.map((q) => (
-                    <div key={q} className="flex items-start gap-2 px-3 py-1.5 text-[11px] text-ink-light font-semibold leading-snug">
-                      <span className="w-1 h-1 rounded-full bg-line flex-shrink-0 mt-[6px]" />
-                      <span className="flex-1 min-w-0">{q}</span>
+                    <div key={q} className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-ink-light font-semibold">
+                      <span className="w-1 h-1 rounded-full bg-line flex-shrink-0" />
+                      <span className="flex-1 min-w-0 whitespace-nowrap truncate">{q}</span>
                     </div>
                   ))}
                 </div>
@@ -520,7 +520,8 @@ function QueryView() {
 
         {/* 우: 추론 과정 */}
         <div className="border border-line-soft rounded bg-white h-[494px] overflow-y-auto">
-          <div className="px-3.5 py-2.5 border-b border-line-soft bg-brand-bg sticky top-0">
+          {/* z-20 — 스텝 뱃지·필이 뒤따르는 형제라 z 없으면 헤더 위로 올라온다 */}
+          <div className="px-3.5 py-2.5 border-b border-line-soft bg-brand-bg sticky top-0 z-20">
             <div className="text-[11.5px] font-extrabold text-ink">추론 과정</div>
             <div className="text-[10.5px] text-ink-dark font-semibold mt-0.5 leading-relaxed">
               🔒 LLM은 <b>질의문만</b> 작성합니다. 값·판정은 <b>그래프에서 실행한 확정 결과</b>입니다.
