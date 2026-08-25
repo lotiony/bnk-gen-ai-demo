@@ -5,14 +5,12 @@ import { useCurrentPersona } from '@/lib/persona';
 import { getApprovalBadgeCount } from '@/lib/personaView';
 
 interface TopbarProps {
-  /** 우측 컨텍스트 배지 텍스트. 예: "프로젝트 상세" */
-  context?: string;
   /** 환경 배지. 비워두면 표시 안 함 */
   envBadge?: string;
 }
 
-/** 모든 페이지 공통 상단바 — 계열사 스위처 + 브랜드 + 컨텍스트 + 유저 칩 */
-export default function Topbar({ context, envBadge }: TopbarProps) {
+/** 모든 페이지 공통 상단바 — 계열사 스위처 + 브랜드 + 유저 칩 */
+export default function Topbar({ envBadge }: TopbarProps) {
   const approvalCount = getApprovalBadgeCount(useCurrentPersona());
 
   return (
@@ -24,11 +22,6 @@ export default function Topbar({ context, envBadge }: TopbarProps) {
           className="flex items-center gap-2.5 text-sm font-extrabold text-ink pl-1 -ml-1.5"
         >
           공동 생성형 AI 플랫폼
-          {context && (
-            <span className="text-[11.5px] font-semibold text-ink-mid ml-1.5 border-l border-line-soft pl-2.5">
-              {context}
-            </span>
-          )}
         </Link>
         {envBadge && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-ink-dark bg-surface px-2 py-1 rounded-sm border border-line-soft font-semibold">
