@@ -235,8 +235,12 @@ function Canvas({
       minY = Math.min(minY, p.y - halfH);
       maxY = Math.max(maxY, p.y + halfH);
     };
-    colAt.forEach((p) => bump(p, CLASS_R + 20, CLASS_R + 30));
-    instAt.forEach((p) => bump(p, 78, 52));
+    // 전체 홉을 모르고 시작하는 게 서사에 맞다. 프레임은 지금까지 드러난
+    // 컬럼만으로 잡고, 홉이 늘 때마다 카메라가 따라 줌아웃한다.
+    const openCols = colAt.filter((c) => c.hop < litCount);
+    const openX = new Set(openCols.map((c) => c.x));
+    openCols.forEach((p) => bump(p, CLASS_R + 20, CLASS_R + 30));
+    instAt.forEach((p) => openX.has(p.x) && bump(p, 78, 52));
     if (!Number.isFinite(minX)) {
       minX = 0; minY = 0; maxX = 600; maxY = 400;
     }
@@ -248,7 +252,7 @@ function Canvas({
       hidden,
       vb: { x: minX - M, y: minY - M - 26, w: maxX - minX + M * 2, h: maxY - minY + M * 2 + 40 },
     };
-  }, [traverse, allSteps]);
+  }, [traverse, allSteps, litCount]);
 
   const off = useCallback((k: string, p: Pt | null): Pt | null => {
     if (!p) return null;
@@ -299,7 +303,7 @@ function Canvas({
   target.current = fit;
   useEffect(() => {
     follow.current = true;
-  }, [trav, built]);
+  }, [trav, built, litCount]);
   useEffect(() => {
     let raf = 0;
     const step = () => {
@@ -575,21 +579,12 @@ function Canvas({
         </defs>
 
         {trav &&
-          trav.colAt.map((p) => {
-            // 틀은 처음부터 둔다 — 카메라가 흔들리지 않고, 앞으로 갈 곳이
-            // 보여야 '몇 홉짜리 추론인지'가 읽힌다. 도달 전에는 죽여 둔다.
-            const rc = reached(p.hop);
-            return (
-              <g key={`bg-${p.hop}`} opacity={rc ? 1 : 0.4}>
-                <rect x={p.x - T_COL_W / 2 + 12} y={trav.vb.y + 14} width={T_COL_W - 24} height={trav.vb.h - 34} rx={8}
-                  fill={BRAND} fillOpacity={rc ? 0.035 : 0.012} stroke={BRAND} strokeOpacity={rc ? 0.12 : 0.07}
-                  strokeDasharray={rc ? undefined : '5 5'} />
-                <text x={p.x} y={trav.vb.y + 40} textAnchor="middle" fontSize={10} fontWeight={800} fill={rc ? BRAND : '#B9BFC6'}>
-                  hop {p.hop}
-                </text>
-              </g>
-            );
-          })}
+          trav.colAt
+            .filter((p) => reached(p.hop))
+            .map((p) => (
+              <rect key={`bg-${p.hop}`} x={p.x - T_COL_W / 2 + 12} y={trav.vb.y + 14} width={T_COL_W - 24} height={trav.vb.h - 34}
+                rx={8} fill={BRAND} fillOpacity={0.035} stroke={BRAND} strokeOpacity={0.12} />
+            ))}
 
         {/* 관계 엣지 — 실행 전에는 전부 연결. 순회 중에는 양끝이 모두
              컬럼에 올라온 클래스일 때만 그린다. 한쪽이 컬럼 밖이면 그 노드는
@@ -673,12 +668,14 @@ function Canvas({
                     ? highlight.cls === n.host && highlight.attr === n.label ? 1 : 0.06
                     : dimming ? (clsLive(n.host!) ? 1 : 0.06) : 1;
                 return (
+                  // style.opacity 는 framer 의 animate.opacity 를 덮어써서 등장
+                  // 지연을 무시한다 — 그러면 선이 클래스보다 먼저 떴다.
+                  // 강조(정적 g)와 등장(motion.g)을 층으로 분리한다.
+                  <g key={n.id} opacity={satOp}>
                   <motion.g
-                    key={n.id}
                     initial={reduce ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: reduce ? 0 : 0.26, delay: reduce ? 0 : tSat(n.host!) }}
-                    style={{ opacity: satOp }}
                   >
                     <line x1={hp.x} y1={hp.y} x2={p.x} y2={p.y} stroke={PROP_COLOR} strokeOpacity={0.32} strokeWidth={1.1} />
                     <circle cx={p.x} cy={p.y} r={PROP_R} fill={PROP_COLOR + '22'} stroke={PROP_COLOR} strokeOpacity={0.65} strokeWidth={1.2} />
@@ -686,6 +683,7 @@ function Canvas({
                       {dispLabel(n.label)}
                     </text>
                   </motion.g>
+                  </g>
                 );
               })}
           </motion.g>
@@ -700,15 +698,20 @@ function Canvas({
             // 펼침선은 **컬럼 대표 클래스**에서 내려온다.
             // 개체의 소속 클래스로 잡으면, 그 클래스가 컬럼에 없을 때
             // CP 가 force 좌표(화면 밖)로 폴백해 선이 화면 밖에서 날아온다.
-            const cp = colOfX(IP0(id)?.x ?? p.x);
-            if (!cp || !reached(cp.hop)) return null;
+            const hc = colOfX(IP0(id)?.x ?? p.x);
+            if (!hc || !reached(hc.hop)) return null;
+            // 대표 클래스를 끌어 옮겼으면 선도 따라가야 한다. 컬럼 원좌표를
+            // 그대로 쓰면 클래스만 떠나고 선이 제자리에 남는다.
+            // 재방문 컬럼은 clsAt 이 첫 등장 컬럼을 가리키므로 원좌표를 쓴다.
+            const cp = hc.repeat ? hc : (CP(hc.cls) ?? hc);
             const on = litSet.has(id);
             const col = clsColor(inst.cls);
             // 원본과 동일한 베지어 펼침선 — 클래스에서 아래로 내려와 개체로
             const midY = (cp.y + CLASS_R + p.y) / 2;
             const d = `M ${cp.x} ${cp.y + CLASS_R} C ${cp.x} ${midY}, ${p.x} ${midY}, ${p.x} ${p.y - instR(on ? 'focus' : 'cand') - 5}`;
-            // 개체보다 먼저 그리면 허공에서 선이 내려오는 게 보인다 — 개체 뒤로.
-            const delay = reduce ? 0 : tInst(IP0(id) ?? p) + 0.09;
+            // 개체는 클래스 자리에서 스프링으로 날아온다. 선은 도착지까지 한 번에
+            // 그려지므로, 개체가 도착할 시간(≈0.3s)을 주지 않으면 선이 먼저 보인다.
+            const delay = reduce ? 0 : tInst(IP0(id) ?? p) + 0.32;
             return (
               <motion.path
                 key={`ci-${id}`}
@@ -733,7 +736,7 @@ function Canvas({
             const same = Math.abs(a.x - b.x) < 4;
             const g = edgeGeom(a, b, same ? 0.4 : i % 2 ? 0.1 : -0.1);
             const eCol = clsColor(instById(e.from)?.cls ?? '');
-            const eDelay = reduce ? 0 : Math.max(tInst(a), tInst(b)) + 0.18;
+            const eDelay = reduce ? 0 : Math.max(tInst(a), tInst(b)) + 0.48;
             return (
               <motion.g key={`te${i}`} style={{ pointerEvents: 'none' }}
                 initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }}
@@ -816,7 +819,7 @@ function Canvas({
               })()}
 
               {/* ＋ 배지 — 클릭=속성·관계 추가, 다른 노드로 드래그=관계 연결 */}
-              {!trav && hoverCls === c.name && !dragId.current && !linkDrag && !spaceDown && (
+              {!trav && onAddFrom && hoverCls === c.name && !dragId.current && !linkDrag && !spaceDown && (
                 <g
                   transform={`translate(${CLASS_R * 0.95} ${-CLASS_R * 0.95})`}
                   style={{ cursor: 'crosshair' }}
@@ -949,14 +952,6 @@ function Canvas({
                     {t}
                   </text>
                 ))}
-                {on && hop != null && (
-                  <g style={{ pointerEvents: 'none' }}>
-                    <circle cx={-r * 0.72 - 5} cy={-r * 0.72 - 5} r={8} fill="#fff" stroke={col} strokeWidth={1.2} />
-                    <text x={-r * 0.72 - 5} y={-r * 0.72 - 1.5} textAnchor="middle" fontSize={8.5} fontWeight={800} fill={col}>
-                      {hop}
-                    </text>
-                  </g>
-                )}
                 {isAnchor && (
                   <g style={{ pointerEvents: 'none' }}>
                     <rect x={6} y={-r - 20} width={38} height={16} rx={8} fill={BRAND} />
