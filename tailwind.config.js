@@ -21,31 +21,45 @@ export default {
         'xxs': ['10px', '1.2'],
         '2xs': ['10.5px', '1.3'],
       },
+      // 레퍼런스는 모서리를 거의 굴리지 않는다. 스케일만 재정의해
+      // rounded-* 클래스를 한 줄도 고치지 않고 전 화면 마감을 각지게 만든다.
+      borderRadius: {
+        sm: '1px',
+        DEFAULT: '2px',
+        md: '2px',
+        lg: '3px',
+        xl: '4px',
+      },
       colors: {
-        // 데모용 중립 브랜드 팔레트.
-        // 원본의 *명도 구조*를 그대로 승계한다 —
-        // DEFAULT·dark 모두 어두운 텍스트(text-ink)를 얹는 밝은 배경이다.
-        // 색을 진하게 바꾸면 574개소의 대비가 한꺼번에 깨지므로 명도는 건드리지 말 것.
+        // 브랜드 팔레트 — BNK 부산은행 웹 실측 (docs/design.md §1).
+        // ⚠️ brand·brand-dark 위에는 반드시 text-white.
+        //    원본 mockup은 밝은 배경+어두운 텍스트 구조였으나 레드로 전환하며
+        //    해당 조합 180여 곳의 텍스트를 흰색으로 반전했다.
         brand: {
-          DEFAULT: '#9FCFC8',
-          dark: '#5FA69C',
-          tint: '#E1F0ED',
-          bg: '#F3F9F8',
+          DEFAULT: '#CB2C10',
+          dark: '#A82410',
+          strong: '#FF3312',
+          tint: '#FBE9E6',
+          bg: '#FDF6F4',
         },
         ink: {
-          DEFAULT: '#1A1A1A',
+          DEFAULT: '#212121',
           dark: '#333333',
           mid: '#666666',
           light: '#999999',
         },
         line: {
-          DEFAULT: '#D9D9D9',
-          soft: '#EDEDED',
+          DEFAULT: '#E0E0E1',
+          soft: '#EFEFEF',
+          warm: '#D3D3D0',
+          strong: '#212121',
         },
         surface: {
-          DEFAULT: '#F7F7F8',
-          soft: '#FAFAFA',
+          DEFAULT: '#F6F6F6',
+          soft: '#FBF9FA',
         },
+        // 배너·강조 블록에 쓰는 웜 그레이 (레퍼런스 #EFEEEB)
+        warm: '#EFEEEB',
         ok: {
           DEFAULT: '#1B8A4D',
           bg: '#E8F5EE',
@@ -63,7 +77,7 @@ export default {
         },
         info: {
           DEFAULT: '#1F5BB8',
-          bg: '#E8F0FF',
+          bg: '#E8F0FB',
           border: '#C5D6F6',
         },
         accent: {

@@ -194,7 +194,7 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
           className={cn(
             'pill border font-extrabold text-[10px]',
             agent.customerFacing
-              ? 'bg-brand text-ink border-brand-dark'
+              ? 'bg-brand text-white border-brand-dark'
               : 'bg-info-bg text-info border-info-border',
           )}
         >
@@ -248,7 +248,7 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
           <button
             type="button"
             onClick={handleShareRequest}
-            className="py-1 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark"
+            className="py-1 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark"
           >
             ＋ 공유 신청
           </button>

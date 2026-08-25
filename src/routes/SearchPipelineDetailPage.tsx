@@ -485,7 +485,7 @@ function IndexRowCard({
           </span>
         )}
         {changedVersion && (
-          <span className="inline-flex items-center text-[10px] font-extrabold py-[2px] px-2 rounded-full border bg-brand text-ink border-brand-dark">
+          <span className="inline-flex items-center text-[10px] font-extrabold py-[2px] px-2 rounded-full border bg-brand text-white border-brand-dark">
             변경됨
           </span>
         )}
@@ -574,7 +574,7 @@ function IndexVersionRow({
         className={cn(
           'inline-flex items-center justify-center text-[10.5px] font-extrabold py-[2px] px-2 rounded-full border min-w-[42px]',
           isPicked
-            ? 'bg-brand text-ink border-brand-dark'
+            ? 'bg-brand text-white border-brand-dark'
             : 'bg-surface-soft text-ink-dark border-line',
         )}
       >
@@ -724,7 +724,7 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
             setKey(makeNewKey());
             setRevealed(true);
           }}
-          className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+          className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
         >
           ＋ 키 발급
         </button>
@@ -880,7 +880,7 @@ function DevDeploymentRow({ d }: { d: PipelineTask['devDeployments'][number] }) 
           className={cn(
             'inline-flex items-center justify-center text-[11px] font-extrabold py-[3px] px-2.5 rounded-full border min-w-[48px]',
             isActive
-              ? 'bg-brand text-ink border-brand-dark'
+              ? 'bg-brand text-white border-brand-dark'
               : 'bg-surface-soft text-ink-dark border-line',
           )}
         >
@@ -1231,7 +1231,7 @@ function EvalRunRow({
     );
   };
   return (
-    <tr className="hover:bg-[#F3F9F8]">
+    <tr className="hover:bg-[#FDF6F4]">
       <td className={cn('py-2 px-2.5', !last && 'border-b border-line-soft')}>
         {run.deployVersion ? (
           <span

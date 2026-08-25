@@ -41,7 +41,7 @@ export default function TenantSwitcher() {
         )}
         title="Namespace 전환 (계열사 10 + 그룹 공통)"
       >
-        <span className="bg-brand px-2.5 py-1 rounded-sm font-black text-ink text-sm leading-none">
+        <span className="px-1 font-black text-brand text-sm leading-none tracking-tight">
           BNK
         </span>
         <span className="text-[12.5px] font-extrabold text-ink tracking-tight">

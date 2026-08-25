@@ -193,7 +193,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
             {records.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft last:border-b-0 text-[12px] hover:bg-[#F3F9F8]"
+                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft last:border-b-0 text-[12px] hover:bg-[#FDF6F4]"
               >
                 <span className="inline-flex items-center justify-center w-7 h-8 rounded border bg-brand-tint border-brand-dark text-[13px] flex-shrink-0">
                   📦
@@ -312,7 +312,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
           <button
             onClick={() => handleEmbedStart()}
             disabled={selectionCount === 0 || embeddingIds.size > 0}
-            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ 선택 임베딩
           </button>
@@ -328,7 +328,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
             return (
               <div
                 key={folder.name}
-                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft text-[12px] hover:bg-[#F3F9F8]"
+                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft text-[12px] hover:bg-[#FDF6F4]"
               >
                 <input
                   type="checkbox"
@@ -367,7 +367,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
                 className={cn(
                   'flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft last:border-b-0 text-[12px]',
                   isChild && 'bg-surface-soft pl-9',
-                  !isChild && 'hover:bg-[#F3F9F8]',
+                  !isChild && 'hover:bg-[#FDF6F4]',
                 )}
               >
                 <input

@@ -413,7 +413,7 @@ function SignalCard({
 
 function ActivityRow({ item }: { item: ActivityItem }) {
   const kindStyle: Record<ActivityKind, { label: string; cls: string }> = {
-    project_register: { label: '등록', cls: 'bg-brand text-ink border-brand-dark' },
+    project_register: { label: '등록', cls: 'bg-brand-tint text-brand border-brand-tint' },
     train_deploy: { label: '학습계', cls: 'bg-info-bg text-info border-info-border' },
     serv_promotion: { label: '서빙계', cls: 'bg-ok-bg text-ok border-ok-border' },
     policy_violation: { label: '정책', cls: 'bg-warn-bg text-warn border-warn-border' },
@@ -842,7 +842,7 @@ function ProjectTokenBarChart({ rows }: { rows: ProjectUsageRow[] }) {
               {/* 입력 (하단) */}
               <rect x={bx} y={ys(d.input)} width={barW} height={inH} fill="#1F5BB8" />
               {/* 출력 (상단) */}
-              <rect x={bx} y={ys(d.input + d.output)} width={barW} height={outH} fill="#5FA69C" />
+              <rect x={bx} y={ys(d.input + d.output)} width={barW} height={outH} fill="#CB2C10" />
               {/* 총합 라벨 (막대 위) */}
               <text
                 x={cx}
@@ -1030,7 +1030,7 @@ function GrafanaLink({ panel }: { panel: string }) {
 
 const PTU_COLORS = [
   { stroke: '#1F5BB8', dot: 'bg-info' },
-  { stroke: '#5FA69C', dot: 'bg-brand-dark' },
+  { stroke: '#CB2C10', dot: 'bg-brand-dark' },
   { stroke: '#1B8A4D', dot: 'bg-ok' },
 ];
 
@@ -1151,7 +1151,7 @@ function PtuByModelList({
   rows: ProjectUsageRow[];
   ptuUsage: ModelPtuUsage[];
 }) {
-  const palette = ['#5FA69C', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+  const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
   const groups = ptuUsage.map((m, mi) => {
     const projects = rows
       .filter((r) => r.primaryModel === m.model && r.monthTokenInput + r.monthTokenOutput > 0)
@@ -2124,7 +2124,7 @@ function GpuInfraTab() {
           slices={(() => {
             const map = new Map<string, number>();
             for (const n of GPU_NODES) map.set(n.gpuModel, (map.get(n.gpuModel) ?? 0) + n.gpuCount);
-            const palette = ['#1F5BB8', '#5FA69C', '#1B8A4D', '#6E3BBD'];
+            const palette = ['#1F5BB8', '#CB2C10', '#1B8A4D', '#6E3BBD'];
             return Array.from(map.entries())
               .sort((a, b) => b[1] - a[1])
               .map(([label, value], i) => ({ label, value, color: palette[i % palette.length] }));
@@ -2974,8 +2974,8 @@ function BigLineChart({
           </text>
         </g>
       ))}
-      <path d={area} fill="#E1F0ED" opacity={0.7} />
-      <path d={d} fill="none" stroke="#5FA69C" strokeWidth={1.7} />
+      <path d={area} fill="#FBE9E6" opacity={0.7} />
+      <path d={d} fill="none" stroke="#CB2C10" strokeWidth={1.7} />
       <circle cx={xs(series.length - 1)} cy={ys(series[series.length - 1])} r={2.6} fill="#1A1A1A" />
       {xLabelIdx.map((i) => (
         <text key={i} x={xs(i)} y={H - 6} textAnchor="middle" fontSize="9" fill="#999999">
@@ -3304,7 +3304,7 @@ function DailyCostChart({
           </g>
         );
       })}
-      <path d={fixedAreaPath} fill="#E1F0ED" />
+      <path d={fixedAreaPath} fill="#FBE9E6" />
       <path d={varAreaPath} fill="#C5D6F6" opacity={0.7} />
       <path d={totalLine} fill="none" stroke="#1F5BB8" strokeWidth={1.7} />
       <circle cx={xs(N - 1)} cy={ys(varTop[N - 1])} r={3} fill="#1F5BB8" />

@@ -208,7 +208,7 @@ function RequestTab({ tables }: { tables: Table[] }) {
     <section className="card shadow-sm mb-3.5">
       <div className="flex items-center justify-between gap-3.5 py-3 px-[18px] border-b border-line-soft">
         <div className="text-sm font-extrabold text-ink">테이블 생성 요청서</div>
-        <button className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark">
+        <button className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark">
           ▶ 테이블 생성 신청
         </button>
       </div>
@@ -382,7 +382,7 @@ function SchemaTab({
               </button>
               <button
                 onClick={submitRequest}
-                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
               >
                 {isCreate ? '생성' : '수정'}
               </button>
@@ -390,14 +390,14 @@ function SchemaTab({
           ) : openTable ? (
             <button
               onClick={() => setEditing(true)}
-              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
             >
               ✎ 수정
             </button>
           ) : (
             <button
               onClick={startCreate}
-              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
             >
               ＋ 테이블 생성
             </button>
@@ -769,7 +769,7 @@ function AccountTab({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setAdding(true)}
-            className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark"
+            className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark"
           >
             계정 생성
           </button>
@@ -871,7 +871,7 @@ function AccountTab({
                                     <button
                                       onClick={() => approve(a.id)}
                                       title="DBA 승인 처리"
-                                      className="h-6 px-2 border border-brand-dark bg-brand rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark whitespace-nowrap"
+                                      className="h-6 px-2 border border-brand-dark bg-brand rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark whitespace-nowrap"
                                     >
                                       {deleting ? '삭제 승인 (DBA)' : '승인 (DBA)'}
                                     </button>
@@ -1037,7 +1037,7 @@ function AddAccountModal({
                   onClick={() => setEnv(e)}
                   className={cn(
                     'h-8 px-3 rounded border text-[12px] font-bold',
-                    env === e ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    env === e ? 'bg-brand border-brand-dark text-white' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {e}
@@ -1077,7 +1077,7 @@ function AddAccountModal({
                   onClick={() => setPwMode(m)}
                   className={cn(
                     'h-8 px-3 rounded border text-[12px] font-bold',
-                    pwMode === m ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    pwMode === m ? 'bg-brand border-brand-dark text-white' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {m === 'auto' ? '자동 발급' : '수동 설정'}
@@ -1121,7 +1121,7 @@ function AddAccountModal({
                 password: pwMode === 'manual' ? pwValue.trim() : '',
               })
             }
-            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
           >
             결재 상신
           </button>
@@ -1345,7 +1345,7 @@ function LoadTab({ tables }: { tables: Table[] }) {
         </div>
         <button
           onClick={() => setAdding(true)}
-          className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+          className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
         >
           ＋ 적재 작업
         </button>
@@ -1671,7 +1671,7 @@ function LoadJobModal({
                   onClick={() => setSource(s)}
                   className={cn(
                     'h-8 px-3 rounded border text-[12px] font-bold',
-                    source === s ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    source === s ? 'bg-brand border-brand-dark text-white' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {SOURCE_ICON[s]} {s}
@@ -1751,7 +1751,7 @@ function LoadJobModal({
                       onClick={() => setMode(m)}
                       className={cn(
                         'h-8 px-3 rounded border text-[11.5px] font-bold',
-                        mode === m ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                        mode === m ? 'bg-brand border-brand-dark text-white' : 'bg-white border-line text-ink-mid hover:bg-surface',
                       )}
                     >
                       {m}
@@ -1771,7 +1771,7 @@ function LoadJobModal({
                   onClick={() => setLang(l)}
                   className={cn(
                     'h-7 px-2.5 rounded border text-[11px] font-bold',
-                    lang === l ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    lang === l ? 'bg-brand border-brand-dark text-white' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {l}
@@ -1809,7 +1809,7 @@ function LoadJobModal({
                 code: code.trim(),
               })
             }
-            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
           >
             적재 실행
           </button>
@@ -1877,7 +1877,7 @@ function FilePickerModal({ onClose, onPick }: { onClose: () => void; onPick: (f:
                     <td className="py-2 px-2 text-right">
                       <button
                         onClick={() => onPick(f)}
-                        className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark whitespace-nowrap"
+                        className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark whitespace-nowrap"
                       >
                         선택
                       </button>

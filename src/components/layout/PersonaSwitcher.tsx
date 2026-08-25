@@ -61,7 +61,7 @@ export default function PersonaSwitcher() {
         )}
         title="페르소나 전환"
       >
-        <span className="w-[22px] h-[22px] rounded-full bg-brand text-ink inline-flex items-center justify-center text-[10px] font-extrabold">
+        <span className="w-[22px] h-[22px] rounded-full bg-brand-tint text-brand inline-flex items-center justify-center text-[10px] font-extrabold">
           {current.initial}
         </span>
         <b className="text-ink-dark text-[12.5px] leading-none">{current.name}</b>
@@ -118,7 +118,7 @@ export default function PersonaSwitcher() {
                                 'w-6 h-6 rounded-full inline-flex items-center justify-center text-[10.5px] font-extrabold border',
                                 selected
                                   ? 'bg-brand-dark text-white border-brand-dark'
-                                  : 'bg-brand text-ink border-brand-dark',
+                                  : 'bg-brand text-white border-brand-dark',
                               )}
                             >
                               {p.initial}

@@ -22,7 +22,7 @@ export default function GNB() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="sticky top-[50px] z-20 bg-white border-b border-line-soft px-6">
+    <nav className="sticky top-[50px] z-20 bg-white border-b-2 border-brand px-6">
       <div className="max-w-[1440px] mx-auto flex items-center gap-1.5">
         {items.map((item) => {
           const isActive =
@@ -31,7 +31,7 @@ export default function GNB() {
           const className = cn(
             'py-3.5 px-[18px] text-[13px] font-semibold border-b-2 border-transparent',
             isActive
-              ? 'text-ink font-extrabold border-brand-dark'
+              ? 'text-brand font-extrabold border-brand'
               : 'text-ink-mid hover:text-ink-dark',
           );
           if (item.to === '#') {

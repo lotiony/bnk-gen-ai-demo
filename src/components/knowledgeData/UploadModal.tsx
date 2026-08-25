@@ -91,7 +91,7 @@ export default function UploadModal({ open, onClose, onUploaded }: Props) {
                 onUploaded?.(uploaded);
                 onClose();
               }}
-              className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               업로드 시작
             </button>
@@ -139,7 +139,7 @@ export default function UploadModal({ open, onClose, onUploaded }: Props) {
               fileInputRef.current?.click();
               simulatePick();
             }}
-            className="h-[30px] px-3.5 bg-brand border border-brand-dark rounded text-xs font-extrabold text-ink hover:bg-brand-dark"
+            className="h-[30px] px-3.5 bg-brand border border-brand-dark rounded text-xs font-extrabold text-white hover:bg-brand-dark"
           >
             파일 선택
           </button>

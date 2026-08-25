@@ -106,7 +106,7 @@ export default function AdminFeaturedAgentsPage() {
             className={cn(
               'h-9 px-4 text-[12.5px] font-extrabold rounded border',
               dirty
-                ? 'bg-brand text-ink border-brand-dark hover:bg-brand-dark'
+                ? 'bg-brand text-white border-brand-dark hover:bg-brand-dark'
                 : 'bg-surface text-ink-light border-line-soft cursor-not-allowed',
             )}
             onClick={() => setDirty(false)}
@@ -242,7 +242,7 @@ export default function AdminFeaturedAgentsPage() {
                   </div>
                   <button
                     onClick={() => addCandidate(c.id)}
-                    className="h-7 px-2.5 text-[10.5px] font-extrabold rounded border border-brand-dark bg-brand-bg text-ink hover:bg-brand"
+                    className="h-7 px-2.5 text-[10.5px] font-extrabold rounded border border-brand-dark bg-brand-bg text-white hover:bg-brand"
                   >
                     + 추가
                   </button>

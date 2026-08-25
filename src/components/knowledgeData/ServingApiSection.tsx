@@ -108,7 +108,7 @@ export default function ServingApiSection() {
                   ? '먼저 학습계에 배포된 빌드가 필요합니다'
                   : '현재 학습계 빌드를 서빙계(운영)로 배포 신청'
               }
-              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {servPending ? '승인 대기 중' : '▶ 서빙계 배포 신청'}
             </button>

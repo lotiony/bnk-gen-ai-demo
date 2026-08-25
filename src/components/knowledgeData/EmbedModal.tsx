@@ -142,7 +142,7 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
               });
               onClose();
             }}
-            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ 임베딩 시작
           </button>

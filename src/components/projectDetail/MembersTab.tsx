@@ -10,7 +10,7 @@ interface Props {
 }
 
 const AVATAR_STYLE: Record<RoleKey, string> = {
-  pm: 'bg-brand text-ink outline outline-1 outline-brand-dark',
+  pm: 'bg-brand text-white outline outline-1 outline-brand-dark',
   dev: 'bg-info-bg text-info outline outline-1 outline-info-border',
   data: 'bg-ok-bg text-ok outline outline-1 outline-ok-border',
   gov: 'bg-accent-purple-bg text-accent-purple outline outline-1 outline-accent-purple-border',

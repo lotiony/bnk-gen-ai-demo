@@ -178,7 +178,7 @@ export default function DeploySection({ indexes }: Props) {
                         <span className="inline-flex items-center gap-1.5">
                           <Link
                             to={`/approvals/${servPending!.id}`}
-                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold text-ink hover:bg-brand inline-flex items-center"
+                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold text-white hover:bg-brand inline-flex items-center"
                           >
                             결재함 →
                           </Link>
@@ -196,7 +196,7 @@ export default function DeploySection({ indexes }: Props) {
                           onClick={() => promote(d)}
                           disabled={!!servPending}
                           title={servPending ? '이미 승인 대기 중인 서빙계 배포가 있습니다' : '이 버전을 서빙계로 승격'}
-                          className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           ▶ 서빙계로 승격
                         </button>

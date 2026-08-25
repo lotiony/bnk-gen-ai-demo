@@ -602,7 +602,7 @@ export default function KnowledgeDataTaskPage() {
             </button>
             <button
               onClick={() => setUploadOpen(true)}
-              className="h-[30px] px-2.5 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+              className="h-[30px] px-2.5 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
             >
               ↑ 파일 업로드
             </button>
@@ -624,7 +624,7 @@ export default function KnowledgeDataTaskPage() {
             <tbody>
               {openFolder ? (
                 folderFiles.map((r, i, arr) => (
-                  <tr key={r.id} className="hover:bg-[#F3F9F8]">
+                  <tr key={r.id} className="hover:bg-[#FDF6F4]">
                     <td className={cn('py-2 px-2.5', i < arr.length - 1 && 'border-b border-line-soft')}>
                       <input type="checkbox" />
                     </td>
@@ -678,7 +678,7 @@ export default function KnowledgeDataTaskPage() {
                 const fFiles = FOLDER_FILES[f.name] ?? [];
                 const fStaged = fFiles.length > 0 && fFiles.every((x) => stagedIds.has(x.id));
                 return (
-                <tr key={f.name} className={cn('hover:bg-[#F3F9F8]', checked.has(f.name) && 'bg-brand-tint')}>
+                <tr key={f.name} className={cn('hover:bg-[#FDF6F4]', checked.has(f.name) && 'bg-brand-tint')}>
                   <td className="py-2 px-2.5 border-b border-line-soft">
                     <input
                       type="checkbox"
@@ -760,8 +760,8 @@ export default function KnowledgeDataTaskPage() {
                       isChecked
                         ? 'bg-brand-tint'
                         : isChild
-                        ? 'bg-surface-soft hover:bg-[#F3F9F8]'
-                        : 'bg-white hover:bg-[#F3F9F8]',
+                        ? 'bg-surface-soft hover:bg-[#FDF6F4]'
+                        : 'bg-white hover:bg-[#FDF6F4]',
                       !isLast && 'border-b border-line-soft',
                     )}
                   >
@@ -1065,7 +1065,7 @@ export default function KnowledgeDataTaskPage() {
                 <span className="flex-1" />
                 <button
                   onClick={confirmBatch}
-                  className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark"
+                  className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark"
                 >
                   데이터셋 확정 → 파싱 청킹
                 </button>
@@ -1095,7 +1095,7 @@ export default function KnowledgeDataTaskPage() {
               </button>
               <button
                 onClick={stageChecked}
-                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
               >
                 ▶ 데이터셋에 담기
               </button>
@@ -1142,7 +1142,7 @@ export default function KnowledgeDataTaskPage() {
                   </button>
                   <button
                     onClick={confirmBatch}
-                    className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+                    className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
                   >
                     데이터셋 확정
                   </button>
@@ -1185,7 +1185,7 @@ export default function KnowledgeDataTaskPage() {
                       setManifestPage(1);
                       setManifestQuery('');
                     }}
-                    className="flex items-center gap-3 py-3 px-3.5 border border-line-soft rounded-lg bg-white text-left hover:border-brand-dark hover:bg-[#F3F9F8] transition-colors"
+                    className="flex items-center gap-3 py-3 px-3.5 border border-line-soft rounded-lg bg-white text-left hover:border-brand-dark hover:bg-[#FDF6F4] transition-colors"
                   >
                     <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-brand-tint border border-brand-dark text-[16px] flex-shrink-0">
                       📦

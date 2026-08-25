@@ -207,7 +207,7 @@ export default function AgentTaskRegisterPage() {
                       <span
                         className={cn(
                           'w-4 h-4 rounded border-2 inline-flex items-center justify-center text-[10px]',
-                          on ? 'bg-brand-dark border-brand-dark text-ink' : 'border-line bg-white',
+                          on ? 'bg-brand-dark border-brand-dark text-white' : 'border-line bg-white',
                         )}
                       >
                         {on && '✓'}

@@ -200,7 +200,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
             onClick={startAll}
             disabled={startablesForBulk.length === 0}
             title={startablesForBulk.length === 0 ? '파싱할 대기 문서가 없습니다' : `대기 문서 ${startablesForBulk.length}건 일괄 파싱`}
-            className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
+            className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
           >
             ▶ 일괄 파싱{startablesForBulk.length > 0 ? ` ${startablesForBulk.length}` : ''}
           </button>
@@ -242,7 +242,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
           <div className="text-[11.5px] text-ink-mid mb-3.5">저장소에서 문서를 선택해 「데이터셋에 담기」 하세요.</div>
           <button
             onClick={onGotoStorage}
-            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark"
+            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark"
           >
             저장소로 이동
           </button>
@@ -434,7 +434,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                       {s === 'stalled' && (
                         <button
                           onClick={() => onStartFile(d, rowSettings)}
-                          className="h-7 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
+                          className="h-7 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark"
                         >
                           재시도
                         </button>
@@ -442,7 +442,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                       {s === 'queued' && (
                         <button
                           onClick={() => onStartFile(d, rowSettings)}
-                          className="h-7 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
+                          className="h-7 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark"
                         >
                           파싱
                         </button>

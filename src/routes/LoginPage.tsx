@@ -27,7 +27,7 @@ export default function LoginPage() {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5">
-            <span className="bg-brand px-3 py-1.5 rounded-md text-ink font-black text-lg leading-none">
+            <span className="font-black text-brand text-[22px] leading-none tracking-tight">
               BNK
             </span>
             <span className="text-[18px] font-extrabold text-ink tracking-tight">
@@ -80,7 +80,7 @@ export default function LoginPage() {
                             'w-9 h-9 rounded-full inline-flex items-center justify-center text-[13px] font-extrabold border',
                             loading
                               ? 'bg-brand-dark text-white border-brand-dark'
-                              : 'bg-brand text-ink border-brand-dark',
+                              : 'bg-brand-tint text-brand border-brand-tint',
                           )}
                         >
                           {p.initial}

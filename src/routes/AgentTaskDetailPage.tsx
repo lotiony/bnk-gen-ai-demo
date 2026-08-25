@@ -623,7 +623,7 @@ function EvalTab({
                 const ts = testSets.find((t) => t.id === r.testSetId);
                 const ver = versions.find((v) => v.version === r.version);
                 return (
-                  <tr key={r.id} className="hover:bg-[#F3F9F8]">
+                  <tr key={r.id} className="hover:bg-[#FDF6F4]">
                     <td className="py-2 px-2.5 border-b border-line-soft">
                       <span
                         className={cn(
@@ -889,7 +889,7 @@ function DeployTab({ agentId }: { agentId: string }) {
                     <button
                       disabled={!allPreflightPass}
                       title={!allPreflightPass ? '사전 점검 미통과 항목이 있으면 기안할 수 없습니다' : '학습계 배포 기안'}
-                      className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                      className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                     >
                       배포 기안 →
                     </button>
@@ -923,7 +923,7 @@ function DeployTab({ agentId }: { agentId: string }) {
           </thead>
           <tbody>
             {history.map((h) => (
-              <tr key={h.id} className="hover:bg-[#F3F9F8]">
+              <tr key={h.id} className="hover:bg-[#FDF6F4]">
                 <td className="py-2 px-2.5 border-b border-line-soft">
                   <code className="font-mono text-ink-dark font-bold">{h.tagName}</code>
                 </td>
@@ -1266,7 +1266,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
           </thead>
           <tbody>
             {data.history.map((h) => (
-              <tr key={h.id} className="hover:bg-[#F3F9F8]">
+              <tr key={h.id} className="hover:bg-[#FDF6F4]">
                 <td className="py-2 px-2.5 border-b border-line-soft">
                   <code className="font-mono text-ink-dark font-bold">{h.tagName}</code>
                 </td>
@@ -1442,7 +1442,7 @@ function RedTeamTab({ agentId }: { agentId: string }) {
           </span>
           <div className="text-[13px] font-extrabold text-ink">{operator.team}</div>
         </div>
-        <button className="h-9 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark inline-flex items-center">
+        <button className="h-9 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark inline-flex items-center">
           ＋ 레드팀 평가 신청
         </button>
       </div>
@@ -1560,7 +1560,7 @@ function RedTeamTab({ agentId }: { agentId: string }) {
                     return (
                       <tr
                         key={`${g.version}-collapsed`}
-                        className="hover:bg-[#F3F9F8] cursor-pointer"
+                        className="hover:bg-[#FDF6F4] cursor-pointer"
                         onClick={() => toggleVersion(g.version)}
                       >
                         <td
@@ -1603,7 +1603,7 @@ function RedTeamTab({ agentId }: { agentId: string }) {
                       isFirstInGroup && groupBorderTop,
                     );
                     return (
-                      <tr key={r.id} className="hover:bg-[#F3F9F8]">
+                      <tr key={r.id} className="hover:bg-[#FDF6F4]">
                         {isFirstInGroup && (
                           <td
                             rowSpan={g.runs.length}
@@ -1738,7 +1738,7 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
             setKey(newKey);
             setRevealed(true);
           }}
-          className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+          className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
         >
           ＋ 키 발급
         </button>
@@ -2034,7 +2034,7 @@ function PiiFilterDashboard({ agentId }: { agentId: string }) {
           </thead>
           <tbody>
             {events.map((e) => (
-              <tr key={e.id} className="hover:bg-[#F3F9F8]">
+              <tr key={e.id} className="hover:bg-[#FDF6F4]">
                 <td className="py-2 px-2.5 border-b border-line-soft text-ink-mid text-[11px] tabular-nums">
                   {e.ts}
                 </td>
@@ -2158,7 +2158,7 @@ function PiiItemsManagement({ agentId }: { agentId: string }) {
           </span>
           <button
             onClick={handleAdd}
-            className="ml-auto h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark"
+            className="ml-auto h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark"
           >
             ＋ 항목 추가 (결재)
           </button>
@@ -2179,7 +2179,7 @@ function PiiItemsManagement({ agentId }: { agentId: string }) {
             </thead>
             <tbody>
               {customItems.map((it) => (
-                <tr key={it.id} className="hover:bg-[#F3F9F8]">
+                <tr key={it.id} className="hover:bg-[#FDF6F4]">
                   <td className="py-2 px-2.5 border-b border-line-soft">
                     <div className="text-[12.5px] font-extrabold text-ink">{it.name}</div>
                     <code className="text-[10px] text-ink-mid font-mono">{it.code}</code>
@@ -2426,7 +2426,7 @@ function LoadTestPanel({
             </thead>
             <tbody>
               {runs.map((r) => (
-                <tr key={r.id} className="hover:bg-[#F3F9F8]">
+                <tr key={r.id} className="hover:bg-[#FDF6F4]">
                   <td className="py-2 px-2.5 border-b border-line-soft">
                     <code className="font-mono text-ink-dark font-bold text-[11.5px]">{r.version}</code>
                   </td>

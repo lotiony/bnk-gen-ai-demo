@@ -79,7 +79,7 @@ const ParseRunSection = forwardRef<HTMLElement, Props>(function ParseRunSection(
           {totals.done > 0 && (
             <button
               onClick={() => window.alert(`완료된 ${totals.done}개 파일을 인덱스로 보냅니다 (목업).`)}
-              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
             >
               ▶ 완료분 인덱스로
             </button>
@@ -138,7 +138,7 @@ const ParseRunSection = forwardRef<HTMLElement, Props>(function ParseRunSection(
                     onClick={() => isClickable && onShowResult(f)}
                     className={cn(
                       'transition-colors',
-                      isClickable ? 'cursor-pointer hover:bg-[#F3F9F8]' : 'cursor-default',
+                      isClickable ? 'cursor-pointer hover:bg-[#FDF6F4]' : 'cursor-default',
                     )}
                   >
                     <td className={cn('py-2 px-2.5', !isLast && 'border-b border-line-soft')}>

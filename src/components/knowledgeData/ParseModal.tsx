@@ -72,7 +72,7 @@ const EXT_BADGE: Record<string, string> = {
 };
 
 const COMPAT_BADGE: Record<Compat, { className: string; label: string }> = {
-  best: { className: 'bg-brand text-ink border-brand-dark', label: '✨ 추천' },
+  best: { className: 'bg-brand text-white border-brand-dark', label: '✨ 추천' },
   ok: { className: 'bg-surface-soft text-ink-mid border-line', label: '호환' },
   no: { className: 'bg-bad-bg text-bad border-bad-border', label: '비호환' },
 };
@@ -177,7 +177,7 @@ export default function ParseModal({ open, onClose, targets, onStart }: Props) {
               onStart?.(out);
               onClose();
             }}
-            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ 파싱 시작
           </button>
@@ -363,7 +363,7 @@ export default function ParseModal({ open, onClose, targets, onStart }: Props) {
               className={cn(
                 'flex items-start gap-2.5 py-2.5 px-3 border rounded text-left transition-colors',
                 on
-                  ? 'border-brand-dark bg-[#F3F9F8]'
+                  ? 'border-brand-dark bg-[#FDF6F4]'
                   : 'border-line bg-white hover:border-brand-dark hover:bg-brand-tint',
               )}
             >

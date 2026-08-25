@@ -247,7 +247,7 @@ export default function SearchPipelineTaskPage() {
                         className={cn(
                           'w-4 h-4 rounded border-2 inline-flex items-center justify-center text-[10px] flex-shrink-0',
                           on
-                            ? 'bg-brand-dark border-brand-dark text-ink'
+                            ? 'bg-brand-dark border-brand-dark text-white'
                             : 'border-line bg-white',
                         )}
                       >
@@ -855,7 +855,7 @@ function StageItem({
         className={cn(
           'w-6 h-6 rounded-full inline-flex items-center justify-center font-extrabold text-[11px] border-2 flex-shrink-0',
           active
-            ? 'bg-brand border-brand-dark text-ink'
+            ? 'bg-brand border-brand-dark text-white'
             : 'bg-white border-line text-ink-mid',
         )}
       >
@@ -1072,7 +1072,7 @@ function AttachRow({
             ? 'border-line-soft bg-surface text-ink-light cursor-not-allowed'
             : attached
             ? 'border-line bg-white text-ink-dark hover:bg-surface'
-            : 'border-brand-dark bg-brand text-ink font-extrabold hover:bg-brand-dark',
+            : 'border-brand-dark bg-brand text-white font-extrabold hover:bg-brand-dark',
         )}
       >
         {auto ? '미리보기' : attached ? '교체' : '＋ 업로드'}

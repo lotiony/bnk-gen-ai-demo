@@ -12,7 +12,7 @@ import {
 } from '@/lib/personaView';
 
 const APPR_CHIP: Record<string, { cls: string; label: string }> = {
-  register: { cls: 'bg-brand text-ink border-brand-dark', label: '프로젝트 생성' },
+  register: { cls: 'bg-brand-tint text-brand border-brand-tint', label: '프로젝트 생성' },
   train: { cls: 'bg-info-bg text-info border-info-border', label: '학습계' },
   serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '서빙계 배포' },
   discard: { cls: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border', label: '폐기' },

@@ -527,7 +527,7 @@ export function getCostBreakdownByCategory(): CostCategory[] {
   const network = Math.round(ptu * 0.04); // 게이트웨이 트래픽
   const obs = Math.round(ptu * 0.03); // 관측·로깅·감사
   return [
-    { key: 'model_ptu', label: '모델 PTU', color: '#5FA69C', monthCost: ptu },
+    { key: 'model_ptu', label: '모델 PTU', color: '#CB2C10', monthCost: ptu },
     { key: 'gpu_onprem', label: '온프렘 GPU', color: '#1F5BB8', monthCost: gpuOnprem },
     { key: 'storage', label: '스토리지·벡터DB', color: '#1B8A4D', monthCost: storage },
     { key: 'network', label: '게이트웨이 트래픽', color: '#6E3BBD', monthCost: network },
@@ -929,7 +929,7 @@ export const CATEGORY_COLOR: Record<NamespaceCategory, string> = {
   system: '#6B4F2A',
   gateway: '#1F5BB8',
   monitoring: '#C9760F',
-  devops: '#5FA69C',
+  devops: '#CB2C10',
   platform: '#777777',
 };
 
@@ -1155,7 +1155,7 @@ export interface ProjectSafetySeries {
   color: string;
 }
 export function getProjectSafetySeries(rows: ProjectUsageRow[]): ProjectSafetySeries[] {
-  const palette = ['#5FA69C', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+  const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
   return rows
     .filter((r) => r.guardrailBlocks + r.piiMaskCount > 0)
     .map((r, i) => {
@@ -1265,7 +1265,7 @@ export interface ProjectDauSeries {
   color: string;
 }
 export function getProjectDauSeries(rows: ProjectUsageRow[]): ProjectDauSeries[] {
-  const palette = ['#5FA69C', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+  const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
   return rows
     .filter((r) => r.dau > 0)
     .map((r, i) => {
@@ -1302,7 +1302,7 @@ export interface ConglomerateTokenSeries {
 export function getConglomerateTokenSeries(): ConglomerateTokenSeries[] {
   const N = 30;
   const config = [
-    { name: '부산은행', base: 42_000_000, amp: 8_000_000, drift: 3_000_000, color: '#5FA69C', seed: 11 },
+    { name: '부산은행', base: 42_000_000, amp: 8_000_000, drift: 3_000_000, color: '#CB2C10', seed: 11 },
     { name: '경남은행', base: 24_000_000, amp: 5_000_000, drift: 1_500_000, color: '#1F5BB8', seed: 23 },
     { name: 'BNK투자증권', base: 12_000_000, amp: 3_000_000, drift: 800_000, color: '#1B8A4D', seed: 31 },
     { name: 'BNK캐피탈', base: 6_000_000, amp: 1_400_000, drift: 400_000, color: '#6E3BBD', seed: 43 },

@@ -339,14 +339,14 @@ function WeeklyUtilChart({ ptus }: { ptus: ModelPtuAllocation[] }) {
           <path
             d={pathOf(p.weeklyUtilPct)}
             fill="none"
-            stroke={p.env === '학습계' ? '#1F5BB8' : '#5FA69C'}
+            stroke={p.env === '학습계' ? '#1F5BB8' : '#CB2C10'}
             strokeWidth={1.8}
           />
           <circle
             cx={xs(p.weeklyUtilPct.length - 1)}
             cy={ys(p.weeklyUtilPct[p.weeklyUtilPct.length - 1])}
             r={3}
-            fill={p.env === '학습계' ? '#1F5BB8' : '#5FA69C'}
+            fill={p.env === '학습계' ? '#1F5BB8' : '#CB2C10'}
           />
         </g>
       ))}

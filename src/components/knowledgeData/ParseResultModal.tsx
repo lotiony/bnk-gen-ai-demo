@@ -169,7 +169,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                 window.alert(`${editedBlocks.length}개 블록을 저장합니다 (목업).`);
                 setDirty(false);
               }}
-              className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               저장
             </button>
@@ -274,7 +274,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
           <button
             onClick={doReparse}
             title="변경한 옵션으로 이 문서를 다시 파싱합니다"
-            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark inline-flex items-center gap-1"
+            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark inline-flex items-center gap-1"
           >
             ↻ 재파싱
           </button>
@@ -370,7 +370,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                     <li
                       key={idx}
                       className={cn(
-                        'py-2 px-3 hover:bg-[#F3F9F8] transition-colors',
+                        'py-2 px-3 hover:bg-[#FDF6F4] transition-colors',
                         isEditing && 'bg-brand-tint',
                       )}
                     >
@@ -403,7 +403,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                           <>
                             <button
                               onClick={() => setEditingIdx(null)}
-                              className="h-6 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
+                              className="h-6 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark"
                             >
                               완료
                             </button>

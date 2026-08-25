@@ -488,8 +488,8 @@ function LineChart({
             opacity={0.7}
           />
         )}
-        <path d={areaPath} fill="#E1F0ED" opacity={0.55} />
-        <path d={d} fill="none" stroke="#5FA69C" strokeWidth={1.6} />
+        <path d={areaPath} fill="#FBE9E6" opacity={0.55} />
+        <path d={d} fill="none" stroke="#CB2C10" strokeWidth={1.6} />
         <circle cx={xs(series.length - 1)} cy={ys(last)} r={2.8} fill="#1A1A1A" />
       </svg>
       <div className="flex justify-between mt-1 text-[10px] text-ink-light font-semibold tabular-nums">

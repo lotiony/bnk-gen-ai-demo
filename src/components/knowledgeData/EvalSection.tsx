@@ -429,7 +429,7 @@ export default function EvalSection() {
                 onClick={runEval}
                 disabled={running || !deployed}
                 title={!deployed ? '배포된 학습계 API가 없습니다' : '선택한 평가셋으로 현재 배포된 학습계 API 평가 실행'}
-                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {running ? '평가 중…' : '▶ 평가 실행'}
               </button>

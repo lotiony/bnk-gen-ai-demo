@@ -77,7 +77,7 @@ export default function AdminMembersPage() {
             플랫폼 전역 역할과 MFA·접근 상태를 관리합니다. 모든 변경은 감사 원장에 기록됩니다.
           </div>
         </div>
-        <button className="h-9 px-4 bg-brand text-ink text-[12.5px] font-extrabold rounded border border-brand-dark hover:bg-brand-dark">
+        <button className="h-9 px-4 bg-brand text-white text-[12.5px] font-extrabold rounded border border-brand-dark hover:bg-brand-dark">
           + 멤버 초대
         </button>
       </div>

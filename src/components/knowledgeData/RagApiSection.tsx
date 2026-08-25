@@ -248,7 +248,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
           <button
             onClick={() => setModalOpen(true)}
             disabled={indexes.length === 0}
-            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ＋ RAG API 발급
           </button>
@@ -292,7 +292,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
                 onClick={() => setModalOpen(true)}
                 disabled={pending}
                 title={pending ? '이미 승인 대기 중인 배포 신청이 있습니다' : '설정을 확인·변경하고 학습계 배포를 신청'}
-                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {pending ? '승인 대기 중' : '▶ 학습계 배포 신청'}
               </button>
@@ -334,7 +334,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
                     />
                     <button
                       onClick={runTest}
-                      className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark flex-shrink-0"
+                      className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark flex-shrink-0"
                     >
                       ▶ 검색 실행
                     </button>
@@ -573,7 +573,7 @@ function IssueApiModal({
                 search,
               })
             }
-            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {existing ? '▶ 학습계 배포 신청' : '▶ API 발급'}
           </button>
@@ -715,7 +715,7 @@ function IssueApiModal({
             onClick={() => setSemanticRanker((v) => !v)}
             className={cn(
               'flex items-start gap-2.5 py-2 px-3 border rounded text-left transition-colors',
-              semanticRanker ? 'border-brand-dark bg-[#F3F9F8]' : 'border-line bg-white hover:border-brand-dark',
+              semanticRanker ? 'border-brand-dark bg-[#FDF6F4]' : 'border-line bg-white hover:border-brand-dark',
             )}
           >
             <ToggleDot on={semanticRanker} />
@@ -733,7 +733,7 @@ function IssueApiModal({
             className={cn(
               'flex items-start gap-2.5 py-2 px-3 border rounded text-left transition-colors',
               !semanticRanker && 'opacity-50 cursor-not-allowed',
-              captions && semanticRanker ? 'border-brand-dark bg-[#F3F9F8]' : 'border-line bg-white hover:border-brand-dark',
+              captions && semanticRanker ? 'border-brand-dark bg-[#FDF6F4]' : 'border-line bg-white hover:border-brand-dark',
             )}
           >
             <ToggleDot on={captions && semanticRanker} />

@@ -370,14 +370,14 @@ function DeployView({ comp }: { comp: CustomComponent }) {
                         <span className="inline-flex items-center gap-1.5">
                           <Link
                             to="/approvals"
-                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold text-ink hover:bg-brand inline-flex items-center"
+                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold text-white hover:bg-brand inline-flex items-center"
                           >
                             결재함 →
                           </Link>
                         </span>
                       ) : (
                         <button
-                          className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
+                          className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark"
                           title="이 버전을 서빙계로 승격"
                         >
                           ▶ 서빙계로 승격

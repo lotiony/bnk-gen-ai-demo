@@ -136,7 +136,7 @@ export default function EvalSetModal({ open, onClose, sets, activeId, onChangeSe
           </span>
           <button
             onClick={onClose}
-            className="h-8 px-4 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark"
+            className="h-8 px-4 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark"
           >
             완료
           </button>
@@ -236,7 +236,7 @@ export default function EvalSetModal({ open, onClose, sets, activeId, onChangeSe
             <button
               onClick={addItem}
               disabled={!q.trim() || !gold.trim() || !passage.trim()}
-              className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               ＋ 추가
             </button>

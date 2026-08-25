@@ -30,7 +30,7 @@ export default function ProjectsListPage() {
             </div>
             <Link
               to="/projects/new"
-              className="py-2 px-[18px] bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark inline-flex items-center gap-1.5"
+              className="py-2 px-[18px] bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark inline-flex items-center gap-1.5"
             >
               + 새 프로젝트 등록
             </Link>

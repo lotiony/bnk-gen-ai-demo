@@ -371,7 +371,7 @@ function ApprovalStep({
         className={cn(
           'w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-extrabold flex-shrink-0',
           state === 'done' && 'bg-ok text-white',
-          state === 'current' && 'bg-brand text-ink border border-brand-dark',
+          state === 'current' && 'bg-brand text-white border border-brand-dark',
           state === 'pending' && 'bg-surface-soft text-ink-light border border-line-soft',
         )}
       >
@@ -685,7 +685,7 @@ function DeployStepper({ dep }: { dep: DeployApproval }) {
 
   const circle: Record<string, string> = {
     done: 'bg-ok text-white border-ok',
-    current: 'bg-brand text-ink border-brand-dark',
+    current: 'bg-brand text-white border-brand-dark',
     rejected: 'bg-bad text-white border-bad',
     upcoming: 'bg-white text-ink-light border-line',
   };

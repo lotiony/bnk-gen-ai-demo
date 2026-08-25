@@ -151,7 +151,7 @@ function IndexCard({
       {/* 현재 버전 요약 — 크게 */}
       <div className="py-3 px-3.5 bg-brand-tint">
         <div className="flex items-center gap-2.5 flex-wrap text-[12.5px]">
-          <span className="inline-flex items-center justify-center text-[11px] font-extrabold py-[2px] px-2 rounded-full border bg-brand text-ink border-brand-dark min-w-[42px]">
+          <span className="inline-flex items-center justify-center text-[11px] font-extrabold py-[2px] px-2 rounded-full border bg-brand text-white border-brand-dark min-w-[42px]">
             {current.version}
           </span>
           <span className="text-[10px] uppercase tracking-[0.3px] text-ink-mid font-bold">현재</span>

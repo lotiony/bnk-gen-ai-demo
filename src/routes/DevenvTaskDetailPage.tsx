@@ -135,7 +135,7 @@ function CoderBody({ task, onOpenIde }: { task: DevenvTask; onOpenIde: () => voi
         <div className="text-[12px] text-ink-mid mb-5">
           마지막 활동 {task.lastActivity} · idle 30분 후 자동 정지됨
         </div>
-        <button className="inline-flex items-center gap-2 h-10 px-5 rounded bg-brand text-ink font-extrabold text-[13px] border border-brand-dark hover:bg-brand-dark">
+        <button className="inline-flex items-center gap-2 h-10 px-5 rounded bg-brand text-white font-extrabold text-[13px] border border-brand-dark hover:bg-brand-dark">
           ▶ 워크스페이스 시작
         </button>
       </section>
