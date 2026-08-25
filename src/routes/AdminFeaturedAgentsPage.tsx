@@ -242,7 +242,7 @@ export default function AdminFeaturedAgentsPage() {
                   </div>
                   <button
                     onClick={() => addCandidate(c.id)}
-                    className="h-7 px-2.5 text-[10.5px] font-extrabold rounded border border-brand-dark bg-brand-bg text-white hover:bg-brand"
+                    className="h-7 px-2.5 text-[10.5px] font-extrabold rounded border border-brand-dark bg-brand-bg hover:bg-brand text-brand hover:text-white"
                   >
                     + 추가
                   </button>

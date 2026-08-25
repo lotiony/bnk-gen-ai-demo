@@ -178,7 +178,7 @@ export default function DeploySection({ indexes }: Props) {
                         <span className="inline-flex items-center gap-1.5">
                           <Link
                             to={`/approvals/${servPending!.id}`}
-                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold text-white hover:bg-brand inline-flex items-center"
+                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold hover:bg-brand inline-flex items-center text-brand hover:text-white"
                           >
                             결재함 →
                           </Link>
