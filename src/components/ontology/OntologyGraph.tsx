@@ -153,6 +153,11 @@ function Canvas({
   const reduce = useReducedMotion();
   const [, force] = useState(0);
 
+  /**
+   * 순회 중 노드를 끌어 옮긴 거리. 컬럼 좌표는 그대로 두고 오프셋만 얹는다 —
+   * 컬럼 배치 자체를 건드리면 hop 정렬(x 로 컬럼을 역인덱싱)이 깨진다.
+   */
+  const [travOff, setTravOff] = useState<Map<string, Pt>>(new Map());
   const relSet = useMemo(() => new Set(activeRelations), [activeRelations]);
   const litSet = useMemo(() => new Set(allSteps.slice(0, litCount).flat()), [allSteps, litCount]);
   /** 순회 morph 는 점등이 시작된 뒤에만 — 그 전엔 설계 그래프와 동일. */
@@ -245,7 +250,15 @@ function Canvas({
     };
   }, [traverse, allSteps]);
 
-  const CP = useCallback((n: string): Pt | null => (trav ? (trav.clsAt.get(n) ?? simP(n)) : simP(n)), [trav, simP]);
+  const off = useCallback((k: string, p: Pt | null): Pt | null => {
+    if (!p) return null;
+    const d = travOff.get(k);
+    return d ? { x: p.x + d.x, y: p.y + d.y } : p;
+  }, [travOff]);
+  const CP = useCallback(
+    (n: string): Pt | null => (trav ? off(`c:${n}`, trav.clsAt.get(n) ?? null) ?? simP(n) : simP(n)),
+    [trav, simP, off],
+  );
   /** 개체 x 좌표가 속한 컬럼. 개체는 컬럼 x 에 정확히 정렬되므로 이걸로 역인덱싱한다. */
   const colOfX = useCallback((x: number) => trav?.colAt.find((c) => Math.abs(c.x - x) < 2) ?? null, [trav]);
   /**
@@ -262,7 +275,9 @@ function Canvas({
     const row = Math.max(0, Math.round((p.y - T_INST_Y0) / T_INST_H));
     return Math.min(row * 0.05, 0.45);
   }, []);
-  const IP = useCallback((id: string): Pt | null => trav?.instAt.get(id) ?? null, [trav]);
+  const IP = useCallback((id: string): Pt | null => off(`i:${id}`, trav?.instAt.get(id) ?? null), [trav, off]);
+  /** 컬럼 역인덱싱은 옮기기 전 원좌표로 한다 — 끌어 놓은 노드가 다른 hop 으로 넘어가면 안 된다. */
+  const IP0 = useCallback((id: string): Pt | null => trav?.instAt.get(id) ?? null, [trav]);
   const visible = useCallback(
     (n: string) => {
       if (!trav) return true;
@@ -273,6 +288,10 @@ function Canvas({
   );
 
   /* ── 카메라 ── */
+  // 시나리오가 바뀌면 옮겨 둔 위치는 의미가 없다 — 컬럼 구성이 통째로 달라진다.
+  const colKey = allSteps.map((a) => a.join(',')).join('|');
+  useEffect(() => setTravOff(new Map()), [colKey]);
+
   const fit = useMemo(() => (trav ? trav.vb : simViewBox(built.sim.nodes() as SimNode[])), [trav, built, litCount]);
   const [view, setView] = useState(fit);
   const follow = useRef(true);
@@ -307,6 +326,8 @@ function Canvas({
   /** ＋ 배지 드래그로 관계를 잇는 중. moved=false 면 클릭으로 친다. */
   const [linkDrag, setLinkDrag] = useState<{ from: string; sx: number; sy: number; x: number; y: number; moved: boolean } | null>(null);
   const dragId = useRef<string | null>(null);
+  /** 순회 드래그 시작점과 그 시점의 오프셋. */
+  const dragFrom = useRef<{ p: Pt; o: Pt } | null>(null);
   const panFrom = useRef<{ p: Pt; v: Pt } | null>(null);
   const [spaceDown, setSpaceDown] = useState(false);
   const [panning, setPanning] = useState(false);
@@ -347,8 +368,16 @@ function Canvas({
 
   const nodeDown = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (spaceDown || trav) {
+    if (spaceDown) {
       startPan(e);
+      return;
+    }
+    if (trav) {
+      // 순회 중에는 시뮬레이션이 아니라 오프셋으로 옮긴다.
+      follow.current = false;
+      moved.current = false;
+      dragId.current = `c:${id}`;
+      dragFrom.current = { p: toSvg(e), o: travOff.get(`c:${id}`) ?? { x: 0, y: 0 } };
       return;
     }
     follow.current = false;
@@ -380,6 +409,16 @@ function Canvas({
       const id = dragId.current;
       if (!id) return;
       moved.current = true;
+      const from = dragFrom.current;
+      if (from) {
+        const q = toSvg(e);
+        setTravOff((m) => {
+          const next = new Map(m);
+          next.set(id, { x: from.o.x + (q.x - from.p.x), y: from.o.y + (q.y - from.p.y) });
+          return next;
+        });
+        return;
+      }
       const n = built.byId.get(id);
       if (n) {
         const p = toSvg(e);
@@ -407,6 +446,10 @@ function Canvas({
       }
       const id = dragId.current;
       dragId.current = null;
+      if (dragFrom.current) {
+        dragFrom.current = null;
+        return;
+      }
       if (!id) return;
       built.sim.alphaTarget(0);
       if (moved.current && onMergeAsk && !built.byId.get(id)?.isProp) {
@@ -657,7 +700,7 @@ function Canvas({
             // 펼침선은 **컬럼 대표 클래스**에서 내려온다.
             // 개체의 소속 클래스로 잡으면, 그 클래스가 컬럼에 없을 때
             // CP 가 force 좌표(화면 밖)로 폴백해 선이 화면 밖에서 날아온다.
-            const cp = colOfX(p.x);
+            const cp = colOfX(IP0(id)?.x ?? p.x);
             if (!cp || !reached(cp.hop)) return null;
             const on = litSet.has(id);
             const col = clsColor(inst.cls);
@@ -665,7 +708,7 @@ function Canvas({
             const midY = (cp.y + CLASS_R + p.y) / 2;
             const d = `M ${cp.x} ${cp.y + CLASS_R} C ${cp.x} ${midY}, ${p.x} ${midY}, ${p.x} ${p.y - instR(on ? 'focus' : 'cand') - 5}`;
             // 개체보다 먼저 그리면 허공에서 선이 내려오는 게 보인다 — 개체 뒤로.
-            const delay = reduce ? 0 : tInst(p) + 0.09;
+            const delay = reduce ? 0 : tInst(IP0(id) ?? p) + 0.09;
             return (
               <motion.path
                 key={`ci-${id}`}
@@ -863,17 +906,24 @@ function Canvas({
             const col = on ? clsColor(inst.cls) : '#8E979F';
             const lines = attrLines(inst, foc ? 2 : 1);
             const cp = CP(inst.cls) ?? p;
-            const hop = colOfX(p.x)?.hop;
+            const hop = colOfX(IP0(id)?.x ?? p.x)?.hop;
             if (hop == null || !reached(hop)) return null;
             const fillA = isSel ? '3a' : isAnchor ? '30' : on ? '1c' : '12';
             return (
               <motion.g
                 key={id}
                 initial={reduce ? false : { x: cp.x, y: cp.y, scale: 0, opacity: 0 }}
-                animate={{ x: p.x, y: p.y, scale: 1, opacity: foc ? 1 : 0.5 }}
-                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26, delay: tInst(p) }}
-                onClick={(e) => { e.stopPropagation(); onSelectInstance?.(inst); }}
-                style={{ cursor: 'pointer' }}
+                animate={{ x: p.x, y: p.y, scale: 1, opacity: foc ? 1 : on ? 0.8 : 0.62 }}
+                transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26, delay: tInst(IP0(id) ?? p) }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  if (spaceDown) { startPan(e); return; }
+                  moved.current = false;
+                  dragId.current = `i:${id}`;
+                  dragFrom.current = { p: toSvg(e), o: travOff.get(`i:${id}`) ?? { x: 0, y: 0 } };
+                }}
+                onClick={(e) => { e.stopPropagation(); if (!moved.current) onSelectInstance?.(inst); }}
+                style={{ cursor: 'grab' }}
               >
                 <title>{`${inst.label} · ${inst.origin}`}</title>
                 {isAnchor && !reduce && (
@@ -891,7 +941,7 @@ function Canvas({
                   strokeDasharray={on ? undefined : '4 4'}
                   style={on ? { filter: `drop-shadow(0 0 ${isSel || isAnchor ? 12 : 7}px ${col}${isSel || isAnchor ? 'aa' : '55'})` } : undefined}
                 />
-                <text y={r + 13} textAnchor="middle" fontSize={11} fontWeight={foc ? 800 : 500} fill={foc ? '#212121' : '#8E979F'} style={{ pointerEvents: 'none' }}>
+                <text y={r + 13} textAnchor="middle" fontSize={11} fontWeight={foc ? 800 : 600} fill={foc ? '#212121' : '#6F7883'} style={{ pointerEvents: 'none' }}>
                   {inst.label.slice(0, 14)}
                 </text>
                 {lines.map((t, li) => (
@@ -921,7 +971,7 @@ function Canvas({
           trav.colAt.map((p) => {
             const n = reached(p.hop) ? (trav.hidden.get(p.hop) ?? 0) : 0;
             return n ? (
-              <text key={`h-${p.hop}`} x={p.x} y={trav.vb.y + trav.vb.h - 24} textAnchor="middle" fontSize={10} fontWeight={700} fill="#B9BFC6">+{n}개</text>
+              <text key={`h-${p.hop}`} x={p.x} y={trav.vb.y + trav.vb.h - 24} textAnchor="middle" fontSize={10} fontWeight={700} fill="#8E979F">후보 +{n}개</text>
             ) : null;
           })}
       </svg>
@@ -936,6 +986,17 @@ function Canvas({
         <span className="inline-flex items-center gap-1">
           <i className="w-[9px] h-[9px] rounded-full" style={{ background: PROP_COLOR + '22', border: `1.5px solid ${PROP_COLOR}` }} />속성
         </span>
+        {/* 순회 중에만 — 점선 원이 '조회는 됐지만 답에 안 쓰인 개체'라는 걸 말해준다 */}
+        {trav && (
+          <>
+            <span className="inline-flex items-center gap-1">
+              <i className="w-[9px] h-[9px] rounded-full" style={{ border: `1.5px solid ${BRAND}`, background: BRAND + '2a' }} />확정
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <i className="w-[9px] h-[9px] rounded-full" style={{ border: '1.5px dashed #8E979F' }} />후보(조회됨·미채택)
+            </span>
+          </>
+        )}
         <span className="text-ink-light">드래그=이동 · Space+드래그=화면 · ⌘휠=줌</span>
         {running && <span className="text-brand font-extrabold">순회 중…</span>}
       </div>
