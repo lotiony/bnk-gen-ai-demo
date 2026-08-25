@@ -32,7 +32,7 @@ export default function HomePage() {
   const greetingSummary = getHomeGreetingSummary(persona);
 
   return (
-    <div className="max-w-[1760px] mx-auto px-6 py-6">
+    <div className="max-w-[1360px] mx-auto px-6 py-6">
       {/* Greeting */}
       <div className="mb-3.5 flex items-baseline gap-3">
         <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">

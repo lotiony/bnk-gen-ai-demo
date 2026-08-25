@@ -67,7 +67,7 @@ export default function AgentTaskRegisterPage() {
   };
 
   return (
-    <div className="max-w-[1760px] mx-auto px-6 py-6 pb-[120px]">
+    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
       <Crumb
         items={[
           { label: '홈', to: '/' },
@@ -315,7 +315,7 @@ export default function AgentTaskRegisterPage() {
 
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
-        <div className="max-w-[1760px] mx-auto px-6 py-3 flex items-center gap-3">
+        <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
           <div className="text-[11.5px] text-ink-mid font-semibold">
             {requiredFilled ? (
               <span className="text-ok font-extrabold">필수 항목 모두 충족</span>

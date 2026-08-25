@@ -80,7 +80,7 @@ export default function AgentTaskDetailPage() {
   const hasRuns = task.state !== '계획' && task.state !== '보류';
 
   return (
-    <div className="max-w-[1600px] mx-auto px-8 pt-3.5 pb-14">
+    <div className="max-w-[1360px] mx-auto px-8 pt-3.5 pb-14">
       <Crumb
         items={[
           { label: '홈', to: '/' },

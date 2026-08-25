@@ -27,7 +27,7 @@ export default function AdminLayout() {
   const displayRole = persona?.role ?? '관리자';
 
   return (
-    <div className="max-w-[1760px] mx-auto px-6 pt-[18px] pb-14">
+    <div className="max-w-[1360px] mx-auto px-6 pt-[18px] pb-14">
       <div className="grid grid-cols-[200px_1fr] gap-5">
         {/* 좌측 사이드바 */}
         <aside className="sticky top-[110px] self-start">

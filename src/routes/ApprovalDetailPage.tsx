@@ -32,7 +32,7 @@ export default function ApprovalDetailPage() {
   if (dep) {
     if (persona && !canViewApproval(persona, dep.id)) {
       return (
-        <div className="max-w-[1760px] mx-auto px-6 py-6">
+        <div className="max-w-[1360px] mx-auto px-6 py-6">
           <Crumb items={[{ label: '결재함', to: '/approvals' }, { label: '열람 권한 없음' }]} />
           <div className="card px-6 py-10 text-center">
             <div className="text-[32px] mb-2">🔒</div>
@@ -53,7 +53,7 @@ export default function ApprovalDetailPage() {
   // 목록에서 걸러진 결재는 상세 URL로 직접 들어와도 열람 불가.
   if (persona && !canViewApproval(persona, approval.id)) {
     return (
-      <div className="max-w-[1760px] mx-auto px-6 py-6">
+      <div className="max-w-[1360px] mx-auto px-6 py-6">
         <Crumb items={[{ label: '결재함', to: '/approvals' }, { label: '열람 권한 없음' }]} />
         <div className="card px-6 py-10 text-center">
           <div className="text-[32px] mb-2">🔒</div>
@@ -74,7 +74,7 @@ export default function ApprovalDetailPage() {
   }
 
   return (
-    <div className="max-w-[1760px] mx-auto px-6 py-6 pb-[120px]">
+    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
       <Crumb
         items={[
           { label: '결재함', to: '/approvals' },
@@ -339,7 +339,7 @@ export default function ApprovalDetailPage() {
 
       {/* Sticky action bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
-        <div className="max-w-[1760px] mx-auto px-6 py-3 flex items-center gap-3">
+        <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
           <textarea
             placeholder="결재 의견을 입력하세요 (선택)"
             rows={2}
@@ -472,7 +472,7 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
   const step2Tone = dep.state === 'done' ? 'done' : dep.state === 'rejected' ? 'rejected' : 'current';
 
   return (
-    <div className="max-w-[1760px] mx-auto px-6 py-6 pb-[120px]">
+    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
       <Crumb
         items={[
           { label: '결재함', to: '/approvals' },
@@ -605,7 +605,7 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
       {/* 하단 고정 액션 바 */}
       {pending && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
-          <div className="max-w-[1760px] mx-auto px-6 py-3 flex items-center gap-3">
+          <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
             <div className="text-[11.5px] text-ink-mid font-semibold">
               <span className="text-warn font-extrabold">승인 대기</span>
               <span className="mx-2 text-line">·</span>

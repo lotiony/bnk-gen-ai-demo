@@ -15,7 +15,7 @@ export default function Topbar({ envBadge }: TopbarProps) {
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-line px-6 py-3">
-      <div className="max-w-[1760px] mx-auto flex items-center gap-3.5">
+      <div className="max-w-[1360px] mx-auto flex items-center gap-3.5">
         <TenantSwitcher />
         <Link
           to="/"

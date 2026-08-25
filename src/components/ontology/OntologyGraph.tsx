@@ -1,71 +1,58 @@
 /**
- * 온톨로지 그래프 — SVG + framer-motion.
+ * 온톨로지 그래프 — 설계 · 매핑 · Query 가 공유하는 단일 캔버스.
  *
- * climax/frontend 의 QueryGraph.jsx 구조를 옮겼다. 2026-08-25 에 오프라인
- * 완결형 제약이 해제되어 원본과 같은 라이브러리(framer-motion)를 쓴다.
+ * climax/frontend 의 OntologyGraph.jsx + QueryGraph.jsx 이식.
+ * 두 화면이 **같은 레이아웃 엔진(graphSim.ts)** 을 쓰므로 그래프 모습이 같다.
  *
- * 핵심 동작 — **질의 실행 전에도 최종 레이아웃이 그대로 서 있다.**
- * 컬럼·개체·후보가 미리 배치된 상태에서 시작하고, 실행하면 그 위로
- * 경로가 점등된다. 레이아웃이 튀지 않아 "무엇을 고를지 지켜보는" 화면이 된다.
+ * 한 좌표계에서 두 모드가 morph:
+ *  · idle     — d3-force 배치. 육각형 클래스 + 속성 위성 원(궤도력) + 전체 관계 엣지.
+ *  · traverse — 방문 클래스가 좌→우 컬럼으로 재배치되고 아래로 개체가 펼쳐진다.
+ *               미방문 클래스·속성은 배경으로 페이드.
  *
- * 인터랙션: 노드 드래그 · 배경 팬 · ⌘/Ctrl+휠 줌 · 화면 맞춤 · 전체화면 · 클릭 상세.
+ * 인터랙션: 노드 드래그(물리 reheat) · 배경/Space 팬 · ⌘휠 줌 · 전체화면(Esc) ·
+ *          클릭 상세 · 겹쳐 놓으면 병합.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useOntology, mergeClasses } from '@/lib/ontologyStore';
+import { useOntology } from '@/lib/ontologyStore';
 import { INSTANCES, instById, type Instance, type TravEdge } from '@/data/ontologyInstances';
+import { buildSim, simViewBox, degreeMap, shade, dispLabel, CLASS_R, PROP_R, PROP_COLOR, type SimNode } from './graphSim';
 
-/* 배치 */
-const COL_W = 168;
-const ROW_H = 96;
-const PAD_X = 88;
-const PAD_Y = 62;
+const BRAND = '#CB2C10';
+const DEEP = '#A82410';
+/** 허브(연결 TOP 5) — 원본의 앰버 자리. */
+const CORE = '#B8791F';
+const HIER = '#7C8695';
 
-const T_COL_W = 252;
-const T_CLS_Y = 86;
-const T_INST_Y0 = 196;
-const T_INST_H = 86;
+const T_COL_W = 250;
+const T_INST_Y0 = 120;
+const T_INST_H = 84;
 const T_CAP = 5;
 const INST_W = 116;
 const INST_H = 38;
 
-const BRAND = '#CB2C10';
-const DEEP = '#A82410';
-const GREY = '#9AA1A9';
-
 type Pt = { x: number; y: number };
 
 function hexPath(r: number) {
-  const p: string[] = [];
+  let d = '';
   for (let i = 0; i < 6; i++) {
-    const a = (Math.PI / 180) * (60 * i - 30);
-    p.push(`${(r * Math.cos(a)).toFixed(1)},${(r * Math.sin(a)).toFixed(1)}`);
+    const a = (Math.PI / 3) * i - Math.PI / 2;
+    d += `${i ? 'L' : 'M'}${(r * Math.cos(a)).toFixed(2)} ${(r * Math.sin(a)).toFixed(2)}`;
   }
-  return `M${p.join('L')}Z`;
+  return d + 'Z';
 }
 
-function edgeGeom(p1: Pt, p2: Pt, bow: number) {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const L = Math.hypot(dx, dy) || 1;
-  const mx = (p1.x + p2.x) / 2 + (-dy / L) * L * bow;
-  const my = (p1.y + p2.y) / 2 + (dx / L) * L * bow;
-  return { d: `M${p1.x.toFixed(1)},${p1.y.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`, mx, my };
+/** 진행 방향에 수직으로 살짝 휜 곡선 (원본 edgeGeom). */
+function edgeGeom(s: Pt, t: Pt, k = 0.08) {
+  const dx = t.x - s.x;
+  const dy = t.y - s.y;
+  const cx = (s.x + t.x) / 2 - dy * k;
+  const cy = (s.y + t.y) / 2 + dx * k;
+  return { d: `M ${s.x} ${s.y} Q ${cx} ${cy} ${t.x} ${t.y}`, mx: (s.x + t.x) / 4 + cx / 2, my: (s.y + t.y) / 4 + cy / 2 };
 }
 
-function clipped(a: Pt, b: Pt, ra: number, rb: number) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const L = Math.hypot(dx, dy) || 1;
-  return [
-    { x: a.x + (dx / L) * ra, y: a.y + (dy / L) * ra },
-    { x: b.x - (dx / L) * rb, y: b.y - (dy / L) * rb },
-  ] as const;
-}
-
-/** prefers-reduced-motion 이면 애니메이션을 끈다. */
 function useReducedMotion() {
   const [r, setR] = useState(false);
   useEffect(() => {
@@ -81,9 +68,7 @@ function useReducedMotion() {
 export interface OntologyGraphProps {
   activeClasses?: string[];
   activeRelations?: string[];
-  /** 시나리오 전체 스텝 — 실행 전에도 이 레이아웃으로 미리 선다. */
   allSteps?: string[][];
-  /** 지금까지 점등된 스텝 수. */
   litCount?: number;
   travEdges?: TravEdge[];
   anchorInst?: string | null;
@@ -91,7 +76,6 @@ export interface OntologyGraphProps {
   showAttrs?: boolean;
   onSelectClass?: (n: string) => void;
   onSelectInstance?: (i: Instance) => void;
-  /** 클래스 노드를 다른 노드에 겹쳐 놓았을 때. */
   onMergeAsk?: (src: string, dst: string) => void;
   selectedClass?: string | null;
   selectedInstance?: string | null;
@@ -101,9 +85,7 @@ export interface OntologyGraphProps {
 export default function OntologyGraph(props: OntologyGraphProps) {
   const [full, setFull] = useState(false);
   const body = <Canvas {...props} full={full} onToggleFull={() => setFull((v) => !v)} />;
-  return full
-    ? createPortal(<div className="fixed inset-0 z-[100] bg-white p-4">{body}</div>, document.body)
-    : body;
+  return full ? createPortal(<div className="fixed inset-0 z-[100] bg-white p-4">{body}</div>, document.body) : body;
 }
 
 function Canvas({
@@ -124,82 +106,99 @@ function Canvas({
   full,
   onToggleFull,
 }: OntologyGraphProps & { full: boolean; onToggleFull: () => void }) {
-  const { classes: CLASSES, relations: RELATIONS } = useOntology();
+  const { classes, relations } = useOntology();
   const reduce = useReducedMotion();
-  const degreeOf = useCallback(
-    (n: string) => RELATIONS.filter((r) => r.domain === n || r.range === n).length,
-    [RELATIONS],
-  );
-  const classR = useCallback((n: string) => 21 + Math.min(degreeOf(n), 6) * 1.4, [degreeOf]);
-  const HUB_CLASSES = useMemo(() => {
-    const d = new Map<string, number>();
-    for (const r of RELATIONS) {
-      d.set(r.domain, (d.get(r.domain) ?? 0) + 1);
-      d.set(r.range, (d.get(r.range) ?? 0) + 1);
-    }
-    return [...d.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n);
-  }, [RELATIONS]);
+  const [, force] = useState(0);
+
   const relSet = useMemo(() => new Set(activeRelations), [activeRelations]);
-  const clsSet = useMemo(() => new Set(activeClasses), [activeClasses]);
-  /** 점등된 개체 — litCount 스텝까지. */
   const litSet = useMemo(() => new Set(allSteps.slice(0, litCount).flat()), [allSteps, litCount]);
-  /** 시나리오가 있으면 항상 컬럼 모드 (실행 전에도). */
-  const colMode = allSteps.some((s) => s.length);
+  /** 순회 morph 는 점등이 시작된 뒤에만 — 그 전엔 설계 그래프와 동일. */
+  const traverse = litCount > 0;
 
-  /* ── 레이아웃 ── */
-  const layout = useMemo(() => {
-    const cls = new Map<string, Pt & { hop: number | null }>();
-    const inst = new Map<string, Pt>();
-    const hidden = new Map<number, number>();
+  const deg = useMemo(() => degreeMap(classes, relations), [classes, relations]);
+  const maxDeg = Math.max(1, ...Object.values(deg));
+  const hubs = useMemo(() => [...Object.entries(deg)].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n), [deg]);
 
-    if (!colMode) {
-      CLASSES.forEach((c) => cls.set(c.name, { x: PAD_X + c.col * COL_W, y: PAD_Y + c.row * ROW_H, hop: null }));
-      const mc = Math.max(...CLASSES.map((c) => c.col));
-      const mr = Math.max(...CLASSES.map((c) => c.row));
-      return { cls, inst, hidden, vb: { x: 0, y: 0, w: PAD_X * 2 + mc * COL_W, h: PAD_Y * 2 + mr * ROW_H } };
-    }
+  /* ── d3-force (설계·Query 공유) ── */
+  const built = useMemo(() => buildSim(classes, relations), [classes, relations]);
+  useEffect(() => {
+    built.sim.on('tick', () => force((t) => t + 1));
+    return () => {
+      built.sim.on('tick', null);
+      built.sim.stop();
+    };
+  }, [built]);
 
+  const simP = useCallback(
+    (id: string): Pt | null => {
+      const n = built.byId.get(id);
+      return n ? { x: n.x ?? 0, y: n.y ?? 0 } : null;
+    },
+    [built],
+  );
+
+  /* ── 순회 컬럼 목표 ── */
+  const trav = useMemo(() => {
+    if (!traverse) return null;
     const cols = allSteps.filter((s) => s.length);
+    const clsAt = new Map<string, Pt & { hop: number }>();
+    const instAt = new Map<string, Pt>();
+    const hidden = new Map<number, number>();
     let maxRows = 1;
     cols.forEach((ids, ci) => {
-      const x = PAD_X + ci * T_COL_W;
+      const x = ci * T_COL_W;
       const rows: string[] = [...ids];
-      // 같은 클래스의 다른 개체 = 미선택 후보
       for (const id of ids) {
         const own = instById(id);
         if (!own) continue;
-        for (const o of INSTANCES) {
-          if (o.cls === own.cls && !ids.includes(o.id) && !rows.includes(o.id)) rows.push(o.id);
-        }
+        for (const o of INSTANCES) if (o.cls === own.cls && !rows.includes(o.id)) rows.push(o.id);
       }
       const shown = rows.slice(0, T_CAP);
       hidden.set(ci, Math.max(0, rows.length - shown.length));
-      shown.forEach((id, i) => inst.set(id, { x, y: T_INST_Y0 + i * T_INST_H }));
+      shown.forEach((id, i) => instAt.set(id, { x, y: T_INST_Y0 + i * T_INST_H }));
       maxRows = Math.max(maxRows, shown.length);
       const head = instById(ids[0]);
-      if (head && !cls.has(head.cls)) cls.set(head.cls, { x, y: T_CLS_Y, hop: ci });
+      if (head && !clsAt.has(head.cls)) clsAt.set(head.cls, { x, y: 0, hop: ci });
     });
-    return {
-      cls,
-      inst,
-      hidden,
-      vb: {
-        x: 0,
-        y: 0,
-        w: Math.max(PAD_X * 2 + Math.max(cols.length - 1, 0) * T_COL_W, 600),
-        h: Math.max(T_INST_Y0 + (maxRows - 1) * T_INST_H + 108, 420),
-      },
+    // viewBox 는 실제 노드 좌표에서 구한다 — 공식으로 잡으면 컬럼이 적을 때
+    // 빈 여백만 크게 잡혀 그래프가 구석에 몰린다.
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    const bump = (p: Pt, halfW: number, halfH: number) => {
+      minX = Math.min(minX, p.x - halfW);
+      maxX = Math.max(maxX, p.x + halfW);
+      minY = Math.min(minY, p.y - halfH);
+      maxY = Math.max(maxY, p.y + halfH);
     };
-  }, [colMode, allSteps, CLASSES]);
+    clsAt.forEach((p) => bump(p, CLASS_R + 20, CLASS_R + 30));
+    instAt.forEach((p) => bump(p, INST_W / 2 + 16, INST_H / 2 + 16));
+    if (!Number.isFinite(minX)) {
+      minX = 0; minY = 0; maxX = 600; maxY = 400;
+    }
+    const M = 70;
+    return {
+      clsAt,
+      instAt,
+      hidden,
+      vb: { x: minX - M, y: minY - M - 26, w: maxX - minX + M * 2, h: maxY - minY + M * 2 + 40 },
+    };
+  }, [traverse, allSteps]);
+
+  const CP = useCallback((n: string): Pt | null => (trav ? (trav.clsAt.get(n) ?? simP(n)) : simP(n)), [trav, simP]);
+  const IP = useCallback((id: string): Pt | null => trav?.instAt.get(id) ?? null, [trav]);
+  const visible = useCallback((n: string) => !trav || trav.clsAt.has(n), [trav]);
 
   /* ── 카메라 ── */
-  const [view, setView] = useState(layout.vb);
+  const fit = useMemo(() => (trav ? trav.vb : simViewBox(built.sim.nodes() as SimNode[])), [trav, built, litCount]);
+  const [view, setView] = useState(fit);
   const follow = useRef(true);
-  const target = useRef(layout.vb);
-  target.current = layout.vb;
+  const target = useRef(fit);
+  target.current = fit;
   useEffect(() => {
     follow.current = true;
-  }, [layout.vb.w, layout.vb.h]);
+  }, [trav, built]);
   useEffect(() => {
     let raf = 0;
     const step = () => {
@@ -207,9 +206,9 @@ function Canvas({
       if (!follow.current) return;
       setView((v) => {
         const t = target.current;
-        const k = 0.14;
+        const k = reduce ? 1 : 0.13;
         const n = { x: v.x + (t.x - v.x) * k, y: v.y + (t.y - v.y) * k, w: v.w + (t.w - v.w) * k, h: v.h + (t.h - v.h) * k };
-        if (Math.abs(n.w - t.w) < 0.5 && Math.abs(n.x - t.x) < 0.5 && Math.abs(n.y - t.y) < 0.5) {
+        if (Math.abs(n.w - t.w) < 0.6 && Math.abs(n.x - t.x) < 0.6) {
           follow.current = false;
           return t;
         }
@@ -218,20 +217,23 @@ function Canvas({
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [reduce]);
 
-  /* ── 드래그 / 팬 / 줌 ── */
+  /* ── 드래그 · 팬 · 줌 ── */
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [offset, setOffset] = useState<Record<string, Pt>>({});
-  const drag = useRef<{ id: string | null; s: Pt; o: Pt } | null>(null);
-  const [panning, setPanning] = useState(false);
+  const dragId = useRef<string | null>(null);
+  const panFrom = useRef<{ p: Pt; v: Pt } | null>(null);
   const [spaceDown, setSpaceDown] = useState(false);
+  const [panning, setPanning] = useState(false);
+  const moved = useRef(false);
+
   useEffect(() => {
     const dn = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         setSpaceDown(true);
         if (e.target === document.body) e.preventDefault();
       }
+      if (e.code === 'Escape' && full) onToggleFull();
     };
     const up = (e: KeyboardEvent) => e.code === 'Space' && setSpaceDown(false);
     window.addEventListener('keydown', dn);
@@ -240,7 +242,7 @@ function Canvas({
       window.removeEventListener('keydown', dn);
       window.removeEventListener('keyup', up);
     };
-  }, []);
+  }, [full, onToggleFull]);
 
   const toSvg = useCallback(
     (e: { clientX: number; clientY: number }): Pt => {
@@ -252,37 +254,64 @@ function Canvas({
     [view],
   );
 
-  const down = (id: string | null) => (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const startPan = (e: React.MouseEvent) => {
     follow.current = false;
-    const pan = !id || spaceDown; // 스페이스 누르면 노드 위에서도 화면이 끌린다(원본 동작)
-    drag.current = { id: pan ? null : id, s: toSvg(e), o: pan ? { x: view.x, y: view.y } : (offset[id!] ?? { x: 0, y: 0 }) };
-    if (pan) setPanning(true);
+    panFrom.current = { p: toSvg(e), v: { x: view.x, y: view.y } };
+    setPanning(true);
   };
+
+  const nodeDown = (id: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (spaceDown || trav) {
+      startPan(e);
+      return;
+    }
+    follow.current = false;
+    moved.current = false;
+    dragId.current = id;
+    const n = built.byId.get(id);
+    if (n) {
+      n.fx = n.x;
+      n.fy = n.y;
+      built.sim.alphaTarget(0.3).restart();
+    }
+  };
+
   useEffect(() => {
     const mv = (e: MouseEvent) => {
-      const d = drag.current;
-      if (!d) return;
-      const p = toSvg(e);
-      if (!d.id) setView((v) => ({ ...v, x: d.o.x - (p.x - d.s.x), y: d.o.y - (p.y - d.s.y) }));
-      else setOffset((o) => ({ ...o, [d.id!]: { x: d.o.x + (p.x - d.s.x), y: d.o.y + (p.y - d.s.y) } }));
+      if (panFrom.current) {
+        const p = toSvg(e);
+        setView((v) => ({
+          ...v,
+          x: panFrom.current!.v.x - (p.x - panFrom.current!.p.x),
+          y: panFrom.current!.v.y - (p.y - panFrom.current!.p.y),
+        }));
+        return;
+      }
+      const id = dragId.current;
+      if (!id) return;
+      moved.current = true;
+      const n = built.byId.get(id);
+      if (n) {
+        const p = toSvg(e);
+        n.fx = p.x;
+        n.fy = p.y;
+      }
     };
     const up = (e: MouseEvent) => {
-      const d = drag.current;
-      drag.current = null;
+      panFrom.current = null;
       setPanning(false);
-      // 클래스 노드를 다른 클래스 노드 위에 놓으면 병합 (원본 동작)
-      if (d?.id?.startsWith('c:') && onMergeAsk) {
-        const srcName = d.id.slice(2);
+      const id = dragId.current;
+      dragId.current = null;
+      if (!id) return;
+      built.sim.alphaTarget(0);
+      if (moved.current && onMergeAsk && !built.byId.get(id)?.isProp) {
         const p = toSvg(e);
-        for (const c of CLASSES) {
-          if (c.name === srcName) continue;
-          const b = layout.cls.get(c.name);
-          if (!b) continue;
-          const o = offset['c:' + c.name];
-          const q = o ? { x: b.x + o.x, y: b.y + o.y } : b;
-          if (Math.hypot(q.x - p.x, q.y - p.y) < classR(c.name) + 10) {
-            onMergeAsk(srcName, c.name);
+        for (const c of classes) {
+          if (c.name === id) continue;
+          const q = simP(c.name);
+          if (q && Math.hypot(q.x - p.x, q.y - p.y) < CLASS_R + 12) {
+            onMergeAsk(id, c.name);
             break;
           }
         }
@@ -294,48 +323,35 @@ function Canvas({
       window.removeEventListener('mousemove', mv);
       window.removeEventListener('mouseup', up);
     };
-  }, [toSvg, CLASSES, layout, offset, classR, onMergeAsk]);
+  }, [toSvg, built, classes, simP, onMergeAsk]);
 
   const wheel = (e: React.WheelEvent) => {
     if (!(e.ctrlKey || e.metaKey)) return;
     e.preventDefault();
     follow.current = false;
     const p = toSvg(e);
-    const k = e.deltaY > 0 ? 1.12 : 0.89;
+    const k = e.deltaY > 0 ? 1.15 : 0.87;
     setView((v) => ({ x: p.x - (p.x - v.x) * k, y: p.y - (p.y - v.y) * k, w: v.w * k, h: v.h * k }));
   };
 
-  const CP = (n: string): Pt | null => {
-    const b = layout.cls.get(n);
-    if (!b) return null;
-    const o = offset['c:' + n];
-    return o ? { x: b.x + o.x, y: b.y + o.y } : b;
-  };
-  const IP = (id: string): Pt | null => {
-    const b = layout.inst.get(id);
-    if (!b) return null;
-    const o = offset['i:' + id];
-    return o ? { x: b.x + o.x, y: b.y + o.y } : b;
-  };
-
-  const spring = reduce ? { duration: 0 } : { type: 'spring' as const, stiffness: 180, damping: 24 };
+  const spring = reduce ? { duration: 0 } : ({ type: 'spring', stiffness: 170, damping: 26 } as const);
+  const pop = (i: number) => ({
+    initial: reduce ? false : { scale: 0 },
+    animate: { scale: 1 },
+    transition: reduce ? { duration: 0 } : ({ type: 'spring', stiffness: 320, damping: 24, delay: Math.min(i * 0.018, 0.45) } as const),
+  });
 
   return (
     <div className={cn('relative w-full h-full', className)}>
       <div className="absolute right-2 top-2 z-10 flex flex-col gap-1">
         {[
-          { t: '＋', f: () => { follow.current = false; setView((v) => ({ ...v, w: v.w * 0.85, h: v.h * 0.85 })); }, l: '확대' },
-          { t: '－', f: () => { follow.current = false; setView((v) => ({ ...v, w: v.w * 1.18, h: v.h * 1.18 })); }, l: '축소' },
-          { t: '⛶', f: () => { setOffset({}); follow.current = true; }, l: '화면 맞춤' },
-          { t: full ? '✕' : '⤢', f: onToggleFull, l: full ? '닫기' : '전체화면' },
+          { t: '＋', f: () => { follow.current = false; setView((v) => ({ ...v, w: v.w * 0.8, h: v.h * 0.8 })); }, l: '확대' },
+          { t: '－', f: () => { follow.current = false; setView((v) => ({ ...v, w: v.w * 1.25, h: v.h * 1.25 })); }, l: '축소' },
+          { t: '⛶', f: () => { follow.current = true; }, l: '화면 맞춤' },
+          { t: full ? '✕' : '⤢', f: onToggleFull, l: full ? '닫기 (Esc)' : '전체화면' },
         ].map((b) => (
-          <button
-            key={b.l}
-            type="button"
-            title={b.l}
-            onClick={b.f}
-            className="w-7 h-7 bg-white/90 border border-line rounded text-[12px] font-bold text-ink-dark hover:border-brand hover:text-brand shadow-sm"
-          >
+          <button key={b.l} type="button" title={b.l} onClick={b.f}
+            className="w-7 h-7 bg-white/90 border border-line rounded text-[12px] font-bold text-ink-dark hover:border-brand hover:text-brand shadow-sm">
             {b.t}
           </button>
         ))}
@@ -346,243 +362,166 @@ function Canvas({
         viewBox={`${view.x.toFixed(1)} ${view.y.toFixed(1)} ${view.w.toFixed(1)} ${view.h.toFixed(1)}`}
         className="w-full h-full select-none"
         style={{ cursor: panning ? 'grabbing' : spaceDown ? 'grab' : 'default' }}
-        onMouseDown={down(null)}
+        onMouseDown={startPan}
         onWheel={wheel}
       >
         <defs>
           <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L8,4 L0,8 Z" fill={BRAND} />
           </marker>
-          <linearGradient id="hexOn" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#E4552F" />
-            <stop offset="100%" stopColor={DEEP} />
-          </linearGradient>
-          <linearGradient id="hexIdle" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="100%" stopColor="#F4F5F6" />
-          </linearGradient>
-          <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
-            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor={BRAND} floodOpacity="0.28" />
-          </filter>
+          <marker id="ard" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#C2C7CD" />
+          </marker>
         </defs>
 
-        {/* ══ 컬럼 배경 ══ */}
-        {colMode &&
-          [...layout.cls.entries()].map(([name, p]) => {
-            const active = clsSet.has(name);
-            return (
-              <g key={`bg-${name}`}>
-                <motion.rect
-                  x={p.x - T_COL_W / 2 + 14}
-                  y={T_CLS_Y - 52}
-                  width={T_COL_W - 28}
-                  height={layout.vb.h - T_CLS_Y + 24}
-                  rx={8}
-                  fill={BRAND}
-                  animate={{ fillOpacity: active ? 0.045 : 0.015 }}
-                  stroke={BRAND}
-                  strokeOpacity={active ? 0.16 : 0.07}
-                />
-                <text x={p.x} y={T_CLS_Y - 60} textAnchor="middle" fontSize={9.5} fontWeight={800} fill={active ? BRAND : '#B9BFC6'}>
-                  hop {p.hop}
+        {trav &&
+          [...trav.clsAt.entries()].map(([name, p]) => (
+            <g key={`bg-${name}`}>
+              <rect x={p.x - T_COL_W / 2 + 12} y={trav.vb.y + 14} width={T_COL_W - 24} height={trav.vb.h - 34} rx={8} fill={BRAND} fillOpacity={0.035} stroke={BRAND} strokeOpacity={0.12} />
+              <text x={p.x} y={trav.vb.y + 40} textAnchor="middle" fontSize={10} fontWeight={800} fill={BRAND}>hop {p.hop}</text>
+            </g>
+          ))}
+
+        {/* 관계 엣지 — 실행 전에도 전부 연결 */}
+        {relations.map((r, i) => {
+          const a = CP(r.domain);
+          const b = CP(r.range);
+          if (!a || !b) return null;
+          const shown = visible(r.domain) && visible(r.range);
+          const on = relSet.has(r.uri);
+          const g = edgeGeom(a, b, i % 2 ? 0.09 : -0.09);
+          const op = on ? 1 : trav ? (shown ? 0.18 : 0.04) : 0.55;
+          return (
+            <g key={r.uri} style={{ pointerEvents: 'none' }}>
+              {on && <path d={g.d} fill="none" stroke={BRAND} strokeOpacity={0.15} strokeWidth={8} strokeLinecap="round" />}
+              <path d={g.d} fill="none" stroke={on ? BRAND : '#C2C7CD'} strokeWidth={on ? 2.2 : 1.1} opacity={op} markerEnd={on ? 'url(#ar)' : 'url(#ard)'} />
+              {on && !reduce && [0, 1].map((k) => (
+                <circle key={k} r={3} fill={BRAND} style={{ filter: `drop-shadow(0 0 5px ${BRAND}) drop-shadow(0 0 10px ${BRAND})` }}>
+                  <animateMotion dur="1.9s" begin={`${k * 0.95 + (i % 5) * 0.28}s`} repeatCount="indefinite" path={g.d} />
+                </circle>
+              ))}
+              {(on || !trav) && (
+                <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill={on ? DEEP : '#98A0A8'} opacity={op}
+                  style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>
+                  {r.name}
                 </text>
-              </g>
-            );
-          })}
+              )}
+            </g>
+          );
+        })}
 
-        {/* ══ idle: 클래스 관계 ══ */}
-        {!colMode &&
-          RELATIONS.map((r, i) => {
-            const a = CP(r.domain);
-            const b = CP(r.range);
-            if (!a || !b) return null;
-            const on = relSet.has(r.uri);
-            const [p1, p2] = clipped(a, b, classR(r.domain), classR(r.range) + 7);
-            const g = edgeGeom(p1, p2, i % 2 ? 0.15 : -0.15);
+        {/* 속성 위성 — 원 + 아래 작은 텍스트 */}
+        {showAttrs &&
+          (built.sim.nodes() as SimNode[]).filter((n) => n.isProp).map((n, i) => {
+            const hp = CP(n.host!);
+            if (!hp) return null;
+            const shown = visible(n.host!);
+            const op = trav ? (shown ? 0.14 : 0.03) : 1;
+            const p = trav ? hp : { x: n.x ?? 0, y: n.y ?? 0 };
             return (
-              <g key={r.uri}>
-                <path d={g.d} fill="none" stroke={on ? BRAND : GREY} strokeWidth={on ? 2.2 : 1} opacity={on ? 1 : clsSet.size ? 0.16 : 0.42} markerEnd={on ? 'url(#ar)' : undefined} />
-              </g>
+              <motion.g key={n.id} animate={{ x: p.x, y: p.y, opacity: op }} transition={spring} style={{ pointerEvents: 'none' }}>
+                {!trav && <line x1={hp.x - p.x} y1={hp.y - p.y} x2={0} y2={0} stroke="#D9DDE2" strokeWidth={1} />}
+                <motion.g {...pop(i + classes.length)}>
+                  <circle r={PROP_R} fill={PROP_COLOR + '22'} stroke={PROP_COLOR} strokeWidth={1.4} />
+                  <text y={PROP_R + 10} textAnchor="middle" fontSize={8.5} fontWeight={600} fill="#7A828B">{dispLabel(n.label)}</text>
+                </motion.g>
+              </motion.g>
             );
           })}
 
-        {/* ══ 클래스 → 개체 연결선 ══ */}
-        {colMode &&
-          [...layout.inst.keys()].map((id) => {
+        {/* 클래스 → 개체 펼침선 */}
+        {trav &&
+          [...trav.instAt.keys()].map((id) => {
             const inst = instById(id)!;
             const cp = CP(inst.cls);
             const p = IP(id);
             if (!cp || !p) return null;
             const on = litSet.has(id);
-            return (
-              <motion.line
-                key={`ci-${id}`}
-                x1={cp.x}
-                y1={cp.y + classR(inst.cls)}
-                x2={p.x}
-                y2={p.y - INST_H / 2}
-                stroke={on ? BRAND : '#D3D7DC'}
-                strokeWidth={on ? 1.5 : 0.9}
-                strokeDasharray={on ? undefined : '4 4'}
-                animate={{ opacity: on ? 0.6 : 0.42 }}
-              />
-            );
+            return <line key={`ci-${id}`} x1={cp.x} y1={cp.y + CLASS_R} x2={p.x} y2={p.y - INST_H / 2}
+              stroke={on ? BRAND : '#D3D7DC'} strokeWidth={on ? 1.5 : 0.9} strokeDasharray={on ? undefined : '4 4'} opacity={on ? 0.6 : 0.4} />;
           })}
 
-        {/* ══ 개체 간 순회 엣지 ══ */}
-        {colMode &&
+        {/* 개체 간 순회 엣지 */}
+        {trav &&
           travEdges.map((e, i) => {
             const a = IP(e.from);
             const b = IP(e.to);
-            if (!a || !b) return null;
-            const on = litSet.has(e.from) && litSet.has(e.to);
-            if (!on) return null;
+            if (!a || !b || !litSet.has(e.from) || !litSet.has(e.to)) return null;
             const same = Math.abs(a.x - b.x) < 4;
-            const [p1, p2] = clipped(a, b, same ? INST_H / 2 : INST_W / 2, same ? INST_H / 2 + 5 : INST_W / 2 + 9);
-            const g = edgeGeom(p1, p2, same ? 0.44 : i % 2 ? 0.11 : -0.11);
+            const g = edgeGeom(a, b, same ? 0.4 : i % 2 ? 0.1 : -0.1);
             return (
-              <g key={`te${i}`}>
+              <g key={`te${i}`} style={{ pointerEvents: 'none' }}>
                 <path d={g.d} fill="none" stroke={BRAND} strokeOpacity={0.13} strokeWidth={7} strokeLinecap="round" />
-                <motion.path
-                  d={g.d}
-                  fill="none"
-                  stroke={BRAND}
-                  strokeWidth={2}
-                  markerEnd="url(#ar)"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  transition={{ duration: 0.55, ease: 'easeOut' }}
-                />
-                <circle r={3} fill={BRAND} style={{ filter: `drop-shadow(0 0 5px ${BRAND}) drop-shadow(0 0 10px ${BRAND})` }}>
-                  <animateMotion dur={`${1.7 + (i % 4) * 0.3}s`} begin={`${-(i % 5) * 0.33}s`} repeatCount="indefinite" path={g.d} />
-                </circle>
-                <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
-                  <rect x={g.mx - (e.rel.length * 6 + 13) / 2} y={g.my - 9} width={e.rel.length * 6 + 13} height={18} rx={9} fill="#fff" stroke={BRAND} strokeOpacity={0.55} />
-                  <text x={g.mx} y={g.my + 3.6} textAnchor="middle" fontSize={9.5} fontWeight={800} fill={DEEP}>
-                    {e.rel}
-                  </text>
-                </motion.g>
+                <motion.path d={g.d} fill="none" stroke={BRAND} strokeWidth={2} markerEnd="url(#ar)"
+                  initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 0.5, ease: 'easeOut' }} />
+                {!reduce && (
+                  <circle r={2.8} fill={BRAND} style={{ filter: `drop-shadow(0 0 5px ${BRAND}) drop-shadow(0 0 9px ${BRAND})` }}>
+                    <animateMotion dur={`${1.7 + (i % 4) * 0.3}s`} begin={`${-(i % 5) * 0.33}s`} repeatCount="indefinite" path={g.d} />
+                  </circle>
+                )}
+                <text x={g.mx} y={g.my - 5} textAnchor="middle" fontSize={9.5} fontWeight={800} fill={DEEP}
+                  style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' }}>{e.rel}</text>
               </g>
             );
           })}
 
-        {/* ══ 속성 위성 (idle) ══ */}
-        {showAttrs && !colMode &&
-          CLASSES.map((c) => {
-            const p = CP(c.name);
-            if (!p) return null;
-            return c.attrs.slice(0, 6).map((a, i) => {
-              const ang = (Math.PI * 2 * i) / 6 - Math.PI / 2;
-              const rr = classR(c.name) + 21;
-              return (
-                <g key={`${c.uri}-${a}`} opacity={clsSet.size && !clsSet.has(c.name) ? 0.1 : 0.8}>
-                  <line x1={p.x} y1={p.y} x2={p.x + rr * Math.cos(ang)} y2={p.y + rr * Math.sin(ang)} stroke="#D9DDE2" strokeWidth={0.8} />
-                  <circle cx={p.x + rr * Math.cos(ang)} cy={p.y + rr * Math.sin(ang)} r={3.5} fill="#fff" stroke="#B9BFC6" strokeWidth={0.9} />
-                </g>
-              );
-            });
-          })}
-
-        {/* ══ 클래스 노드 ══ */}
-        {CLASSES.map((c, i) => {
+        {/* 클래스 노드 */}
+        {classes.map((c, i) => {
           const p = CP(c.name);
           if (!p) return null;
-          if (colMode && !layout.cls.has(c.name)) return null;
-          const hub = HUB_CLASSES.includes(c.name);
-          const on = clsSet.has(c.name);
-          const r = classR(c.name);
+          const shown = visible(c.name);
+          const on = activeClasses.includes(c.name);
+          const hub = hubs.includes(c.name);
+          const t = Math.sqrt((deg[c.name] ?? 0) / maxDeg);
+          const base = on ? BRAND : hub ? CORE : HIER;
           const sel = selectedClass === c.name;
           return (
-            <motion.g
-              key={c.uri}
-              animate={{ x: p.x, y: p.y, opacity: colMode ? 1 : clsSet.size && !on ? 0.16 : 1 }}
-              transition={drag.current ? { duration: 0 } : spring}
-              onMouseDown={down('c:' + c.name)}
-              onClick={() => onSelectClass?.(c.name)}
-              style={{ cursor: 'grab' }}
-            >
-              <title>{`${c.name} · 관계 ${degreeOf(c.name)}개`}</title>
-              {(hub || on) && (
-                <motion.path
-                  d={hexPath(r + 9)}
-                  fill="none"
-                  stroke={BRAND}
-                  strokeWidth={1.3}
-                  animate={{ opacity: [0.14, 0.4, 0.14], scale: [1, 1.06, 1] }}
-                  transition={{ duration: 3.4, repeat: Infinity, delay: (i % 7) * 0.4 }}
-                />
-              )}
-              {sel && <path d={hexPath(r + 6)} fill="none" stroke={BRAND} strokeWidth={1.4} strokeDasharray="3 3" />}
-              <motion.path
-                d={hexPath(r)}
-                animate={{ opacity: 1 }}
-                fill={on ? 'url(#hexOn)' : 'url(#hexIdle)'}
-                stroke={on || colMode ? BRAND : hub ? BRAND : GREY}
-                strokeWidth={on || hub ? 2 : 1.2}
-                style={on ? { filter: 'url(#soft)' } : undefined}
-              />
-              <path d={hexPath(r * 0.44)} fill={on ? '#fff' : BRAND} fillOpacity={on ? 0.34 : 0.22} />
-              <text y={3.6} textAnchor="middle" fontSize={11} fontWeight={800} fill={on ? '#fff' : '#212121'} style={{ pointerEvents: 'none' }}>
-                {c.name}
-              </text>
-              {!colMode && (
-                <text y={r + 14} textAnchor="middle" fontSize={9} fontWeight={700} fill="#666" style={{ pointerEvents: 'none' }}>
-                  {c.attrs.length}속성
+            <motion.g key={c.uri}
+              animate={{ x: p.x, y: p.y, opacity: trav ? (shown ? 1 : 0.05) : 1, scale: trav && !shown ? 0.75 : 1 }}
+              transition={dragId.current === c.name ? { duration: 0 } : spring}
+              onMouseDown={nodeDown(c.name)}
+              onClick={() => !moved.current && onSelectClass?.(c.name)}
+              style={{ cursor: trav ? 'default' : 'grab' }}>
+              <title>{`${c.name} · 관계 ${deg[c.name] ?? 0}개 · 속성 ${c.attrs.length}개`}</title>
+              <motion.g {...pop(i)}>
+                {(hub || on) && !reduce && (
+                  <motion.path d={hexPath(CLASS_R + 8)} fill="none" stroke={base} strokeWidth={1 + t * 1.4}
+                    animate={{ opacity: [0.12, 0.4, 0.12], scale: [1, 1.07, 1] }}
+                    transition={{ duration: 3.4, repeat: Infinity, delay: (i % 7) * 0.4 }} />
+                )}
+                {sel && <path d={hexPath(CLASS_R + 5)} fill="none" stroke={BRAND} strokeWidth={1.4} strokeDasharray="3 3" />}
+                <path d={hexPath(CLASS_R)} fill={shade(base, t)} stroke={base} strokeWidth={1.2 + t * 1.6}
+                  style={{ filter: `drop-shadow(0 0 ${4 + Math.round(t * 12)}px ${base}66)` }} />
+                <path d={hexPath(CLASS_R * 0.46)} fill={base} fillOpacity={0.5 + t * 0.4} style={{ pointerEvents: 'none' }} />
+                <text y={CLASS_R + 15} textAnchor="middle" fontSize={11} fontWeight={800} fill="#212121" style={{ pointerEvents: 'none' }}>
+                  {dispLabel(c.name)}
                 </text>
-              )}
+              </motion.g>
             </motion.g>
           );
         })}
 
-        {/* ══ 개체 노드 ══ */}
-        {colMode &&
-          [...layout.inst.keys()].map((id) => {
-            const p = IP(id);
+        {/* 개체 노드 */}
+        {trav &&
+          [...trav.instAt.keys()].map((id) => {
+            const p = IP(id)!;
             const inst = instById(id);
-            if (!p || !inst) return null;
+            if (!inst) return null;
             const on = litSet.has(id);
             const anchor = anchorInst === id && on;
             const sel = selectedInstance === id;
             return (
-              <motion.g
-                key={id}
-                animate={{ x: p.x, y: p.y, opacity: on ? 1 : 0.4 }}
-                transition={drag.current ? { duration: 0 } : spring}
-                onMouseDown={down('i:' + id)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectInstance?.(inst);
-                }}
-                style={{ cursor: 'pointer' }}
-              >
+              <motion.g key={id} animate={{ x: p.x, y: p.y, opacity: on ? 1 : 0.42 }} transition={spring}
+                onClick={(e) => { e.stopPropagation(); onSelectInstance?.(inst); }} style={{ cursor: 'pointer' }}>
                 <title>{`${inst.label} · ${inst.origin}`}</title>
-                {anchor && (
-                  <motion.rect
-                    x={-INST_W / 2 - 5}
-                    y={-INST_H / 2 - 5}
-                    width={INST_W + 10}
-                    height={INST_H + 10}
-                    rx={7}
-                    fill="none"
-                    stroke={BRAND}
-                    strokeWidth={1.6}
-                    animate={{ opacity: [0.7, 0, 0.7], scale: [1, 1.14, 1] }}
-                    transition={{ duration: 1.7, repeat: Infinity }}
-                  />
+                {anchor && !reduce && (
+                  <motion.rect x={-INST_W / 2 - 5} y={-INST_H / 2 - 5} width={INST_W + 10} height={INST_H + 10} rx={7} fill="none" stroke={BRAND} strokeWidth={1.6}
+                    animate={{ opacity: [0.7, 0, 0.7], scale: [1, 1.14, 1] }} transition={{ duration: 1.7, repeat: Infinity }} />
                 )}
                 {sel && <rect x={-INST_W / 2 - 4} y={-INST_H / 2 - 4} width={INST_W + 8} height={INST_H + 8} rx={6} fill="none" stroke={BRAND} strokeWidth={1.3} strokeDasharray="3 3" />}
-                <motion.rect
-                  x={-INST_W / 2}
-                  y={-INST_H / 2}
-                  width={INST_W}
-                  height={INST_H}
-                  rx={6}
-                  animate={{ fill: on ? '#FFFFFF' : '#FAFBFC' }}
-                  stroke={on ? BRAND : '#CDD2D8'}
-                  strokeWidth={on ? 1.8 : 1}
-                  strokeDasharray={on ? undefined : '4 3'}
-                  style={on ? { filter: 'url(#soft)' } : undefined}
-                />
+                <rect x={-INST_W / 2} y={-INST_H / 2} width={INST_W} height={INST_H} rx={6} fill={on ? '#fff' : '#FAFBFC'}
+                  stroke={on ? BRAND : '#CDD2D8'} strokeWidth={on ? 1.8 : 1} strokeDasharray={on ? undefined : '4 3'}
+                  style={on ? { filter: `drop-shadow(0 1px 5px ${BRAND}33)` } : undefined} />
                 {on && <rect x={-INST_W / 2} y={-INST_H / 2} width={4} height={INST_H} rx={2} fill={BRAND} />}
                 <text y={-2} textAnchor="middle" fontSize={10} fontWeight={800} fill={on ? '#212121' : '#9AA1A9'} style={{ pointerEvents: 'none' }}>
                   {inst.label.length > 14 ? inst.label.slice(0, 13) + '…' : inst.label}
@@ -595,22 +534,27 @@ function Canvas({
             );
           })}
 
-        {/* ══ 컬럼별 생략 개수 ══ */}
-        {colMode &&
-          [...layout.cls.entries()].map(([name, p]) => {
-            const n = layout.hidden.get(p.hop ?? -1) ?? 0;
-            if (!n) return null;
-            return (
-              <text key={`h-${name}`} x={p.x} y={layout.vb.h - 32} textAnchor="middle" fontSize={10} fontWeight={700} fill="#B9BFC6">
-                +{n}개
-              </text>
-            );
+        {trav &&
+          [...trav.clsAt.entries()].map(([name, p]) => {
+            const n = trav.hidden.get(p.hop) ?? 0;
+            return n ? (
+              <text key={`h-${name}`} x={p.x} y={trav.vb.y + trav.vb.h - 24} textAnchor="middle" fontSize={10} fontWeight={700} fill="#B9BFC6">+{n}개</text>
+            ) : null;
           })}
       </svg>
 
-      <div className="absolute left-2 bottom-2 text-[9.5px] text-ink-mid font-semibold bg-white/85 border border-line-soft rounded px-2 py-1">
-        {colMode ? <>컬럼=hop · 카드=개체 · 실선=확정 · 점선=미선택 후보 · 드래그·⌘휠 줌</> : <>육각형=클래스 · 원=속성 · 드래그·⌘휠 줌</>}
-        {running && <span className="ml-1.5 text-brand font-extrabold">순회 중…</span>}
+      <div className="absolute left-2 bottom-2 flex items-center gap-2.5 text-[9.5px] text-ink-mid font-semibold bg-white/85 border border-line-soft rounded px-2 py-1">
+        <span className="inline-flex items-center gap-1">
+          <svg width="12" height="12" viewBox="-8.5 -8.5 17 17"><path d={hexPath(7)} fill={shade(HIER, 0.4)} stroke={HIER} strokeWidth="1.6" /></svg>클래스
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <svg width="12" height="12" viewBox="-8.5 -8.5 17 17"><path d={hexPath(7)} fill={shade(CORE, 0.6)} stroke={CORE} strokeWidth="1.6" /></svg>허브 TOP5
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <i className="w-[9px] h-[9px] rounded-full" style={{ background: PROP_COLOR + '22', border: `1.5px solid ${PROP_COLOR}` }} />속성
+        </span>
+        <span className="text-ink-light">드래그=이동 · Space+드래그=화면 · ⌘휠=줌</span>
+        {running && <span className="text-brand font-extrabold">순회 중…</span>}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ export default function ProjectsListPage() {
   const projectsList = getVisibleProjects(persona);
 
   return (
-    <div className="max-w-[1760px] mx-auto px-6 py-6">
+    <div className="max-w-[1360px] mx-auto px-6 py-6">
       {/* Page header */}
       <div className="card px-6 py-5 mb-3.5">
         <div className="flex items-baseline gap-2.5 flex-wrap">

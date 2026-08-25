@@ -36,7 +36,7 @@ export default function OntologyEditor({
   const cls = classes.find((c) => c.name === selected) ?? null;
 
   return (
-    <div className="border border-line-soft rounded bg-white h-[560px] flex flex-col">
+    <div className="border border-line-soft rounded bg-white h-[440px] flex flex-col">
       <div className="flex items-center border-b border-line-soft">
         {(
           [
@@ -286,7 +286,7 @@ function ImportPane() {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="@prefix bnk: <...> .&#10;bnk:GoGaek a owl:Class ; rdfs:label &quot;고객&quot;@ko ."
-        className="mt-2 w-full h-[300px] border border-line rounded p-2 text-[10px] font-mono"
+        className="mt-2 w-full h-[230px] border border-line rounded p-2 text-[10px] font-mono"
       />
       <button
         type="button"

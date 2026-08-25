@@ -159,7 +159,7 @@ function GraphDesign() {
       </div>
 
       <div className="grid grid-cols-[1fr_300px] gap-3">
-        <div className="border border-line-soft rounded bg-surface-soft h-[560px] overflow-hidden">
+        <div className="border border-line-soft rounded bg-surface-soft h-[440px] overflow-hidden">
           <OntologyGraph
             showAttrs={showAttrs}
             onSelectClass={setSelected}
@@ -244,7 +244,7 @@ function MappingView() {
       </div>
 
       <div className="border border-line-soft rounded overflow-hidden">
-        <div className="max-h-[520px] overflow-y-auto">
+        <div className="max-h-[230px] overflow-y-auto">
           <table className="w-full text-[11.5px]">
             <thead className="bg-surface-soft sticky top-0">
               <tr className="text-ink-mid">
@@ -411,7 +411,7 @@ function QueryView() {
               </span>
             )}
           </div>
-          <div className="relative border border-line-soft rounded bg-surface-soft h-[600px] overflow-hidden">
+          <div className="relative border border-line-soft rounded bg-surface-soft h-[470px] overflow-hidden">
             {picked && (
               <div className="og-answer absolute left-2 top-2 z-10 w-[260px] bg-white border border-brand rounded shadow-lg p-3">
                 <div className="flex items-start gap-2">
@@ -428,7 +428,7 @@ function QueryView() {
                     ✕
                   </button>
                 </div>
-                <div className="mt-2 border-t border-line-soft pt-2 space-y-1 max-h-[300px] overflow-y-auto">
+                <div className="mt-2 border-t border-line-soft pt-2 space-y-1 max-h-[230px] overflow-y-auto">
                   {Object.entries(picked.props).map(([k, v]) => (
                     <div key={k} className="flex items-start gap-2 text-[10.5px]">
                       <span className="text-ink-mid font-semibold w-[74px] flex-shrink-0">{k}</span>
@@ -450,7 +450,7 @@ function QueryView() {
               travEdges={scenario.travEdges}
               anchorInst={scenario.anchorInst}
               running={running}
-              showAttrs={false}
+              showAttrs
               onSelectInstance={setPicked}
               selectedInstance={picked?.id ?? null}
             />
@@ -458,7 +458,7 @@ function QueryView() {
         </div>
 
         {/* 우: 추론 과정 */}
-        <div className="border border-line-soft rounded bg-white h-[624px] overflow-y-auto">
+        <div className="border border-line-soft rounded bg-white h-[494px] overflow-y-auto">
           <div className="px-3.5 py-2.5 border-b border-line-soft bg-brand-bg sticky top-0">
             <div className="text-[11.5px] font-extrabold text-ink">추론 과정</div>
             <div className="text-[10.5px] text-ink-dark font-semibold mt-0.5 leading-relaxed">

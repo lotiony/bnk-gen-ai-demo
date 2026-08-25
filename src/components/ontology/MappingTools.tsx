@@ -173,7 +173,7 @@ export function MaterializePane() {
         </button>
       </div>
 
-      <div className="border border-line-soft rounded bg-[#1E1E1E] p-3 h-[380px] overflow-y-auto font-mono text-[11px] leading-relaxed">
+      <div className="border border-line-soft rounded bg-[#1E1E1E] p-3 h-[230px] overflow-y-auto font-mono text-[11px] leading-relaxed">
         {log.length === 0 && <div className="text-[#6A737D]">$ 실행 대기</div>}
         {log.map((l, i) => (
           <div key={i} className="og-step text-[#D4D4D4]">
@@ -256,7 +256,7 @@ export function DiagnosticsPane() {
       </div>
 
       <div className="border border-line-soft rounded overflow-hidden">
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-[330px] overflow-y-auto">
           <table className="w-full text-[11.5px]">
             <thead className="bg-surface-soft sticky top-0">
               <tr className="text-ink-mid">
