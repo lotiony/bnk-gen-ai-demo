@@ -30,6 +30,8 @@ export interface QueryStep {
   query?: string;
   /** 실행 결과 요약 배지. */
   resultBadge?: string;
+  /** 클릭하면 펼쳐지는 실제 질의문 (SPARQL 또는 SQL). */
+  sparql?: string;
   /** 확정 근거 한 줄 — 왜 이게 확정인지. */
   basis?: string;
   /** 이 스텝에서 그래프에 점등할 클래스 (좌측 순회 연출). */
@@ -99,6 +101,15 @@ const S1: QueryScenario = {
         '등급이 규정 적용 구간을 가르므로 먼저 확정해야 합니다. ' +
         '직전 등급(BBB+)은 평가일자가 앞서므로 후보에서 제외됩니다.',
       query: 'search(대성정밀의 신용등급, 여신신청 금액과 자금용도)',
+      sparql: `PREFIX bnk: <https://ontology.bnk.example/schema#>
+SELECT ?grade ?gradeDate ?appNo ?amt ?purpose WHERE {
+  ?cust a bnk:GoGaek ; rdfs:label "대성정밀(주)" .
+  ?cust bnk:PyeongGa_GoGaek_SinYongDeungGeup ?g .
+  ?g bnk:GyuJeong_deungGeupCode ?grade ; bnk:pyeongGaIlja ?gradeDate .
+  ?cust bnk:SinCheong_GoGaek_YeoSinSinCheong ?app .
+  ?app bnk:sinCheongBeonHo ?appNo ; bnk:sinCheongGeumAek ?amt ; bnk:jaGeumYongDo ?purpose .
+}
+ORDER BY DESC(?gradeDate) LIMIT 1`,
       resultBadge: 'SQL 투사/조인 · 2건',
       basis: '집계·조인은 소스 DB에 SQL로 투사 (트리플스토어 아님)',
       lightClasses: ['고객', '신용등급', '여신신청'],
@@ -111,6 +122,13 @@ const S1: QueryScenario = {
         '기존 여신약정과 제공 담보를 순회해 한도 잔액과 담보 여력을 확정합니다. ' +
         '담보인정비율을 곱한 유효담보가액이 승인 판정의 입력값입니다.',
       query: 'search(대성정밀 여신약정의 한도잔액, 제공 담보의 감정가액·담보인정비율)',
+      sparql: `-- 집계는 트리플스토어가 아니라 소스 DB 로 투사한다 (EDA-001 zero-copy)
+SELECT a.AGMT_NO, a.LIMIT_BAL, c.COLL_NO, c.APPR_AMT, c.LTV_RATE, c.SENIOR_AMT
+  FROM DV_LOAN.V_CREDIT_AGREEMENT a
+  JOIN DV_LOAN.V_COLLATERAL      c ON c.AGMT_NO = a.AGMT_NO
+ WHERE a.CUST_NO = 'CUST-8842'
+   AND a.AGMT_STAT = '정상'
+ ORDER BY a.AGMT_NO`,
       resultBadge: 'SQL 투사/조인 · 3건',
       basis: '그래프에서 이 SPARQL을 실행한 결과',
       lightClasses: ['고객', '여신약정', '담보', '부동산담보'],
@@ -134,6 +152,14 @@ const S1: QueryScenario = {
         '여신업무규정에서 BBB등급·신용공여 구간의 취급 조건 조항을 조회합니다. ' +
         '심사 개체가 조항을 근거로 참조하고 있어 그래프를 타고 직접 도달합니다.',
       query: 'search(여신업무규정 중 BBB등급 신용공여 취급조건 조항)',
+      sparql: `PREFIX bnk: <https://ontology.bnk.example/schema#>
+SELECT ?clauseNo ?title ?body WHERE {
+  ?review a bnk:SimSa ; bnk:simSaBeonHo "RV-2026-0455" .
+  ?review bnk:GeunGeo_SimSa_JoHang ?clause .
+  ?clause bnk:joHangBeonHo ?clauseNo ; bnk:joHangJeMok ?title ; bnk:joHangBonMun ?body .
+  ?reg bnk:PoHam_GyuJeong_JoHang ?clause .
+  ?reg rdfs:label "여신업무규정" .
+}`,
       resultBadge: '문서 조항 · 2건',
       basis: '문서에서 실체화된 조항 개체 — 원문 링크 보유',
       lightClasses: ['심사', '조항', '규정'],
@@ -145,6 +171,16 @@ const S1: QueryScenario = {
       text:
         '마지막으로 신청금액 5억이 걸리는 전결 구간을 판정하고, 그 전결권이 귀속된 직책과 소속 조직까지 펼칩니다.',
       query: 'search(여신 5억 신용공여 건의 전결권 → 직책 → 조직)',
+      sparql: `PREFIX bnk: <https://ontology.bnk.example/schema#>
+SELECT ?auth ?position ?org WHERE {
+  ?app a bnk:YeoSinSinCheong ; bnk:sinCheongBeonHo "APP-2026-0311" .
+  ?app  bnk:JeokYong_YeoSinSinCheong_JeonGyeolGwon ?a .
+  ?a    bnk:jeonGyeolGuBun ?auth ;
+        bnk:sinYongGongYeoPoHam "Y" .
+  ?a    bnk:GwiSok_JeonGyeolGwon_JikChaek ?p .  ?p rdfs:label ?position .
+  ?p    bnk:SoSok_JikChaek_JoJik          ?o .  ?o rdfs:label ?org .
+  FILTER(?amtLow <= 17.0 && 17.0 <= ?amtHigh)
+}`,
       resultBadge: '그래프 순회 · 3 hop',
       basis: '전결규정 별표1에서 실체화된 금액 구간을 그래프로 매칭',
       lightClasses: ['여신신청', '전결권', '직책', '조직', '조항'],
@@ -228,6 +264,15 @@ const S2: QueryScenario = {
       kind: 'doc',
       text: '전결규정 별표1에서 8억이 속하는 구간을 판정합니다.',
       query: 'search(전결권 중 금액하한 ≤ 8억 ≤ 금액상한 인 구간)',
+      sparql: `PREFIX bnk: <https://ontology.bnk.example/schema#>
+SELECT ?gubun ?low ?high ?creditIncl WHERE {
+  ?a a bnk:JeonGyeolGwon ;
+     bnk:jeonGyeolGuBun ?gubun ;
+     bnk:geumAekHaHan   ?low ;
+     bnk:geumAekSangHan ?high ;
+     bnk:sinYongGongYeoPoHam ?creditIncl .
+  FILTER(?low <= 8.0 && 8.0 <= ?high)
+}`,
       resultBadge: '문서 조항 · 1건',
       basis: '표 인식으로 실체화된 금액 구간 — 규칙 매칭(계산)',
       lightClasses: ['전결권', '조항', '규정'],
@@ -238,6 +283,12 @@ const S2: QueryScenario = {
       kind: 'traverse',
       text: '해당 전결권이 귀속된 직책과 조직을 순회합니다.',
       query: 'search(전결권 → 직책 → 조직)',
+      sparql: `PREFIX bnk: <https://ontology.bnk.example/schema#>
+SELECT ?position ?org WHERE {
+  ?a a bnk:JeonGyeolGwon ; bnk:jeonGyeolGuBun "AU-B" .
+  ?a bnk:GwiSok_JeonGyeolGwon_JikChaek ?p . ?p rdfs:label ?position .
+  ?p bnk:SoSok_JikChaek_JoJik          ?o . ?o rdfs:label ?org .
+}`,
       resultBadge: '그래프 순회 · 2 hop',
       basis: '그래프에서 이 SPARQL을 실행한 결과',
       lightClasses: ['전결권', '직책', '조직', '여신협의회'],
@@ -298,6 +349,12 @@ const S3: QueryScenario = {
       kind: 'traverse',
       text: '책무가 배분된 직책과 그 근거 조항을 동시에 순회합니다.',
       query: 'search(여신심사 책무 → 배분 직책, 근거 조항)',
+      sparql: `PREFIX bnk: <https://ontology.bnk.example/schema#>
+SELECT ?duty ?position ?clauseNo ?body WHERE {
+  ?cm a bnk:ChaekMu ; bnk:chaekMuBeonHo "CM-여신-004" ; bnk:chaekMuNaeYong ?duty .
+  ?cm bnk:BaeBun_ChaekMu_JikChaek ?p . ?p rdfs:label ?position .
+  ?cm bnk:GeunGeo_ChaekMu_JoHang  ?c . ?c bnk:joHangBeonHo ?clauseNo ; bnk:joHangBonMun ?body .
+}`,
       resultBadge: '그래프 순회 · 2 hop',
       basis: '그래프에서 이 SPARQL을 실행한 결과',
       lightClasses: ['책무', '직책', '조항', '조직', '규정'],

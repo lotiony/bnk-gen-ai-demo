@@ -10,6 +10,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import OntologyGraph from './OntologyGraph';
+import OntologyEditor from './OntologyEditor';
+import { AutoMapPane, MaterializePane, DiagnosticsPane } from './MappingTools';
+import { useOntology, mergeClasses } from '@/lib/ontologyStore';
 import {
   CLASSES,
   RELATIONS,
@@ -23,7 +26,7 @@ import { COVERAGE, MAPPING_ROWS, SOURCE_LABEL, SOURCE_TONE, type MappingKind } f
 import { SCENARIOS, EXTRA_QUESTIONS, type QueryScenario, type StepKind } from '@/data/ontologyQueries';
 import { INSTANCE_COUNT as ABOX_COUNT, instById, type Instance } from '@/data/ontologyInstances';
 
-type SubTab = 'graph' | 'mapping' | 'query';
+type SubTab = 'graph' | 'mapping' | 'automap' | 'materialize' | 'diag' | 'query';
 
 export default function OntologySection() {
   const [sub, setSub] = useState<SubTab>('query');
@@ -41,6 +44,15 @@ export default function OntologySection() {
         <SubTabBtn on={sub === 'mapping'} onClick={() => setSub('mapping')}>
           데이터 매핑
         </SubTabBtn>
+        <SubTabBtn on={sub === 'automap'} onClick={() => setSub('automap')}>
+          Auto-Map
+        </SubTabBtn>
+        <SubTabBtn on={sub === 'materialize'} onClick={() => setSub('materialize')}>
+          Materialize
+        </SubTabBtn>
+        <SubTabBtn on={sub === 'diag'} onClick={() => setSub('diag')}>
+          진단
+        </SubTabBtn>
         <SubTabBtn on={sub === 'query'} onClick={() => setSub('query')}>
           Query
         </SubTabBtn>
@@ -48,6 +60,9 @@ export default function OntologySection() {
 
       {sub === 'graph' && <GraphDesign />}
       {sub === 'mapping' && <MappingView />}
+      {sub === 'automap' && <AutoMapPane />}
+      {sub === 'materialize' && <MaterializePane />}
+      {sub === 'diag' && <DiagnosticsPane />}
       {sub === 'query' && <QueryView />}
     </div>
   );
@@ -81,9 +96,11 @@ function SubTabBtn({
 /* ══════════════════════ 구축 단계 ══════════════════════ */
 
 function BuildStages() {
+  const { classes, relations } = useOntology();
+  const attrs = classes.reduce((a, c) => a + c.attrs.length, 0);
   const stages = [
-    { n: `${CLASS_COUNT}`, unit: '클래스', sub: `${ATTR_COUNT} 속성`, label: '온톨로지 생성' },
-    { n: `${RELATION_COUNT}`, unit: '관계', sub: '구조 점검', label: '관계 정의' },
+    { n: `${classes.length}`, unit: '클래스', sub: `${attrs} 속성`, label: '온톨로지 생성' },
+    { n: `${relations.length}`, unit: '관계', sub: '구조 점검', label: '관계 정의' },
     { n: `${MAPPING_ROWS.filter((r) => r.status !== 'none').length}`, unit: '매핑', sub: 'DB·문서 매핑', label: '데이터 연결' },
     { n: `${ABOX_COUNT}`, unit: '인스턴스', sub: '실체화', label: 'A-Box 생성' },
   ];
@@ -118,15 +135,22 @@ function BuildStages() {
 function GraphDesign() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showAttrs, setShowAttrs] = useState(true);
-  const cls = selected ? classByName(selected) : null;
+  const { classes, relations } = useOntology();
+
+  const askMerge = (src: string, dst: string) => {
+    if (window.confirm(`'${src}' 를 '${dst}' 에 병합할까요?\n속성이 합쳐지고 관계 끝점이 옮겨집니다.`)) {
+      mergeClasses(src, dst);
+      if (selected === src) setSelected(dst);
+    }
+  };
 
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
         <div className="text-[11.5px] text-ink-mid font-semibold">
-          <b className="text-ink">{CLASS_COUNT}</b> classes · <b className="text-ink">{RELATION_COUNT}</b> relationships
+          <b className="text-ink">{classes.length}</b> classes · <b className="text-ink">{relations.length}</b> relationships
           <span className="mx-1.5 text-ink-light">·</span>
-          육각형=클래스 · 원=속성 · 채움=허브(연결 TOP {HUB_CLASSES.length}) · 클릭=상세
+          클릭=상세 · 드래그=이동 · <b className="text-ink-dark">겹쳐 놓으면 병합</b> · Space+드래그=화면 이동 · ⌘/Ctrl+휠=줌
         </div>
         <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-ink-dark cursor-pointer">
           <input type="checkbox" checked={showAttrs} onChange={(e) => setShowAttrs(e.target.checked)} />
@@ -134,64 +158,16 @@ function GraphDesign() {
         </label>
       </div>
 
-      <div className="grid grid-cols-[1fr_260px] gap-3">
+      <div className="grid grid-cols-[1fr_300px] gap-3">
         <div className="border border-line-soft rounded bg-surface-soft h-[560px] overflow-hidden">
-          <OntologyGraph showAttrs={showAttrs} onSelectClass={setSelected} selectedClass={selected} />
+          <OntologyGraph
+            showAttrs={showAttrs}
+            onSelectClass={setSelected}
+            selectedClass={selected}
+            onMergeAsk={askMerge}
+          />
         </div>
-
-        <div className="border border-line-soft rounded p-3.5 bg-white overflow-y-auto h-[560px]">
-          {!cls ? (
-            <div className="text-[11.5px] text-ink-mid font-semibold text-center pt-16 leading-relaxed">
-              그래프에서 클래스를 클릭하면
-              <br />
-              속성·관계 명세가 표시됩니다
-            </div>
-          ) : (
-            <>
-              <div className="text-[14px] font-extrabold text-ink">{cls.name}</div>
-              <div className="text-[10.5px] font-mono text-ink-mid mt-0.5">{cls.uri}</div>
-              <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                <span className="pill bg-surface text-ink-mid border border-line-soft">
-                  {cls.axis === 'credit' ? '여신 축' : '규정 축'}
-                </span>
-                {cls.parent && (
-                  <span className="pill bg-info-bg text-info border border-info-border">상위 {cls.parent}</span>
-                )}
-                {HUB_CLASSES.includes(cls.name) && (
-                  <span className="pill bg-brand-tint text-brand border border-brand-tint">허브</span>
-                )}
-              </div>
-
-              <div className="mt-3 text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">
-                속성 {cls.attrs.length}
-              </div>
-              <ul className="mt-1 space-y-0.5">
-                {cls.attrs.map((a) => (
-                  <li key={a} className="text-[11.5px] text-ink-dark font-semibold">
-                    · {a}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-3 text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">관계</div>
-              <ul className="mt-1 space-y-1">
-                {RELATIONS.filter((r) => r.domain === cls.name || r.range === cls.name).map((r) => (
-                  <li key={r.uri} className="text-[11px] text-ink-dark font-semibold">
-                    {r.domain === cls.name ? (
-                      <>
-                        <b className="text-brand">{r.name}</b> → {r.range}
-                      </>
-                    ) : (
-                      <>
-                        {r.domain} → <b className="text-brand">{r.name}</b>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
+        <OntologyEditor selected={selected} onSelect={setSelected} />
       </div>
     </div>
   );
@@ -357,14 +333,24 @@ function QueryView() {
   const activeRelations = [...new Set(lit.flatMap((s) => s.lightRelations ?? []))];
   const done = shown >= scenario.steps.length;
 
-  // 스텝별 점등 개체 — 각 스텝이 hop 컬럼 하나가 된다 (빈 스텝은 컬럼을 만들지 않음)
-  const instanceSteps = useMemo(
-    () => lit.map((s) => s.lightInstances ?? []).filter((a) => a.length),
-    [shown, scenario], // eslint-disable-line react-hooks/exhaustive-deps
+  // 시나리오 전체 스텝 — 실행 전에도 이 레이아웃으로 컬럼이 미리 선다.
+  const allSteps = useMemo(
+    () => scenario.steps.map((s) => s.lightInstances ?? []).filter((a) => a.length),
+    [scenario],
   );
-  const activeInstances = useMemo(() => instanceSteps.flat(), [instanceSteps]);
+  // 지금까지 점등된 컬럼 수 — allSteps 기준으로 환산
+  const litCount = useMemo(() => {
+    let n = 0;
+    for (const st of scenario.steps.slice(0, shown)) if ((st.lightInstances ?? []).length) n += 1;
+    return n;
+  }, [shown, scenario]);
+  const activeInstances = useMemo(() => allSteps.slice(0, litCount).flat(), [allSteps, litCount]);
   const [picked, setPicked] = useState<Instance | null>(null);
-  useEffect(() => setPicked(null), [scenario]);
+  const [openStep, setOpenStep] = useState<number | null>(null);
+  useEffect(() => {
+    setPicked(null);
+    setOpenStep(null);
+  }, [scenario]);
 
   return (
     <div className="p-5">
@@ -459,7 +445,8 @@ function QueryView() {
             <OntologyGraph
               activeClasses={activeClasses}
               activeRelations={activeRelations}
-              instanceSteps={instanceSteps}
+              allSteps={allSteps}
+              litCount={litCount}
               travEdges={scenario.travEdges}
               anchorInst={scenario.anchorInst}
               running={running}
@@ -491,6 +478,7 @@ function QueryView() {
             <div className="p-3.5 space-y-3">
               {lit.map((s, i) => {
                 const tone = STEP_TONE[s.kind];
+                const open = openStep === i;
                 return (
                   <div key={i} className="flex gap-2.5 og-step">
                     <div className="flex flex-col items-center flex-shrink-0">
@@ -503,9 +491,34 @@ function QueryView() {
                       <span className={cn('pill border', tone.cls)}>{tone.label}</span>
                       <p className="text-[11.5px] text-ink-dark font-semibold leading-relaxed mt-1">{s.text}</p>
                       {s.query && (
-                        <code className="block mt-1.5 px-2 py-1.5 bg-surface border border-line-soft rounded text-[10.5px] font-mono text-ink break-all">
+                        <button
+                          type="button"
+                          onClick={() => setOpenStep(open ? null : i)}
+                          className="w-full text-left mt-1.5 px-2 py-1.5 bg-surface border border-line-soft rounded text-[10.5px] font-mono text-ink break-all hover:border-brand"
+                          title={s.sparql ? '클릭하면 실제 질의문이 열립니다' : undefined}
+                        >
                           {s.query}
-                        </code>
+                          {s.sparql && <span className="ml-1.5 text-brand font-sans font-extrabold">{open ? '▲ 닫기' : '▼ 질의문'}</span>}
+                        </button>
+                      )}
+                      {open && s.sparql && (
+                        <div className="og-answer mt-1.5 border border-brand-tint rounded overflow-hidden">
+                          <div className="flex items-center justify-between px-2 py-1 bg-brand-bg">
+                            <span className="text-[9.5px] font-extrabold text-brand">
+                              {s.sparql.trimStart().startsWith('--') ? 'SQL — 소스 DB 투사' : 'SPARQL — 그래프 실행'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard?.writeText(s.sparql!)}
+                              className="text-[9.5px] font-bold text-ink-mid hover:text-brand"
+                            >
+                              복사
+                            </button>
+                          </div>
+                          <pre className="px-2 py-1.5 text-[9.5px] font-mono leading-relaxed text-ink-dark overflow-x-auto whitespace-pre bg-white">
+                            {s.sparql}
+                          </pre>
+                        </div>
                       )}
                       {s.resultBadge && (
                         <div className="mt-1.5">
