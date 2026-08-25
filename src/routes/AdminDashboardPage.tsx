@@ -2076,7 +2076,7 @@ function GpuInfraTab() {
           label="총 GPU"
           value={`${totalGpus}`}
           unit="개"
-          sub={`${totalNodes}개 노드/인스턴스 · 장애 ${faultGpus} · 점검 ${maintGpus}`}
+          sub={`${totalNodes}개 노드 · 장애 ${faultGpus} · 점검 ${maintGpus}`}
           tone={faultGpus > 0 ? 'bad' : 'ok'}
         />
         <KpiCard
@@ -2179,11 +2179,11 @@ function GpuInfraTab() {
       {/* TTFT 비교 */}
       <TtftCompareCard deployments={MODEL_DEPLOYMENTS} />
 
-      {/* 노드/인스턴스 테이블 */}
+      {/* 노드 테이블 */}
       <div className="card">
         <div className="px-5 py-3.5 flex items-baseline justify-between border-b border-line-soft flex-wrap gap-2">
           <div>
-            <h2 className="text-[15px] font-extrabold text-ink">노드 · 인스턴스</h2>
+            <h2 className="text-[15px] font-extrabold text-ink">노드 현황</h2>
             <div className="text-[10.5px] text-ink-mid mt-0.5">
               물리 노드 (GPU 8장/대) · {filteredNodes.length}대 / 전체{' '}
               {GPU_NODES.length}대
@@ -2209,9 +2209,9 @@ function GpuInfraTab() {
             <thead className="sticky top-0 bg-white">
               <tr className="text-[10.5px] uppercase tracking-[0.3px] text-ink-mid border-b border-line bg-surface-soft/40">
                 <th className="w-[28px]" />
-                <th className="text-left font-bold py-2.5 px-2 w-[140px]">노드 / 인스턴스</th>
+                <th className="text-left font-bold py-2.5 px-2 w-[140px]">노드</th>
                 <th className="text-left font-bold py-2.5 px-2 w-[160px]">위치</th>
-                <th className="text-left font-bold py-2.5 px-2 w-[210px]">인스턴스 유형</th>
+                <th className="text-left font-bold py-2.5 px-2 w-[210px]">서버 모델</th>
                 <th className="text-left font-bold py-2.5 px-2 w-[120px]">GPU</th>
                 <th className="text-center font-bold py-2.5 px-2 w-[80px]">활성</th>
                 <th className="text-right font-bold py-2.5 px-2 w-[90px]">평균 사용률</th>
