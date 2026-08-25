@@ -13,7 +13,7 @@ const GROUPS: PersonaGroup[] = ['관리자', '개발자', '사용자'];
 /**
  * Topbar 우측 사용자 칩 — 클릭 시 페르소나 전환 드롭다운.
  * 9개 페르소나(관리자 4 / 개발자 3 / 사용자 2)를 그룹별로 나눠서 표시.
- * 선택값은 localStorage 에 보존되며 새로고침 후에도 유지된다.
+ * 선택값은 메모리 스토어에만 보존된다(새로고침 시 초기화).
  */
 export default function PersonaSwitcher() {
   const [open, setOpen] = useState(false);
@@ -56,12 +56,12 @@ export default function PersonaSwitcher() {
         className={cn(
           'inline-flex items-center gap-2 py-1 pl-1 pr-2.5 border rounded-full bg-white transition-colors',
           open
-            ? 'border-kb-yellow-dark bg-kb-yellow-bg'
-            : 'border-line hover:border-kb-yellow-dark',
+            ? 'border-brand-dark bg-brand-bg'
+            : 'border-line hover:border-brand-dark',
         )}
         title="페르소나 전환"
       >
-        <span className="w-[22px] h-[22px] rounded-full bg-kb-yellow text-ink inline-flex items-center justify-center text-[10px] font-extrabold">
+        <span className="w-[22px] h-[22px] rounded-full bg-brand text-ink inline-flex items-center justify-center text-[10px] font-extrabold">
           {current.initial}
         </span>
         <b className="text-ink-dark text-[12.5px] leading-none">{current.name}</b>
@@ -110,15 +110,15 @@ export default function PersonaSwitcher() {
                             onClick={() => handleSelect(p)}
                             className={cn(
                               'w-full grid grid-cols-[28px_1fr_16px] items-center gap-2 px-3 py-2 text-left hover:bg-surface-soft',
-                              selected && 'bg-kb-yellow-bg',
+                              selected && 'bg-brand-bg',
                             )}
                           >
                             <span
                               className={cn(
                                 'w-6 h-6 rounded-full inline-flex items-center justify-center text-[10.5px] font-extrabold border',
                                 selected
-                                  ? 'bg-kb-yellow-dark text-white border-kb-yellow-dark'
-                                  : 'bg-kb-yellow text-ink border-kb-yellow-dark',
+                                  ? 'bg-brand-dark text-white border-brand-dark'
+                                  : 'bg-brand text-ink border-brand-dark',
                               )}
                             >
                               {p.initial}

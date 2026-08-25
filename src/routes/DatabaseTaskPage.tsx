@@ -208,7 +208,7 @@ function RequestTab({ tables }: { tables: Table[] }) {
     <section className="card shadow-sm mb-3.5">
       <div className="flex items-center justify-between gap-3.5 py-3 px-[18px] border-b border-line-soft">
         <div className="text-sm font-extrabold text-ink">테이블 생성 요청서</div>
-        <button className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark">
+        <button className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark">
           ▶ 테이블 생성 신청
         </button>
       </div>
@@ -289,7 +289,7 @@ function RequestTab({ tables }: { tables: Table[] }) {
 
 /* ---------------- 스키마 ---------------- */
 
-const INPUT = 'w-full h-7 px-2 border border-line rounded text-[11.5px] bg-white focus:outline-none focus:border-kb-yellow-dark disabled:bg-transparent disabled:border-transparent disabled:px-0 disabled:text-ink-dark';
+const INPUT = 'w-full h-7 px-2 border border-line rounded text-[11.5px] bg-white focus:outline-none focus:border-brand-dark disabled:bg-transparent disabled:border-transparent disabled:px-0 disabled:text-ink-dark';
 
 function SchemaTab({
   tables,
@@ -382,7 +382,7 @@ function SchemaTab({
               </button>
               <button
                 onClick={submitRequest}
-                className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
               >
                 {isCreate ? '생성' : '수정'}
               </button>
@@ -390,14 +390,14 @@ function SchemaTab({
           ) : openTable ? (
             <button
               onClick={() => setEditing(true)}
-              className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
             >
               ✎ 수정
             </button>
           ) : (
             <button
               onClick={startCreate}
-              className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
             >
               ＋ 테이블 생성
             </button>
@@ -506,7 +506,7 @@ function SchemaTab({
                 <select
                   value={t.env}
                   onChange={(e) => patchTable(t.id, { env: e.target.value as AccountEnv })}
-                  className="h-7 px-2 border border-line rounded text-[11px] font-bold bg-white focus:outline-none focus:border-kb-yellow-dark"
+                  className="h-7 px-2 border border-line rounded text-[11px] font-bold bg-white focus:outline-none focus:border-brand-dark"
                 >
                   <option value="학습계">학습계</option>
                   <option value="서빙계">서빙계</option>
@@ -521,14 +521,14 @@ function SchemaTab({
                 onChange={(e) => patchTable(t.id, { table: e.target.value })}
                 disabled={!editing}
                 placeholder="table_name"
-                className="h-7 px-2 border border-line rounded text-[12px] font-mono font-extrabold text-ink bg-white focus:outline-none focus:border-kb-yellow-dark w-[200px] disabled:bg-transparent disabled:border-transparent disabled:px-0"
+                className="h-7 px-2 border border-line rounded text-[12px] font-mono font-extrabold text-ink bg-white focus:outline-none focus:border-brand-dark w-[200px] disabled:bg-transparent disabled:border-transparent disabled:px-0"
               />
               <input
                 value={t.desc}
                 onChange={(e) => patchTable(t.id, { desc: e.target.value })}
                 disabled={!editing}
                 placeholder="설명"
-                className="h-7 px-2 border border-line rounded text-[11.5px] text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark flex-1 disabled:bg-transparent disabled:border-transparent disabled:px-0"
+                className="h-7 px-2 border border-line rounded text-[11.5px] text-ink-dark bg-white focus:outline-none focus:border-brand-dark flex-1 disabled:bg-transparent disabled:border-transparent disabled:px-0"
               />
               {t.pending && !editing && (
                 <span className="inline-flex items-center py-[1px] px-1.5 rounded-full border border-warn-border bg-warn-bg text-warn text-[10px] font-extrabold whitespace-nowrap">
@@ -654,7 +654,7 @@ function SchemaTab({
                       value={ix.kind}
                       onChange={(e) => patchIdx(t.id, ix.id, { kind: e.target.value })}
                       disabled={!editing}
-                      className="h-7 px-2 border border-line rounded text-[11px] bg-white font-bold focus:outline-none focus:border-kb-yellow-dark w-[90px] disabled:bg-transparent disabled:border-transparent disabled:px-0 disabled:appearance-none"
+                      className="h-7 px-2 border border-line rounded text-[11px] bg-white font-bold focus:outline-none focus:border-brand-dark w-[90px] disabled:bg-transparent disabled:border-transparent disabled:px-0 disabled:appearance-none"
                     >
                       {IDX_KINDS.map((k) => (
                         <option key={k}>{k}</option>
@@ -665,7 +665,7 @@ function SchemaTab({
                       onChange={(e) => patchIdx(t.id, ix.id, { cols: e.target.value })}
                       disabled={!editing}
                       placeholder="컬럼 (예: customer_id, consult_at DESC)"
-                      className="h-7 px-2 border border-line rounded text-[11.5px] font-mono bg-white focus:outline-none focus:border-kb-yellow-dark flex-1 disabled:bg-transparent disabled:border-transparent disabled:px-0"
+                      className="h-7 px-2 border border-line rounded text-[11.5px] font-mono bg-white focus:outline-none focus:border-brand-dark flex-1 disabled:bg-transparent disabled:border-transparent disabled:px-0"
                     />
                     {editing && (
                       <button
@@ -769,7 +769,7 @@ function AccountTab({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setAdding(true)}
-            className="h-7 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[11px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+            className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark"
           >
             계정 생성
           </button>
@@ -871,7 +871,7 @@ function AccountTab({
                                     <button
                                       onClick={() => approve(a.id)}
                                       title="DBA 승인 처리"
-                                      className="h-6 px-2 border border-kb-yellow-dark bg-kb-yellow rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow-dark whitespace-nowrap"
+                                      className="h-6 px-2 border border-brand-dark bg-brand rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark whitespace-nowrap"
                                     >
                                       {deleting ? '삭제 승인 (DBA)' : '승인 (DBA)'}
                                     </button>
@@ -960,7 +960,7 @@ function DeleteAccountModal({
                     type="checkbox"
                     checked={sel.has(a.id)}
                     onChange={() => toggle(a.id)}
-                    className="accent-kb-yellow-dark"
+                    className="accent-brand-dark"
                   />
                   <span className="font-mono font-bold text-[12px] text-ink-dark">{a.name}</span>
                   <span className={cn('inline-flex items-center py-[1px] px-1.5 rounded-full border text-[10px] font-extrabold whitespace-nowrap', KIND_PILL[a.kind])}>
@@ -1037,7 +1037,7 @@ function AddAccountModal({
                   onClick={() => setEnv(e)}
                   className={cn(
                     'h-8 px-3 rounded border text-[12px] font-bold',
-                    env === e ? 'bg-kb-yellow border-kb-yellow-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    env === e ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {e}
@@ -1053,7 +1053,7 @@ function AddAccountModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: hong.gildong"
-              className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-brand-dark"
             />
             {nameDup && <div className="text-[10.5px] text-bad font-bold mt-1">이미 존재하는 계정명입니다.</div>}
           </Field>
@@ -1064,7 +1064,7 @@ function AddAccountModal({
               type="date"
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark"
             />
           </Field>
 
@@ -1077,7 +1077,7 @@ function AddAccountModal({
                   onClick={() => setPwMode(m)}
                   className={cn(
                     'h-8 px-3 rounded border text-[12px] font-bold',
-                    pwMode === m ? 'bg-kb-yellow border-kb-yellow-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    pwMode === m ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {m === 'auto' ? '자동 발급' : '수동 설정'}
@@ -1093,7 +1093,7 @@ function AddAccountModal({
                   value={pwValue}
                   onChange={(e) => setPwValue(e.target.value)}
                   placeholder="패스워드 (8자 이상)"
-                  className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-kb-yellow-dark"
+                  className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-brand-dark"
                 />
                 {pwValue.length > 0 && pwValue.trim().length < 8 && (
                   <div className="text-[10.5px] text-bad font-bold mt-1">8자 이상 입력하세요.</div>
@@ -1121,7 +1121,7 @@ function AddAccountModal({
                 password: pwMode === 'manual' ? pwValue.trim() : '',
               })
             }
-            className="h-8 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
           >
             결재 상신
           </button>
@@ -1178,7 +1178,7 @@ function ApprovalTab() {
                 className={cn(
                   'flex items-start gap-2 py-1.5 px-2 rounded border',
                   s.tone === 'done' && 'bg-ok-bg/40 border-ok-border',
-                  s.tone === 'current' && 'bg-kb-yellow-tint border-kb-yellow-dark',
+                  s.tone === 'current' && 'bg-brand-tint border-brand-dark',
                   s.tone === 'upcoming' && 'bg-white border-line-soft',
                 )}
               >
@@ -1186,7 +1186,7 @@ function ApprovalTab() {
                   className={cn(
                     'w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-extrabold flex-shrink-0',
                     s.tone === 'done' && 'bg-ok text-white',
-                    s.tone === 'current' && 'bg-kb-yellow-dark text-white',
+                    s.tone === 'current' && 'bg-brand-dark text-white',
                     s.tone === 'upcoming' && 'bg-white text-ink-light border border-line',
                   )}
                 >
@@ -1269,7 +1269,7 @@ interface StorageFile {
   at: string;
   by: string;
 }
-const STORAGE_BUCKET = 'obj://kb-internal/pb-ingest';
+const STORAGE_BUCKET = 'obj://aip-internal/pb-ingest';
 const STORAGE_FILES: StorageFile[] = [
   { id: uid(), name: 'customer_seed.csv', format: 'CSV', sizeMB: 12.4, path: '/seed/', at: '2026-08-05', by: '정오너' },
   { id: uid(), name: 'consult_2020_2025.parquet', format: 'Parquet', sizeMB: 842.1, path: '/migration/', at: '2026-08-04', by: '이도현' },
@@ -1345,7 +1345,7 @@ function LoadTab({ tables }: { tables: Table[] }) {
         </div>
         <button
           onClick={() => setAdding(true)}
-          className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+          className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
         >
           ＋ 적재 작업
         </button>
@@ -1534,7 +1534,7 @@ function LoadApprovalModal({
                 onChange={(e) => setNote(e.target.value)}
                 rows={3}
                 placeholder="승인·반려 사유 (선택)"
-                className="w-full text-[12px] text-ink-dark leading-[1.6] border border-line rounded p-2 bg-white resize-y focus:outline-none focus:border-kb-yellow-dark"
+                className="w-full text-[12px] text-ink-dark leading-[1.6] border border-line rounded p-2 bg-white resize-y focus:outline-none focus:border-brand-dark"
               />
             </SidebarCard>
           </aside>
@@ -1596,7 +1596,7 @@ function LApprStep({ seq, label, sub, tone }: { seq: string; label: string; sub:
         tone === 'done' && 'bg-ok-bg/40 border-ok-border',
         tone === 'rejected' && 'bg-bad-bg border-bad-border',
         tone === 'upcoming' && 'bg-white border-line-soft',
-        current && 'bg-kb-yellow-tint border-kb-yellow-dark',
+        current && 'bg-brand-tint border-brand-dark',
       )}
     >
       <span
@@ -1605,7 +1605,7 @@ function LApprStep({ seq, label, sub, tone }: { seq: string; label: string; sub:
           tone === 'done' && 'bg-ok text-white border border-ok',
           tone === 'rejected' && 'bg-bad text-white border border-bad',
           tone === 'upcoming' && 'bg-white text-ink-light border border-line',
-          current && 'bg-kb-yellow-dark text-white border border-kb-yellow-dark',
+          current && 'bg-brand-dark text-white border border-brand-dark',
         )}
       >
         {tone === 'rejected' ? '✕' : seq}
@@ -1671,7 +1671,7 @@ function LoadJobModal({
                   onClick={() => setSource(s)}
                   className={cn(
                     'h-8 px-3 rounded border text-[12px] font-bold',
-                    source === s ? 'bg-kb-yellow border-kb-yellow-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    source === s ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {SOURCE_ICON[s]} {s}
@@ -1692,7 +1692,7 @@ function LoadJobModal({
             <select
               value={table}
               onChange={(e) => setTable(e.target.value)}
-              className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-brand-dark"
             >
               {envTables.length === 0 && <option value="">(테이블 없음)</option>}
               {envTables.map((t) => (
@@ -1709,7 +1709,7 @@ function LoadJobModal({
                   value={version}
                   onChange={(e) => setVersion(e.target.value)}
                   placeholder="예: V4"
-                  className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-kb-yellow-dark"
+                  className="w-full h-8 px-2.5 border border-line rounded text-[12px] font-mono bg-white focus:outline-none focus:border-brand-dark"
                 />
               </Field>
               {/* 변경 사유 */}
@@ -1718,7 +1718,7 @@ function LoadJobModal({
                   value={origin}
                   onChange={(e) => setOrigin(e.target.value)}
                   placeholder="예: channel 컬럼 추가 → UNKNOWN 백필"
-                  className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+                  className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark"
                 />
               </Field>
             </>
@@ -1751,7 +1751,7 @@ function LoadJobModal({
                       onClick={() => setMode(m)}
                       className={cn(
                         'h-8 px-3 rounded border text-[11.5px] font-bold',
-                        mode === m ? 'bg-kb-yellow border-kb-yellow-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                        mode === m ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
                       )}
                     >
                       {m}
@@ -1771,7 +1771,7 @@ function LoadJobModal({
                   onClick={() => setLang(l)}
                   className={cn(
                     'h-7 px-2.5 rounded border text-[11px] font-bold',
-                    lang === l ? 'bg-kb-yellow border-kb-yellow-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
+                    lang === l ? 'bg-brand border-brand-dark text-ink' : 'bg-white border-line text-ink-mid hover:bg-surface',
                   )}
                 >
                   {l}
@@ -1786,7 +1786,7 @@ function LoadJobModal({
               placeholder={codePh}
               rows={7}
               spellCheck={false}
-              className="w-full px-2.5 py-2 border border-line rounded text-[11.5px] font-mono leading-[1.6] text-ink-dark bg-surface-soft focus:outline-none focus:border-kb-yellow-dark resize-y"
+              className="w-full px-2.5 py-2 border border-line rounded text-[11.5px] font-mono leading-[1.6] text-ink-dark bg-surface-soft focus:outline-none focus:border-brand-dark resize-y"
             />
           </Field>
         </div>
@@ -1809,7 +1809,7 @@ function LoadJobModal({
                 code: code.trim(),
               })
             }
-            className="h-8 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
           >
             적재 실행
           </button>
@@ -1849,7 +1849,7 @@ function FilePickerModal({ onClose, onPick }: { onClose: () => void; onPick: (f:
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="파일명 검색"
-            className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark mb-2.5"
+            className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark mb-2.5"
           />
           <div className="border border-line-soft rounded-lg overflow-x-auto">
             <table className="w-full text-[11.5px]">
@@ -1877,7 +1877,7 @@ function FilePickerModal({ onClose, onPick }: { onClose: () => void; onPick: (f:
                     <td className="py-2 px-2 text-right">
                       <button
                         onClick={() => onPick(f)}
-                        className="h-6 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow-dark whitespace-nowrap"
+                        className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark whitespace-nowrap"
                       >
                         선택
                       </button>
@@ -1908,20 +1908,20 @@ interface ConnInfo {
 const CONNECTIONS: ConnInfo[] = [
   {
     env: '학습계',
-    host: 'pb-consult-db-dev.kb-internal.local',
+    host: 'pb-consult-db-dev.aip.group.local',
     port: 5432,
     database: 'pb_consult_dev',
-    jdbc: 'jdbc:postgresql://pb-consult-db-dev.kb-internal.local:5432/pb_consult_dev',
+    jdbc: 'jdbc:postgresql://pb-consult-db-dev.aip.group.local:5432/pb_consult_dev',
     account: 'svc_pb_consult_ro_dev (읽기 전용)',
     ssl: 'require · TLS 1.2+',
     network: '내부망(폐쇄망)',
   },
   {
     env: '서빙계',
-    host: 'pb-consult-db.kb-internal.local',
+    host: 'pb-consult-db.aip.group.local',
     port: 5432,
     database: 'pb_consult',
-    jdbc: 'jdbc:postgresql://pb-consult-db.kb-internal.local:5432/pb_consult',
+    jdbc: 'jdbc:postgresql://pb-consult-db.aip.group.local:5432/pb_consult',
     account: 'svc_pb_consult_ro (읽기 전용)',
     ssl: 'require · TLS 1.2+',
     network: '내부망(폐쇄망)',
@@ -1987,7 +1987,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       className={cn(
         'relative py-2.5 px-3.5 text-[13px] font-bold -mb-px border-b-2',
-        active ? 'text-ink border-kb-yellow-dark' : 'text-ink-mid border-transparent hover:text-ink-dark',
+        active ? 'text-ink border-brand-dark' : 'text-ink-mid border-transparent hover:text-ink-dark',
       )}
     >
       {children}

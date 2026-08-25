@@ -31,7 +31,7 @@ interface Props {
 const EXT_BADGE: Record<string, string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 
@@ -200,7 +200,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
             onClick={startAll}
             disabled={startablesForBulk.length === 0}
             title={startablesForBulk.length === 0 ? '파싱할 대기 문서가 없습니다' : `대기 문서 ${startablesForBulk.length}건 일괄 파싱`}
-            className="h-7 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
+            className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
           >
             ▶ 일괄 파싱{startablesForBulk.length > 0 ? ` ${startablesForBulk.length}` : ''}
           </button>
@@ -242,7 +242,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
           <div className="text-[11.5px] text-ink-mid mb-3.5">저장소에서 문서를 선택해 「데이터셋에 담기」 하세요.</div>
           <button
             onClick={onGotoStorage}
-            className="h-8 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+            className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark"
           >
             저장소로 이동
           </button>
@@ -363,7 +363,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                       <select
                         value={pipelineId}
                         onChange={(e) => setPipelineMap((m) => ({ ...m, [d.id]: e.target.value }))}
-                        className="w-full h-7 px-1.5 border border-line rounded text-[11px] font-bold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+                        className="w-full h-7 px-1.5 border border-line rounded text-[11px] font-bold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
                         title="파이프라인"
                       >
                         <optgroup label="기본 제공">
@@ -385,7 +385,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                           <select
                             value={parserId}
                             onChange={(e) => setParserMap((m) => ({ ...m, [d.id]: e.target.value as ParserId }))}
-                            className="w-full h-6 px-1 border border-line rounded text-[10.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+                            className="w-full h-6 px-1 border border-line rounded text-[10.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
                             title="파서"
                           >
                             {parsersFor(d).map((p) => (
@@ -397,7 +397,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                             onChange={(e) =>
                               setChunkerMap((m) => ({ ...m, [d.id]: e.target.value as RunSettings['chunking'] }))
                             }
-                            className="w-full h-6 px-1 border border-line rounded text-[10.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+                            className="w-full h-6 px-1 border border-line rounded text-[10.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
                             title="청커"
                           >
                             {(['length', 'semantic', 'custom'] as RunSettings['chunking'][]).map((c) => (
@@ -434,7 +434,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                       {s === 'stalled' && (
                         <button
                           onClick={() => onStartFile(d, rowSettings)}
-                          className="h-7 px-2 bg-kb-yellow border border-kb-yellow-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                          className="h-7 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
                         >
                           재시도
                         </button>
@@ -442,7 +442,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                       {s === 'queued' && (
                         <button
                           onClick={() => onStartFile(d, rowSettings)}
-                          className="h-7 px-2 bg-kb-yellow border border-kb-yellow-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                          className="h-7 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
                         >
                           파싱
                         </button>
@@ -474,7 +474,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                     setPageSize(Number(e.target.value));
                     setPage(1);
                   }}
-                  className="h-[26px] px-1.5 border border-line rounded text-[11px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+                  className="h-[26px] px-1.5 border border-line rounded text-[11px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
                   title="페이지당 표시 개수"
                 >
                   <option value={10}>10개씩</option>
@@ -501,7 +501,7 @@ const ParseSection = forwardRef<HTMLElement, Props>(function ParseSection(
                         className={cn(
                           'h-[26px] min-w-[26px] px-1.5 border rounded text-[11px] font-bold tabular-nums',
                           on
-                            ? 'border-kb-yellow-dark bg-kb-yellow-tint text-ink font-extrabold'
+                            ? 'border-brand-dark bg-brand-tint text-ink font-extrabold'
                             : 'border-line bg-white text-ink-dark hover:bg-surface',
                         )}
                       >

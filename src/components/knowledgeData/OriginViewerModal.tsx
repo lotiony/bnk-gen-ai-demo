@@ -67,7 +67,7 @@ export default function OriginViewerModal({ row, onClose }: Props) {
           <p className="mb-3">
             대표 예·적금 상품의 기본금리와 우대금리 조건을 정리한다. 우대금리는 급여이체·자동이체·
             카드실적 등 조건 충족 여부에 따라 차등 적용되며, PB는 고객 거래 현황을 확인해{' '}
-            <mark className="bg-kb-yellow-tint px-1 rounded">적용 가능한 우대 조건</mark>을 안내한다.
+            <mark className="bg-brand-tint px-1 rounded">적용 가능한 우대 조건</mark>을 안내한다.
           </p>
           <h3 className="text-sm font-extrabold text-ink mb-2 mt-4">
             표 3.2.1 — 상품별 금리·조건 (2026년)
@@ -83,13 +83,13 @@ export default function OriginViewerModal({ row, onClose }: Props) {
             </thead>
             <tbody>
               <tr>
-                <td className="border border-line-soft p-2">KB 정기예금</td>
+                <td className="border border-line-soft p-2">그룹 정기예금</td>
                 <td className="border border-line-soft p-2 text-right tabular-nums">3.10%</td>
                 <td className="border border-line-soft p-2 text-right tabular-nums">3.55%</td>
                 <td className="border border-line-soft p-2 text-right tabular-nums">제한 없음</td>
               </tr>
               <tr>
-                <td className="border border-line-soft p-2">KB 자유적금</td>
+                <td className="border border-line-soft p-2">그룹 자유적금</td>
                 <td className="border border-line-soft p-2 text-right tabular-nums">3.40%</td>
                 <td className="border border-line-soft p-2 text-right tabular-nums">4.20%</td>
                 <td className="border border-line-soft p-2 text-right tabular-nums">월 300만원</td>
@@ -105,7 +105,7 @@ export default function OriginViewerModal({ row, onClose }: Props) {
           <h3 className="text-sm font-extrabold text-ink mb-2 mt-4">PB 상담 활용 가이드</h3>
           <p>
             고객이 "어떤 상품이 저에게 맞나요"라고 물으면 자산 성향·목표를 확인한 뒤{' '}
-            <mark className="bg-kb-yellow-tint px-1 rounded">적합 상품 매칭 가이드 PB-007</mark>에 따라
+            <mark className="bg-brand-tint px-1 rounded">적합 상품 매칭 가이드 PB-007</mark>에 따라
             적합 상품을 조회·요약해 답변 초안을 제공한다.
           </p>
         </div>

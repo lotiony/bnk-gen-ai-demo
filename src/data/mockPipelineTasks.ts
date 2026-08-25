@@ -239,7 +239,7 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
       {
         id: 'idx-compliance-rules-3p4k',
         indexName: '전사_규정_컴플라이언스_지식인덱스',
-        ownerTask: '전사 규정·컴플라이언스 KB',
+        ownerTask: '전사 규정·컴플라이언스 지식',
         mine: false,
         sens: 3,
         refresh: '실시간',
@@ -313,7 +313,7 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
           { name: 'nDCG@10', baseline: 0.74, threshold: 0.78, current: 0.79, passed: true },
         ],
         note: '3차 — rerank 가중 0.7로 상향, 모든 임계값 통과',
-        consoleRunUrl: 'https://search-evals.kbagentops.kbfg.com/runs/EVAL-3',
+        consoleRunUrl: 'https://evals.aip.group.local/runs/EVAL-3',
       },
       {
         id: 'EVAL-2',
@@ -328,7 +328,7 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
           { name: 'nDCG@10', baseline: 0.74, threshold: 0.78, current: 0.76, passed: false },
         ],
         note: '2차 — rerank 가중 0.5, 일부 게이트 미달',
-        consoleRunUrl: 'https://search-evals.kbagentops.kbfg.com/runs/EVAL-2',
+        consoleRunUrl: 'https://evals.aip.group.local/runs/EVAL-2',
       },
       {
         id: 'EVAL-1',
@@ -343,16 +343,16 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
           { name: 'nDCG@10', baseline: 0.74, threshold: 0.78, current: 0.71, passed: false },
         ],
         note: '1차 — Hybrid only (rerank 미적용), 베이스라인 대비 하락',
-        consoleRunUrl: 'https://search-evals.kbagentops.kbfg.com/runs/EVAL-1',
+        consoleRunUrl: 'https://evals.aip.group.local/runs/EVAL-1',
       },
     ],
     evalConsole: {
       name: 'Search Evals',
-      url: 'https://search-evals.kbagentops.kbfg.com/projects/SRC-301',
+      url: 'https://evals.aip.group.local/projects/SRC-301',
       traceCount: 4218,
       lastSyncedAt: '2026-05-23 14:08',
-      runUrl: 'https://search-evals.kbagentops.kbfg.com/projects/SRC-301/runs/new',
-      datasetUrl: 'https://search-evals.kbagentops.kbfg.com/projects/SRC-301/datasets',
+      runUrl: 'https://evals.aip.group.local/projects/SRC-301/runs/new',
+      datasetUrl: 'https://evals.aip.group.local/projects/SRC-301/datasets',
     },
     consumers: [
       {
@@ -373,7 +373,7 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
     apiKey: {
       fullKey: 'sk-train-A8h2k9PqRtX4mNbVcF6sLwYz3DjGhKfE5uTqWnBpQrJyXcVnMr',
       lastFour: 'k7zA',
-      endpoint: 'https://search-dev.kbagentops.kbfg.com/v1/search/regulation-compliance',
+      endpoint: 'https://retriever-dev.aip.group.local/v1/search/regulation-compliance',
       issuedAt: '2026-05-19 10:24',
       issuedBy: '조현우',
       callCount: 4218,
@@ -419,7 +419,7 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
         approvalId: 'APR-2026-0367',
       },
     ],
-    endpointDev: 'https://search-dev.kbagentops.kbfg.com/v1/search/regulation-compliance',
+    endpointDev: 'https://retriever-dev.aip.group.local/v1/search/regulation-compliance',
     endpointProd: undefined,
     callsDaily: 0,
     p95Ms: 720,

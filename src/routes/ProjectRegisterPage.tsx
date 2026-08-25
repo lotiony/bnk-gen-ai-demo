@@ -223,7 +223,7 @@ export default function ProjectRegisterPage() {
                   <ChannelCard
                     active={channel === 'portal'}
                     onClick={() => setChannel('portal')}
-                    label="① KB GenAI ONE 통합 포털"
+                    label="① 그룹 공통 AI 포털"
                   />
                 )}
                 <ChannelCard
@@ -504,7 +504,7 @@ export default function ProjectRegisterPage() {
                   className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-surface-soft"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-kb-yellow-tint text-ink font-extrabold text-2xs border border-kb-yellow-dark">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-brand-tint text-ink font-extrabold text-2xs border border-brand-dark">
                       {letter}
                     </span>
                     <span className="font-semibold text-ink-dark">{name}</span>
@@ -574,14 +574,14 @@ function RadioBox({
       className={cn(
         'inline-flex items-center gap-2 py-2 px-3 rounded border cursor-pointer text-[12.5px] font-semibold',
         checked
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
       )}
     >
       <span
         className={cn(
           'w-3.5 h-3.5 rounded-full border-2 inline-block',
-          checked ? 'border-kb-yellow-dark bg-kb-yellow' : 'border-line',
+          checked ? 'border-brand-dark bg-brand' : 'border-line',
         )}
       />
       {label}
@@ -633,8 +633,8 @@ function ChannelCard({
       className={cn(
         'w-full text-left p-3 rounded border',
         active
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark'
-          : 'bg-white border-line hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark'
+          : 'bg-white border-line hover:border-brand-dark',
       )}
     >
       <div className="text-[12.5px] font-extrabold text-ink">{label}</div>
@@ -665,7 +665,7 @@ function Progress({
       </div>
       <div className="h-1.5 bg-surface-soft rounded overflow-hidden">
         <div
-          className={cn('h-full', tone === 'bad' ? 'bg-bad' : 'bg-kb-yellow-dark')}
+          className={cn('h-full', tone === 'bad' ? 'bg-bad' : 'bg-brand-dark')}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -692,14 +692,14 @@ function ApprLineStep({
         tone === 'draft' && 'bg-surface-soft border-line-soft',
         tone === 'auto' && 'bg-warn-bg border-warn-border',
         tone === 'normal' && 'bg-white border-line-soft',
-        current && 'bg-kb-yellow-tint border-kb-yellow-dark',
+        current && 'bg-brand-tint border-brand-dark',
       )}
     >
       <span
         className={cn(
           'w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-extrabold flex-shrink-0',
           current
-            ? 'bg-kb-yellow-dark text-white border border-kb-yellow-dark'
+            ? 'bg-brand-dark text-white border border-brand-dark'
             : 'bg-white border border-line text-ink-dark',
         )}
       >

@@ -47,7 +47,7 @@ export default function SynonymModal({ open, onClose, indexName, kind, rules, on
           </span>
           <button
             onClick={onClose}
-            className="h-8 px-4 bg-kb-yellow border border-kb-yellow-dark rounded text-[12px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+            className="h-8 px-4 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark"
           >
             완료
           </button>
@@ -74,12 +74,12 @@ export default function SynonymModal({ open, onClose, indexName, kind, rules, on
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()}
             placeholder="동등: 적금, 정기적금, 예적금   ·   명시: ISA => 개인종합자산관리계좌"
-            className="flex-1 h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+            className="flex-1 h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark"
           />
           <button
             onClick={add}
             disabled={!draft.trim()}
-            className="h-8 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
             ＋ 추가
           </button>

@@ -51,7 +51,7 @@ const INDEX_KIND_LABEL: Record<IndexKind, string> = {
   bm25: 'BM25',
 };
 
-const randKey = () => `kb-rag-sk-${Math.random().toString(16).slice(2, 18).padEnd(16, '0')}`;
+const randKey = () => `aip-rag-sk-${Math.random().toString(16).slice(2, 18).padEnd(16, '0')}`;
 const mask = (key: string) => `${key.slice(0, 10)}${'•'.repeat(8)}${key.slice(-4)}`;
 const nowLabel = () =>
   new Date().toLocaleString('ko-KR', {
@@ -91,8 +91,8 @@ function buildApiMock(): RagApi {
   return {
     id: 'api-pb-7m2k',
     name: '지식 검색 API',
-    endpoint: 'https://kb-genai-dev.search.windows.net/indexes/pb-consult/docs/search',
-    apiKey: 'kb-rag-sk-3f9a2b7c1d4e88a1',
+    endpoint: 'https://search-dev.aip.group.local/indexes/pb-consult/docs/search',
+    apiKey: 'aip-rag-sk-3f9a2b7c1d4e88a1',
     indexIds: ['idx-vp-call-7m2k'],
     indexVersions: { 'idx-vp-call-7m2k': 'v4' },
     search: { queryType: 'hybrid', semanticRanker: true, vectorAlgo: 'hnsw', topK: 5, captions: true },
@@ -157,7 +157,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
       return {
         id: `api-${Date.now()}`,
         name: payload.name,
-        endpoint: `https://kb-genai-dev.search.windows.net/indexes/${slug}/docs/search`,
+        endpoint: `https://search-dev.aip.group.local/indexes/${slug}/docs/search`,
         apiKey: randKey(),
         indexIds: payload.indexIds,
         indexVersions: payload.indexVersions,
@@ -248,7 +248,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
           <button
             onClick={() => setModalOpen(true)}
             disabled={indexes.length === 0}
-            className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ＋ RAG API 발급
           </button>
@@ -292,7 +292,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
                 onClick={() => setModalOpen(true)}
                 disabled={pending}
                 title={pending ? '이미 승인 대기 중인 배포 신청이 있습니다' : '설정을 확인·변경하고 학습계 배포를 신청'}
-                className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {pending ? '승인 대기 중' : '▶ 학습계 배포 신청'}
               </button>
@@ -330,11 +330,11 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
                       onChange={(e) => setTestQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && runTest()}
                       placeholder="질의문을 입력하세요"
-                      className="flex-1 h-8 px-2.5 border border-line rounded text-[12px] text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+                      className="flex-1 h-8 px-2.5 border border-line rounded text-[12px] text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
                     />
                     <button
                       onClick={runTest}
-                      className="h-8 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark flex-shrink-0"
+                      className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark flex-shrink-0"
                     >
                       ▶ 검색 실행
                     </button>
@@ -573,7 +573,7 @@ function IssueApiModal({
                 search,
               })
             }
-            className="py-2 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {existing ? '▶ 학습계 배포 신청' : '▶ API 발급'}
           </button>
@@ -599,7 +599,7 @@ function IssueApiModal({
                 key={idx.indexId}
                 className={cn(
                   'flex items-center gap-2 py-2 px-2.5 border rounded transition-colors',
-                  on ? 'border-kb-yellow-dark bg-kb-yellow-tint' : 'border-line bg-white',
+                  on ? 'border-brand-dark bg-brand-tint' : 'border-line bg-white',
                   mismatch && 'opacity-50',
                 )}
               >
@@ -611,7 +611,7 @@ function IssueApiModal({
                   <span
                     className={cn(
                       'w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center',
-                      on ? 'border-kb-yellow-dark bg-kb-yellow-dark' : 'border-line',
+                      on ? 'border-brand-dark bg-brand-dark' : 'border-line',
                     )}
                   >
                     {on && <span className="text-white text-[10px] font-extrabold">✓</span>}
@@ -634,7 +634,7 @@ function IssueApiModal({
                     value={selVer}
                     onChange={(e) => setIndexVersions((m) => ({ ...m, [idx.indexId]: e.target.value }))}
                     title="버전 선택"
-                    className="h-8 px-2 border border-line rounded text-[11px] font-bold text-ink-dark bg-white flex-shrink-0 focus:outline-none focus:border-kb-yellow-dark"
+                    className="h-8 px-2 border border-line rounded text-[11px] font-bold text-ink-dark bg-white flex-shrink-0 focus:outline-none focus:border-brand-dark"
                   >
                     {idx.versions.map((v) => (
                       <option key={v.version} value={v.version}>
@@ -667,7 +667,7 @@ function IssueApiModal({
                   onClick={() => setQueryType(q)}
                   className={cn(
                     'py-2 px-2 border rounded text-center text-[12px] font-extrabold transition-colors',
-                    on ? 'border-kb-yellow-dark bg-kb-yellow-tint text-ink shadow-sm' : 'border-line bg-white text-ink-mid hover:border-kb-yellow-dark',
+                    on ? 'border-brand-dark bg-brand-tint text-ink shadow-sm' : 'border-line bg-white text-ink-mid hover:border-brand-dark',
                   )}
                 >
                   {QUERY_TYPE_LABEL[q]}
@@ -688,7 +688,7 @@ function IssueApiModal({
               value={vectorAlgo}
               disabled={queryType === 'keyword'}
               onChange={(e) => setVectorAlgo(e.target.value as VectorAlgo)}
-              className="w-full h-9 px-2.5 border border-line rounded text-[12px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark disabled:opacity-50"
+              className="w-full h-9 px-2.5 border border-line rounded text-[12px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark disabled:opacity-50"
             >
               <option value="hnsw">HNSW</option>
               <option value="knn">Exhaustive KNN</option>
@@ -705,7 +705,7 @@ function IssueApiModal({
               max={50}
               value={topK}
               onChange={(e) => setTopK(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
-              className="w-full h-9 px-3 border border-line rounded text-[12.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="w-full h-9 px-3 border border-line rounded text-[12.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
             />
           </div>
         </div>
@@ -715,7 +715,7 @@ function IssueApiModal({
             onClick={() => setSemanticRanker((v) => !v)}
             className={cn(
               'flex items-start gap-2.5 py-2 px-3 border rounded text-left transition-colors',
-              semanticRanker ? 'border-kb-yellow-dark bg-[#FFFEF8]' : 'border-line bg-white hover:border-kb-yellow-dark',
+              semanticRanker ? 'border-brand-dark bg-[#F3F9F8]' : 'border-line bg-white hover:border-brand-dark',
             )}
           >
             <ToggleDot on={semanticRanker} />
@@ -733,7 +733,7 @@ function IssueApiModal({
             className={cn(
               'flex items-start gap-2.5 py-2 px-3 border rounded text-left transition-colors',
               !semanticRanker && 'opacity-50 cursor-not-allowed',
-              captions && semanticRanker ? 'border-kb-yellow-dark bg-[#FFFEF8]' : 'border-line bg-white hover:border-kb-yellow-dark',
+              captions && semanticRanker ? 'border-brand-dark bg-[#F3F9F8]' : 'border-line bg-white hover:border-brand-dark',
             )}
           >
             <ToggleDot on={captions && semanticRanker} />

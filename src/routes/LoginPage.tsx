@@ -8,7 +8,7 @@ const GROUPS: PersonaGroup[] = ['관리자', '개발자', '사용자'];
 
 /**
  * SSO 계정 선택 스타일 로그인 페이지.
- * 실제로는 KB Digital Identity SSO 로 자동 로그인되지만,
+ * 실제로는 그룹 통합 SSO 로 자동 로그인되지만,
  * 데모 편의를 위해 계정 목록을 노출하고 클릭 시 즉시 로그인 처리.
  */
 export default function LoginPage() {
@@ -27,15 +27,15 @@ export default function LoginPage() {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5">
-            <span className="bg-kb-yellow px-3 py-1.5 rounded-md text-ink font-black text-lg leading-none">
-              KB
+            <span className="bg-brand px-3 py-1.5 rounded-md text-ink font-black text-lg leading-none">
+              BNK
             </span>
             <span className="text-[18px] font-extrabold text-ink tracking-tight">
-              GenAI Portal 2.0
+              공동 생성형 AI 플랫폼
             </span>
           </div>
           <div className="text-[11.5px] text-ink-mid font-semibold mt-2">
-            KB금융그룹 AI Agent 운영 플랫폼
+            BNK금융그룹 공동 생성형 AI 플랫폼
           </div>
         </div>
 
@@ -70,7 +70,7 @@ export default function LoginPage() {
                         className={cn(
                           'w-full grid grid-cols-[36px_1fr_auto] items-center gap-3 px-6 py-2.5 text-left transition-colors',
                           loading
-                            ? 'bg-kb-yellow-bg'
+                            ? 'bg-brand-bg'
                             : 'hover:bg-surface-soft',
                           loadingId !== null && !loading && 'opacity-50',
                         )}
@@ -79,8 +79,8 @@ export default function LoginPage() {
                           className={cn(
                             'w-9 h-9 rounded-full inline-flex items-center justify-center text-[13px] font-extrabold border',
                             loading
-                              ? 'bg-kb-yellow-dark text-white border-kb-yellow-dark'
-                              : 'bg-kb-yellow text-ink border-kb-yellow-dark',
+                              ? 'bg-brand-dark text-white border-brand-dark'
+                              : 'bg-brand text-ink border-brand-dark',
                           )}
                         >
                           {p.initial}
@@ -110,7 +110,7 @@ export default function LoginPage() {
           </div>
 
           <div className="px-6 py-3 border-t border-line-soft flex items-center justify-between text-[10.5px] text-ink-mid font-semibold">
-            <span>🔒 KB Digital Identity SSO</span>
+            <span>🔒 그룹 통합 SSO</span>
             <a href="#" className="hover:text-ink-dark">
               다른 계정 사용
             </a>
@@ -118,7 +118,7 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center text-[10.5px] text-ink-light font-semibold mt-5">
-          © 2026 KB Financial Group · Internal Use Only
+          © 2026 BNK금융그룹 · 제안 시연용 데모
         </div>
       </div>
     </div>

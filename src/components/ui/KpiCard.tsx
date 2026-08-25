@@ -60,7 +60,7 @@ export default function KpiCard({
               key={i}
               className={cn(
                 'flex-1 rounded-[1px] min-h-[3px]',
-                i === spark.length - 1 ? 'bg-kb-yellow-dark' : 'bg-line-soft',
+                i === spark.length - 1 ? 'bg-brand-dark' : 'bg-line-soft',
               )}
               style={{ height: `${h}%` }}
             />

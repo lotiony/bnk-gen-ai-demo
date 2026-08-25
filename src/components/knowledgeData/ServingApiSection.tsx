@@ -10,8 +10,8 @@ import {
 } from '@/lib/deployApprovalStore';
 import { SearchSummary } from './RagApiSection';
 
-const PROD_ENDPOINT = 'https://kb-genai.search.windows.net/indexes/pb-consult/docs/search';
-const PROD_KEY = 'kb-rag-sk-9d2e77c4b1a0prod';
+const PROD_ENDPOINT = 'https://search.aip.group.local/indexes/pb-consult/docs/search';
+const PROD_KEY = 'aip-rag-sk-9d2e77c4b1a0prod';
 
 const mask = (key: string) => `${key.slice(0, 10)}${'•'.repeat(8)}${key.slice(-4)}`;
 const nowLabel = () =>
@@ -108,7 +108,7 @@ export default function ServingApiSection() {
                   ? '먼저 학습계에 배포된 빌드가 필요합니다'
                   : '현재 학습계 빌드를 서빙계(운영)로 배포 신청'
               }
-              className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {servPending ? '승인 대기 중' : '▶ 서빙계 배포 신청'}
             </button>

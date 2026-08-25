@@ -31,7 +31,7 @@ export default function GNB() {
           const className = cn(
             'py-3.5 px-[18px] text-[13px] font-semibold border-b-2 border-transparent',
             isActive
-              ? 'text-ink font-extrabold border-kb-yellow-dark'
+              ? 'text-ink font-extrabold border-brand-dark'
               : 'text-ink-mid hover:text-ink-dark',
           );
           if (item.to === '#') {

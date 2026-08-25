@@ -208,7 +208,7 @@ const EVENTS: Record<string, PiiFilterEvent[]> = {
       ts: '2026-05-23 17:22',
       itemCode: 'ACCT-KR',
       itemName: '계좌번호',
-      contextSnippet: '국민은행 [XXX-XX-XXXXXX]로 이체 부탁드립니다',
+      contextSnippet: '부산은행 [XXX-XX-XXXXXX]로 이체 부탁드립니다',
       source: 'run-9c39',
       direction: 'input',
     },

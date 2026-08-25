@@ -1,7 +1,7 @@
 import type { FileRow } from './storageData';
 import type { FileRunStatus } from './parseRunData';
 
-export type EmbedModelId = 'bge-m3-ko' | 'text-embedding-3-large' | 'kb-embed-finance';
+export type EmbedModelId = 'bge-m3-ko' | 'text-embedding-3-large' | 'aip-embed-finance';
 
 export interface EmbedModelDef {
   id: EmbedModelId;
@@ -28,14 +28,14 @@ export const EMBED_MODELS: EmbedModelDef[] = [
     desc: '한국어·금융 도메인 파인튜닝 · 사내 GPU · 권장 기본값',
   },
   {
-    id: 'kb-embed-finance',
-    name: 'KB Embed Finance',
-    short: 'kb-embed-finance',
+    id: 'aip-embed-finance',
+    name: 'AIP Embed Finance',
+    short: 'aip-embed-finance',
     source: 'on-prem',
     dimension: 768,
     version: 'v0.9.1',
     costPerKWon: 0,
-    desc: 'KB 사내 금융 코퍼스 학습 · 짧은 청크에 강점',
+    desc: '그룹 금융 코퍼스 학습 · 짧은 청크에 강점',
   },
   {
     id: 'text-embedding-3-large',
@@ -230,7 +230,7 @@ export function buildIndexListMock(): IndexWithVersions[] {
           version: 'v2',
           createdAt: '2025-12-30 15:12',
           createdBy: '조현우',
-          modelId: 'kb-embed-finance',
+          modelId: 'aip-embed-finance',
           kind: 'bm25',
           vectors: 842,
           sizeMB: 2.3,

@@ -113,9 +113,9 @@ export default function ApprovalDetailPage() {
             defaultOpen
           >
             <KvGrid>
-              <KvRow k="프로젝트명" v="리스크 관리 에이전트_금융AI2센터" tone="strong" />
+              <KvRow k="프로젝트명" v="리스크 관리 에이전트_AI디지털전략부" tone="strong" />
               <KvRow k="프로젝트 코드" v="prj-vp-7k3m9d" />
-              <KvRow k="소속 부서·팀" v="금융AI2센터" />
+              <KvRow k="소속 부서·팀" v="AI디지털전략부" />
               <KvRow
                 k="프로젝트 오너 그룹"
                 v={
@@ -236,7 +236,7 @@ export default function ApprovalDetailPage() {
                   현재 점유
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 bg-kb-yellow rounded-sm" />
+                  <span className="inline-block w-2.5 h-2.5 bg-brand rounded-sm" />
                   이 과제 추가 시
                 </span>
                 <span className="ml-auto">임계치 90% 도달 시 풀 증설 사전 합의 권장</span>
@@ -256,7 +256,7 @@ export default function ApprovalDetailPage() {
             <KvGrid>
               <KvRow
                 k="사전 협의 담당자"
-                v={<ChipReadonly primary>김국민</ChipReadonly>}
+                v={<ChipReadonly primary>김플랫</ChipReadonly>}
               />
               <KvRow
                 k="예산 할당"
@@ -343,7 +343,7 @@ export default function ApprovalDetailPage() {
           <textarea
             placeholder="결재 의견을 입력하세요 (선택)"
             rows={2}
-            className="flex-1 border border-line rounded px-3 py-2 text-[12.5px] resize-none focus:outline-none focus:border-kb-yellow-dark"
+            className="flex-1 border border-line rounded px-3 py-2 text-[12.5px] resize-none focus:outline-none focus:border-brand-dark"
           />
           <Button variant="danger">반려</Button>
           <Button>보류</Button>
@@ -371,7 +371,7 @@ function ApprovalStep({
         className={cn(
           'w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-extrabold flex-shrink-0',
           state === 'done' && 'bg-ok text-white',
-          state === 'current' && 'bg-kb-yellow text-ink border border-kb-yellow-dark',
+          state === 'current' && 'bg-brand text-ink border border-brand-dark',
           state === 'pending' && 'bg-surface-soft text-ink-light border border-line-soft',
         )}
       >
@@ -421,7 +421,7 @@ function PoolRow({
           style={{ width: `${pct}%` }}
         />
         <div
-          className="absolute top-0 bottom-0 bg-kb-yellow"
+          className="absolute top-0 bottom-0 bg-brand"
           style={{ left: `${pct}%`, width: `${add}%` }}
         />
       </div>
@@ -595,7 +595,7 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
                 onChange={(e) => setNote(e.target.value)}
                 rows={3}
                 placeholder="승인·반려 사유 (선택)"
-                className="w-full text-[12px] text-ink-dark leading-[1.6] border border-line rounded p-2 bg-white resize-y focus:outline-none focus:border-kb-yellow-dark"
+                className="w-full text-[12px] text-ink-dark leading-[1.6] border border-line rounded p-2 bg-white resize-y focus:outline-none focus:border-brand-dark"
               />
             </SidebarCard>
           )}
@@ -649,7 +649,7 @@ function ApprStep({
         tone === 'done' && 'bg-ok-bg/40 border-ok-border',
         tone === 'rejected' && 'bg-bad-bg border-bad-border',
         tone === 'upcoming' && 'bg-white border-line-soft',
-        current && 'bg-kb-yellow-tint border-kb-yellow-dark',
+        current && 'bg-brand-tint border-brand-dark',
       )}
     >
       <span
@@ -658,7 +658,7 @@ function ApprStep({
           tone === 'done' && 'bg-ok text-white border border-ok',
           tone === 'rejected' && 'bg-bad text-white border border-bad',
           tone === 'upcoming' && 'bg-white text-ink-light border border-line',
-          current && 'bg-kb-yellow-dark text-white border border-kb-yellow-dark',
+          current && 'bg-brand-dark text-white border border-brand-dark',
         )}
       >
         {tone === 'rejected' ? '✕' : seq}
@@ -685,7 +685,7 @@ function DeployStepper({ dep }: { dep: DeployApproval }) {
 
   const circle: Record<string, string> = {
     done: 'bg-ok text-white border-ok',
-    current: 'bg-kb-yellow text-ink border-kb-yellow-dark',
+    current: 'bg-brand text-ink border-brand-dark',
     rejected: 'bg-bad text-white border-bad',
     upcoming: 'bg-white text-ink-light border-line',
   };

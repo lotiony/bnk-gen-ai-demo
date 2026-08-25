@@ -106,7 +106,7 @@ export default function AdminFeaturedAgentsPage() {
             className={cn(
               'h-9 px-4 text-[12.5px] font-extrabold rounded border',
               dirty
-                ? 'bg-kb-yellow text-ink border-kb-yellow-dark hover:bg-kb-yellow-dark'
+                ? 'bg-brand text-ink border-brand-dark hover:bg-brand-dark'
                 : 'bg-surface text-ink-light border-line-soft cursor-not-allowed',
             )}
             onClick={() => setDirty(false)}
@@ -148,7 +148,7 @@ export default function AdminFeaturedAgentsPage() {
                   <div className="text-[15px] font-extrabold text-ink-mid tabular-nums text-center">
                     {i + 1}
                   </div>
-                  <div className="w-9 h-9 rounded-md bg-kb-yellow-bg border border-kb-yellow-dark flex items-center justify-center text-[18px]">
+                  <div className="w-9 h-9 rounded-md bg-brand-bg border border-brand-dark flex items-center justify-center text-[18px]">
                     {r.icon}
                   </div>
                   <div className="min-w-0">
@@ -242,7 +242,7 @@ export default function AdminFeaturedAgentsPage() {
                   </div>
                   <button
                     onClick={() => addCandidate(c.id)}
-                    className="h-7 px-2.5 text-[10.5px] font-extrabold rounded border border-kb-yellow-dark bg-kb-yellow-bg text-ink hover:bg-kb-yellow"
+                    className="h-7 px-2.5 text-[10.5px] font-extrabold rounded border border-brand-dark bg-brand-bg text-ink hover:bg-brand"
                   >
                     + 추가
                   </button>
@@ -286,7 +286,7 @@ function IconBtn({
         'w-7 h-7 text-[11px] font-extrabold rounded border tabular-nums',
         disabled
           ? 'text-ink-light border-line-soft cursor-not-allowed'
-          : 'text-ink-dark border-line hover:bg-surface-soft hover:border-kb-yellow-dark',
+          : 'text-ink-dark border-line hover:bg-surface-soft hover:border-brand-dark',
       )}
     >
       {children}

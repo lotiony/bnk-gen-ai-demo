@@ -216,7 +216,7 @@ function OverviewTab({
           <div className="text-[11.5px] font-extrabold text-ink-dark uppercase tracking-[0.4px] mb-2.5">
             거버넌스 자동 매칭
           </div>
-          <div className="bg-kb-yellow-tint border border-kb-yellow-dark rounded p-3 space-y-1.5 text-[11.5px] text-ink-dark">
+          <div className="bg-brand-tint border border-brand-dark rounded p-3 space-y-1.5 text-[11.5px] text-ink-dark">
             <AutoLine>
               <b>민감도 승계</b> · 인덱스 최고 등급 <b>{maxSens}등급</b>
             </AutoLine>
@@ -342,7 +342,7 @@ function IndexesTab({ task }: { task: PipelineTask }) {
 
       {/* Fixed action bar — 변경 있을 때만 노출 */}
       {totalChanges > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t-2 border-kb-yellow-dark shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t-2 border-brand-dark shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
           <div className="max-w-[1280px] mx-auto px-8 py-3 flex items-center gap-3.5">
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-extrabold text-ink mb-1">
@@ -440,7 +440,7 @@ function IndexRowCard({
         !selected
           ? 'border-line-soft opacity-60'
           : changedVersion
-          ? 'border-kb-yellow-dark shadow-sm'
+          ? 'border-brand-dark shadow-sm'
           : 'border-line-soft',
       )}
     >
@@ -451,10 +451,10 @@ function IndexRowCard({
             type="checkbox"
             checked={selected}
             onChange={onToggleSelected}
-            className="w-4 h-4 accent-kb-yellow-dark cursor-pointer"
+            className="w-4 h-4 accent-brand-dark cursor-pointer"
           />
         </label>
-        <span className="w-9 h-9 rounded bg-gradient-to-br from-kb-yellow to-kb-yellow-dark border border-kb-yellow-dark inline-flex items-center justify-center text-[11px] font-extrabold text-ink flex-shrink-0">
+        <span className="w-9 h-9 rounded bg-gradient-to-br from-brand to-brand-dark border border-brand-dark inline-flex items-center justify-center text-[11px] font-extrabold text-ink flex-shrink-0">
           IDX
         </span>
         <div className="flex-1 min-w-0">
@@ -485,7 +485,7 @@ function IndexRowCard({
           </span>
         )}
         {changedVersion && (
-          <span className="inline-flex items-center text-[10px] font-extrabold py-[2px] px-2 rounded-full border bg-kb-yellow text-ink border-kb-yellow-dark">
+          <span className="inline-flex items-center text-[10px] font-extrabold py-[2px] px-2 rounded-full border bg-brand text-ink border-brand-dark">
             변경됨
           </span>
         )}
@@ -549,7 +549,7 @@ function IndexVersionRow({
     <li
       className={cn(
         'flex items-center gap-3 py-2 px-3.5 text-[12px]',
-        isPicked && !disabled && 'bg-kb-yellow-tint',
+        isPicked && !disabled && 'bg-brand-tint',
         disabled && 'opacity-50',
       )}
     >
@@ -567,14 +567,14 @@ function IndexVersionRow({
           checked={isPicked}
           disabled={disabled || cannotPick}
           onChange={onPick}
-          className="w-3.5 h-3.5 accent-kb-yellow-dark cursor-pointer disabled:cursor-not-allowed"
+          className="w-3.5 h-3.5 accent-brand-dark cursor-pointer disabled:cursor-not-allowed"
         />
       </label>
       <span
         className={cn(
           'inline-flex items-center justify-center text-[10.5px] font-extrabold py-[2px] px-2 rounded-full border min-w-[42px]',
           isPicked
-            ? 'bg-kb-yellow text-ink border-kb-yellow-dark'
+            ? 'bg-brand text-ink border-brand-dark'
             : 'bg-surface-soft text-ink-dark border-line',
         )}
       >
@@ -702,7 +702,7 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
         .toLocaleString('ko-KR', { hour12: false })
         .replace(/\./g, '-')
         .slice(0, 16),
-      issuedBy: '김국민',
+      issuedBy: '김플랫',
       callCount: 0,
     };
   };
@@ -724,7 +724,7 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
             setKey(makeNewKey());
             setRevealed(true);
           }}
-          className="h-8 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+          className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
         >
           ＋ 키 발급
         </button>
@@ -872,7 +872,7 @@ function DevDeploymentRow({ d }: { d: PipelineTask['devDeployments'][number] }) 
     <li
       className={cn(
         'border rounded overflow-hidden',
-        isActive ? 'border-kb-yellow-dark bg-kb-yellow-tint' : 'border-line-soft bg-white',
+        isActive ? 'border-brand-dark bg-brand-tint' : 'border-line-soft bg-white',
       )}
     >
       <div className="flex items-center gap-3 px-3.5 py-2.5">
@@ -880,7 +880,7 @@ function DevDeploymentRow({ d }: { d: PipelineTask['devDeployments'][number] }) 
           className={cn(
             'inline-flex items-center justify-center text-[11px] font-extrabold py-[3px] px-2.5 rounded-full border min-w-[48px]',
             isActive
-              ? 'bg-kb-yellow text-ink border-kb-yellow-dark'
+              ? 'bg-brand text-ink border-brand-dark'
               : 'bg-surface-soft text-ink-dark border-line',
           )}
         >
@@ -1231,14 +1231,14 @@ function EvalRunRow({
     );
   };
   return (
-    <tr className="hover:bg-[#FFFCF3]">
+    <tr className="hover:bg-[#F3F9F8]">
       <td className={cn('py-2 px-2.5', !last && 'border-b border-line-soft')}>
         {run.deployVersion ? (
           <span
             className={cn(
               'pill border',
               deployActive
-                ? 'bg-kb-yellow-tint text-ink border-kb-yellow-dark'
+                ? 'bg-brand-tint text-ink border-brand-dark'
                 : 'bg-surface-soft text-ink-mid border-line-soft',
             )}
           >
@@ -1456,7 +1456,7 @@ function TabBtn({
       className={cn(
         'inline-flex items-center gap-1.5 px-4 py-2.5 text-[12.5px] font-extrabold border-b-2 -mb-px transition-colors',
         active
-          ? 'text-ink border-kb-yellow-dark bg-kb-yellow-tint'
+          ? 'text-ink border-brand-dark bg-brand-tint'
           : 'text-ink-mid border-transparent hover:text-ink-dark hover:bg-surface',
       )}
     >
@@ -1512,7 +1512,7 @@ function Kv({
 function AutoLine({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 leading-snug">
-      <span className="text-kb-yellow-dark text-[9px] mt-[5px]">●</span>
+      <span className="text-brand-dark text-[9px] mt-[5px]">●</span>
       <span>{children}</span>
     </div>
   );

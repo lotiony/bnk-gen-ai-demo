@@ -1,7 +1,7 @@
 /**
  * 플랫폼 관리자 대시보드 mock.
  *
- * 계열사(KB국민은행) 내 모든 프로젝트의 사용 현황을 한 레이어 위에서 합산한다.
+ * 계열사(부산은행) 내 모든 프로젝트의 사용 현황을 한 레이어 위에서 합산한다.
  * 프로젝트 대시보드(모니터링 탭)가 가진 메트릭을 동일 기준으로 cross-project 집계.
  */
 
@@ -91,7 +91,7 @@ export const ADMIN_PROJECT_ROWS: ProjectUsageRow[] = [
     id: 'PRJ-2025-PB-001',
     name: 'PB 에이전트 프로젝트',
     dept: 'PB 사업부',
-    pmName: '김국민',
+    pmName: '김플랫',
     status: '운영 중',
     servingAgents: 1,
     totalAgents: 1,
@@ -527,7 +527,7 @@ export function getCostBreakdownByCategory(): CostCategory[] {
   const network = Math.round(ptu * 0.04); // 게이트웨이 트래픽
   const obs = Math.round(ptu * 0.03); // 관측·로깅·감사
   return [
-    { key: 'model_ptu', label: '모델 PTU', color: '#E5BD00', monthCost: ptu },
+    { key: 'model_ptu', label: '모델 PTU', color: '#5FA69C', monthCost: ptu },
     { key: 'gpu_onprem', label: '온프렘 GPU', color: '#1F5BB8', monthCost: gpuOnprem },
     { key: 'storage', label: '스토리지·벡터DB', color: '#1B8A4D', monthCost: storage },
     { key: 'network', label: '게이트웨이 트래픽', color: '#6E3BBD', monthCost: network },
@@ -581,7 +581,7 @@ export function getDailyCostSeries(rows: ProjectUsageRow[]): {
 
 /** 시간(0~23) × 요일(0=일 ~ 6=토) 호출 히트맵 — 평균 RPS 기준. */
 export function getHourlyHeatmap(): number[][] {
-  // 24 x 7 — KB 운영 패턴 (평일 9~18시 피크, 주말 약함)
+  // 24 x 7 — 그룹 운영 패턴 (평일 9~18시 피크, 주말 약함)
   const out: number[][] = [];
   for (let h = 0; h < 24; h++) {
     const row: number[] = [];
@@ -662,7 +662,7 @@ export const ACTIVITY_FEED: ActivityItem[] = [
     id: 'ACT-1023',
     kind: 'ptu_change',
     title: 'openai/gpt-oss-120b PTU 220 → 240 증설',
-    who: '김국민 · 결재 ▶ 2단계 완료',
+    who: '김플랫 · 결재 ▶ 2단계 완료',
     at: '2026-05-24 11:42',
   },
   {
@@ -709,7 +709,7 @@ export const PTU_CHANGE_EVENTS: PtuChangeEvent[] = [
     from: 220,
     to: 240,
     reason: '피크 사용률 94% 도달 — 사용 현황 탭 알람 기반 증설',
-    approver: '김국민',
+    approver: '김플랫',
     costDeltaKrw: 20_000_000,
   },
   {
@@ -719,7 +719,7 @@ export const PTU_CHANGE_EVENTS: PtuChangeEvent[] = [
     from: 140,
     to: 160,
     reason: '여신심사 에이전트 트래픽 증가 대응',
-    approver: '김국민',
+    approver: '김플랫',
     costDeltaKrw: 16_000_000,
   },
   {
@@ -739,7 +739,7 @@ export const PTU_CHANGE_EVENTS: PtuChangeEvent[] = [
     from: 160,
     to: 140,
     reason: 'PB 프로젝트 호출 안정화 — 평균 효율 38% → 감설',
-    approver: '김국민',
+    approver: '김플랫',
     costDeltaKrw: -16_000_000,
   },
 ];
@@ -842,14 +842,14 @@ export const AUDIT_LOG: AuditLogItem[] = [
   {
     id: 'AUD-2026-05-24-0042',
     at: '2026-05-24 14:08',
-    actor: '김국민',
+    actor: '김플랫',
     action: '관리 대시보드 진입 (MFA 인증)',
     target: '/admin',
   },
   {
     id: 'AUD-2026-05-24-0041',
     at: '2026-05-24 11:42',
-    actor: '김국민',
+    actor: '김플랫',
     action: 'PTU 증설 결재 승인',
     target: 'openai/gpt-oss-120b 220→240',
   },
@@ -929,7 +929,7 @@ export const CATEGORY_COLOR: Record<NamespaceCategory, string> = {
   system: '#6B4F2A',
   gateway: '#1F5BB8',
   monitoring: '#C9760F',
-  devops: '#E5BD00',
+  devops: '#5FA69C',
   platform: '#777777',
 };
 
@@ -938,7 +938,7 @@ export const NAMESPACES: NamespaceUsage[] = [
   {
     name: 'pb-agent',
     category: 'project',
-    description: 'PB 에이전트 프로젝트 (학습계 + 서빙계) · 담당 김국민',
+    description: 'PB 에이전트 프로젝트 (학습계 + 서빙계) · 담당 김플랫',
     pods: { running: 5, pending: 0, failed: 0 },
     cpuUsedM: 3_200,
     cpuLimitM: 8_000,
@@ -1007,7 +1007,7 @@ export const NAMESPACES: NamespaceUsage[] = [
   },
   // ─── 플랫폼 공통 네임스페이스 ───
   {
-    name: 'kbagentops-gateway',
+    name: 'aip-gateway',
     category: 'gateway',
     description: 'LLM Gateway · PTU 라우터 · 가드레일',
     pods: { running: 14, pending: 0, failed: 0 },
@@ -1021,7 +1021,7 @@ export const NAMESPACES: NamespaceUsage[] = [
     lastDeploy: '2026-05-24 11:42',
   },
   {
-    name: 'kbagentops-mon',
+    name: 'aip-mon',
     category: 'monitoring',
     description: 'Prometheus · Grafana · Loki · Alertmanager',
     pods: { running: 18, pending: 0, failed: 0 },
@@ -1080,18 +1080,18 @@ export interface Deployment {
 
 export const DEPLOYMENTS: Deployment[] = [
   // === 시스템 네임스페이스 ===
-  // kbagentops-gateway
-  { namespace: 'kbagentops-gateway', name: 'gateway-router', replicasReady: 4, replicasDesired: 4, image: 'kbops/gateway-router', imageTag: 'v2.4.1', age: '12d', status: 'Healthy' },
-  { namespace: 'kbagentops-gateway', name: 'guardrail-engine', replicasReady: 3, replicasDesired: 3, image: 'kbops/guardrail', imageTag: 'v1.8.2', age: '8d', status: 'Healthy' },
-  { namespace: 'kbagentops-gateway', name: 'ptu-balancer', replicasReady: 3, replicasDesired: 3, image: 'kbops/ptu-balancer', imageTag: 'v0.9.4', age: '5d', status: 'Healthy' },
-  { namespace: 'kbagentops-gateway', name: 'rate-limiter', replicasReady: 2, replicasDesired: 2, image: 'kbops/rate-limiter', imageTag: 'v1.2.0', age: '21d', status: 'Healthy' },
-  { namespace: 'kbagentops-gateway', name: 'pii-mask-sidecar', replicasReady: 2, replicasDesired: 2, image: 'kbops/pii-mask', imageTag: 'v0.6.1', age: '5d', status: 'Healthy' },
-  // kbagentops-mon
-  { namespace: 'kbagentops-mon', name: 'prometheus', replicasReady: 1, replicasDesired: 1, image: 'prom/prometheus', imageTag: 'v2.51', age: '45d', status: 'Healthy' },
-  { namespace: 'kbagentops-mon', name: 'grafana', replicasReady: 1, replicasDesired: 1, image: 'grafana/grafana', imageTag: '10.4.2', age: '45d', status: 'Healthy' },
-  { namespace: 'kbagentops-mon', name: 'loki', replicasReady: 1, replicasDesired: 1, image: 'grafana/loki', imageTag: '3.0.0', age: '45d', status: 'Healthy' },
-  { namespace: 'kbagentops-mon', name: 'alertmanager', replicasReady: 1, replicasDesired: 1, image: 'prom/alertmanager', imageTag: 'v0.27', age: '45d', status: 'Healthy' },
-  { namespace: 'kbagentops-mon', name: 'node-exporter', replicasReady: 14, replicasDesired: 14, image: 'prom/node-exporter', imageTag: 'v1.8.1', age: '45d', status: 'Healthy' },
+  // aip-gateway
+  { namespace: 'aip-gateway', name: 'gateway-router', replicasReady: 4, replicasDesired: 4, image: 'aip/gateway-router', imageTag: 'v2.4.1', age: '12d', status: 'Healthy' },
+  { namespace: 'aip-gateway', name: 'guardrail-engine', replicasReady: 3, replicasDesired: 3, image: 'aip/guardrail', imageTag: 'v1.8.2', age: '8d', status: 'Healthy' },
+  { namespace: 'aip-gateway', name: 'ptu-balancer', replicasReady: 3, replicasDesired: 3, image: 'aip/ptu-balancer', imageTag: 'v0.9.4', age: '5d', status: 'Healthy' },
+  { namespace: 'aip-gateway', name: 'rate-limiter', replicasReady: 2, replicasDesired: 2, image: 'aip/rate-limiter', imageTag: 'v1.2.0', age: '21d', status: 'Healthy' },
+  { namespace: 'aip-gateway', name: 'pii-mask-sidecar', replicasReady: 2, replicasDesired: 2, image: 'aip/pii-mask', imageTag: 'v0.6.1', age: '5d', status: 'Healthy' },
+  // aip-mon
+  { namespace: 'aip-mon', name: 'prometheus', replicasReady: 1, replicasDesired: 1, image: 'prom/prometheus', imageTag: 'v2.51', age: '45d', status: 'Healthy' },
+  { namespace: 'aip-mon', name: 'grafana', replicasReady: 1, replicasDesired: 1, image: 'grafana/grafana', imageTag: '10.4.2', age: '45d', status: 'Healthy' },
+  { namespace: 'aip-mon', name: 'loki', replicasReady: 1, replicasDesired: 1, image: 'grafana/loki', imageTag: '3.0.0', age: '45d', status: 'Healthy' },
+  { namespace: 'aip-mon', name: 'alertmanager', replicasReady: 1, replicasDesired: 1, image: 'prom/alertmanager', imageTag: 'v0.27', age: '45d', status: 'Healthy' },
+  { namespace: 'aip-mon', name: 'node-exporter', replicasReady: 14, replicasDesired: 14, image: 'prom/node-exporter', imageTag: 'v1.8.1', age: '45d', status: 'Healthy' },
   // ingress-nginx
   { namespace: 'ingress-nginx', name: 'ingress-nginx-controller', replicasReady: 3, replicasDesired: 3, image: 'ingress-nginx', imageTag: 'v1.10.1', age: '62d', status: 'Healthy' },
   // kube-system
@@ -1101,25 +1101,25 @@ export const DEPLOYMENTS: Deployment[] = [
   { namespace: 'kube-system', name: 'csi-nfs-driver', replicasReady: 14, replicasDesired: 14, image: 'k8s/csi-nfs', imageTag: 'v4.6.0', age: '120d', status: 'Healthy' },
   // === 프로젝트 네임스페이스 ===
   // pb-agent
-  { namespace: 'pb-agent', name: 'pb-agent-serv', replicasReady: 3, replicasDesired: 3, image: 'kb/pb-agent', imageTag: 'v0.4.2-serv', age: '4d', status: 'Healthy' },
-  { namespace: 'pb-agent', name: 'pb-agent-train', replicasReady: 2, replicasDesired: 2, image: 'kb/pb-agent', imageTag: 'v0.4.2-train', age: '4d', status: 'Healthy' },
+  { namespace: 'pb-agent', name: 'pb-agent-serv', replicasReady: 3, replicasDesired: 3, image: 'aip/pb-agent', imageTag: 'v0.4.2-serv', age: '4d', status: 'Healthy' },
+  { namespace: 'pb-agent', name: 'pb-agent-train', replicasReady: 2, replicasDesired: 2, image: 'aip/pb-agent', imageTag: 'v0.4.2-train', age: '4d', status: 'Healthy' },
   // fc-agent
-  { namespace: 'fc-agent', name: 'fc-agent-serv', replicasReady: 12, replicasDesired: 12, image: 'kb/fc-agent', imageTag: 'v3.2.1-serv', age: '6d', status: 'Healthy' },
-  { namespace: 'fc-agent', name: 'fc-agent-train', replicasReady: 5, replicasDesired: 6, image: 'kb/fc-agent', imageTag: 'v3.3.0-train', age: '1d', status: 'Updating' },
-  { namespace: 'fc-agent', name: 'fc-rag-builder', replicasReady: 4, replicasDesired: 4, image: 'kb/rag-builder', imageTag: 'v2.1.0', age: '14d', status: 'Healthy' },
-  { namespace: 'fc-agent', name: 'fc-eval-runner', replicasReady: 2, replicasDesired: 2, image: 'kb/eval-runner', imageTag: 'v1.4.0', age: '6d', status: 'Healthy' },
+  { namespace: 'fc-agent', name: 'fc-agent-serv', replicasReady: 12, replicasDesired: 12, image: 'aip/fc-agent', imageTag: 'v3.2.1-serv', age: '6d', status: 'Healthy' },
+  { namespace: 'fc-agent', name: 'fc-agent-train', replicasReady: 5, replicasDesired: 6, image: 'aip/fc-agent', imageTag: 'v3.3.0-train', age: '1d', status: 'Updating' },
+  { namespace: 'fc-agent', name: 'fc-rag-builder', replicasReady: 4, replicasDesired: 4, image: 'aip/rag-builder', imageTag: 'v2.1.0', age: '14d', status: 'Healthy' },
+  { namespace: 'fc-agent', name: 'fc-eval-runner', replicasReady: 2, replicasDesired: 2, image: 'aip/eval-runner', imageTag: 'v1.4.0', age: '6d', status: 'Healthy' },
   // cr-agent
-  { namespace: 'cr-agent', name: 'cr-agent-serv', replicasReady: 4, replicasDesired: 4, image: 'kb/cr-agent', imageTag: 'v0.8.3-serv', age: '7d', status: 'Healthy' },
-  { namespace: 'cr-agent', name: 'cr-agent-train', replicasReady: 2, replicasDesired: 2, image: 'kb/cr-agent', imageTag: 'v0.8.3-train', age: '7d', status: 'Healthy' },
-  { namespace: 'cr-agent', name: 'cr-doc-extract', replicasReady: 2, replicasDesired: 2, image: 'kb/doc-extract', imageTag: 'v1.0.0', age: '14d', status: 'Healthy' },
+  { namespace: 'cr-agent', name: 'cr-agent-serv', replicasReady: 4, replicasDesired: 4, image: 'aip/cr-agent', imageTag: 'v0.8.3-serv', age: '7d', status: 'Healthy' },
+  { namespace: 'cr-agent', name: 'cr-agent-train', replicasReady: 2, replicasDesired: 2, image: 'aip/cr-agent', imageTag: 'v0.8.3-train', age: '7d', status: 'Healthy' },
+  { namespace: 'cr-agent', name: 'cr-doc-extract', replicasReady: 2, replicasDesired: 2, image: 'aip/doc-extract', imageTag: 'v1.0.0', age: '14d', status: 'Healthy' },
   // cs-agent
-  { namespace: 'cs-agent', name: 'cs-agent-serv', replicasReady: 8, replicasDesired: 8, image: 'kb/cs-agent', imageTag: 'v2.1.4-serv', age: '3d', status: 'Healthy' },
-  { namespace: 'cs-agent', name: 'cs-agent-train', replicasReady: 4, replicasDesired: 4, image: 'kb/cs-agent', imageTag: 'v2.1.4-train', age: '3d', status: 'Healthy' },
-  { namespace: 'cs-agent', name: 'cs-eval-runner', replicasReady: 4, replicasDesired: 4, image: 'kb/eval-runner', imageTag: 'v1.4.0', age: '6d', status: 'Healthy' },
-  { namespace: 'cs-agent', name: 'cs-feedback-loop', replicasReady: 2, replicasDesired: 2, image: 'kb/feedback-loop', imageTag: 'v0.3.1', age: '12d', status: 'Healthy' },
+  { namespace: 'cs-agent', name: 'cs-agent-serv', replicasReady: 8, replicasDesired: 8, image: 'aip/cs-agent', imageTag: 'v2.1.4-serv', age: '3d', status: 'Healthy' },
+  { namespace: 'cs-agent', name: 'cs-agent-train', replicasReady: 4, replicasDesired: 4, image: 'aip/cs-agent', imageTag: 'v2.1.4-train', age: '3d', status: 'Healthy' },
+  { namespace: 'cs-agent', name: 'cs-eval-runner', replicasReady: 4, replicasDesired: 4, image: 'aip/eval-runner', imageTag: 'v1.4.0', age: '6d', status: 'Healthy' },
+  { namespace: 'cs-agent', name: 'cs-feedback-loop', replicasReady: 2, replicasDesired: 2, image: 'aip/feedback-loop', imageTag: 'v0.3.1', age: '12d', status: 'Healthy' },
   // aml-agent (개발 중)
-  { namespace: 'aml-agent', name: 'aml-agent-train', replicasReady: 2, replicasDesired: 3, image: 'kb/aml-agent', imageTag: 'v0.1.0-dev', age: '2d', status: 'Updating' },
-  { namespace: 'aml-agent', name: 'aml-eval-runner', replicasReady: 0, replicasDesired: 1, image: 'kb/eval-runner', imageTag: 'v1.4.0', age: '2d', status: 'Failed' },
+  { namespace: 'aml-agent', name: 'aml-agent-train', replicasReady: 2, replicasDesired: 3, image: 'aip/aml-agent', imageTag: 'v0.1.0-dev', age: '2d', status: 'Updating' },
+  { namespace: 'aml-agent', name: 'aml-eval-runner', replicasReady: 0, replicasDesired: 1, image: 'aip/eval-runner', imageTag: 'v1.4.0', age: '2d', status: 'Failed' },
 ];
 
 /** 클러스터 24h CPU·Memory 사용률 시계열. */
@@ -1155,7 +1155,7 @@ export interface ProjectSafetySeries {
   color: string;
 }
 export function getProjectSafetySeries(rows: ProjectUsageRow[]): ProjectSafetySeries[] {
-  const palette = ['#E5BD00', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+  const palette = ['#5FA69C', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
   return rows
     .filter((r) => r.guardrailBlocks + r.piiMaskCount > 0)
     .map((r, i) => {
@@ -1265,7 +1265,7 @@ export interface ProjectDauSeries {
   color: string;
 }
 export function getProjectDauSeries(rows: ProjectUsageRow[]): ProjectDauSeries[] {
-  const palette = ['#E5BD00', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+  const palette = ['#5FA69C', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
   return rows
     .filter((r) => r.dau > 0)
     .map((r, i) => {
@@ -1302,11 +1302,11 @@ export interface ConglomerateTokenSeries {
 export function getConglomerateTokenSeries(): ConglomerateTokenSeries[] {
   const N = 30;
   const config = [
-    { name: 'KB국민은행', base: 42_000_000, amp: 8_000_000, drift: 3_000_000, color: '#E5BD00', seed: 11 },
-    { name: 'KB카드', base: 24_000_000, amp: 5_000_000, drift: 1_500_000, color: '#1F5BB8', seed: 23 },
-    { name: 'KB증권', base: 12_000_000, amp: 3_000_000, drift: 800_000, color: '#1B8A4D', seed: 31 },
-    { name: 'KB라이프', base: 6_000_000, amp: 1_400_000, drift: 400_000, color: '#6E3BBD', seed: 43 },
-    { name: 'KB저축은행', base: 2_400_000, amp: 600_000, drift: 200_000, color: '#C9760F', seed: 53 },
+    { name: '부산은행', base: 42_000_000, amp: 8_000_000, drift: 3_000_000, color: '#5FA69C', seed: 11 },
+    { name: '경남은행', base: 24_000_000, amp: 5_000_000, drift: 1_500_000, color: '#1F5BB8', seed: 23 },
+    { name: 'BNK투자증권', base: 12_000_000, amp: 3_000_000, drift: 800_000, color: '#1B8A4D', seed: 31 },
+    { name: 'BNK캐피탈', base: 6_000_000, amp: 1_400_000, drift: 400_000, color: '#6E3BBD', seed: 43 },
+    { name: 'BNK저축은행', base: 2_400_000, amp: 600_000, drift: 200_000, color: '#C9760F', seed: 53 },
   ];
   return config.map((c) => {
     let s = c.seed;
@@ -1365,11 +1365,11 @@ export function getCostByConglomerate(): ConglomerateCostRow[] {
   // 카탈로그에서 계열사별 운영·실행 중 에이전트 수 계산은 mockCatalogAgents 의존이라
   // 여기선 시드 기반 추정치로만 채움 (소비처에서 더 정확히 덮어쓸 수 있음).
   const agentCountByTenant: Record<string, number> = {
-    KB국민은행: 5,
-    KB카드: 2,
-    KB증권: 1,
-    KB라이프: 1,
-    KB저축은행: 0,
+    부산은행: 5,
+    경남은행: 2,
+    BNK투자증권: 1,
+    BNK캐피탈: 1,
+    BNK저축은행: 0,
   };
 
   return series.map((s) => ({

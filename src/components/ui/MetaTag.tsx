@@ -9,7 +9,7 @@ interface Props {
 
 const TONE: Record<MetaTagTone, string> = {
   default: 'bg-surface-soft text-ink-mid border-line-soft',
-  target: 'bg-kb-yellow-tint text-ink border-kb-yellow-dark font-extrabold',
+  target: 'bg-brand-tint text-ink border-brand-dark font-extrabold',
   sens: 'bg-bad-bg text-bad border-bad-border font-extrabold',
   pii: 'bg-warn-bg text-warn border-warn-border',
 };

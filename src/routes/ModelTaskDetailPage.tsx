@@ -178,7 +178,7 @@ export default function ModelTaskDetailPage() {
                       <span
                         className={cn(
                           'inline-block w-2.5 h-2.5 rounded-sm',
-                          p.env === '학습계' ? 'bg-info' : 'bg-kb-yellow-dark',
+                          p.env === '학습계' ? 'bg-info' : 'bg-brand-dark',
                         )}
                       />
                       <span className="text-ink-dark font-bold">{p.env}</span>
@@ -339,14 +339,14 @@ function WeeklyUtilChart({ ptus }: { ptus: ModelPtuAllocation[] }) {
           <path
             d={pathOf(p.weeklyUtilPct)}
             fill="none"
-            stroke={p.env === '학습계' ? '#1F5BB8' : '#E5BD00'}
+            stroke={p.env === '학습계' ? '#1F5BB8' : '#5FA69C'}
             strokeWidth={1.8}
           />
           <circle
             cx={xs(p.weeklyUtilPct.length - 1)}
             cy={ys(p.weeklyUtilPct[p.weeklyUtilPct.length - 1])}
             r={3}
-            fill={p.env === '학습계' ? '#1F5BB8' : '#E5BD00'}
+            fill={p.env === '학습계' ? '#1F5BB8' : '#5FA69C'}
           />
         </g>
       ))}

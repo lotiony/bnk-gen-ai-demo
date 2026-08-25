@@ -128,7 +128,7 @@ export default function ConversationsTab() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="본문 검색 (마스킹된 표시 기준)"
-            className="h-7 w-[220px] px-2 border border-line rounded text-[11.5px] outline-none focus:border-kb-yellow-dark"
+            className="h-7 w-[220px] px-2 border border-line rounded text-[11.5px] outline-none focus:border-brand-dark"
           />
         </div>
       </div>
@@ -243,11 +243,11 @@ function ConversationListCard({
         onClick={onClick}
         className={cn(
           'w-full text-left px-3.5 py-3 relative transition-colors block',
-          selected ? 'bg-kb-yellow-tint' : 'hover:bg-surface',
+          selected ? 'bg-brand-tint' : 'hover:bg-surface',
         )}
       >
         {selected && (
-          <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-kb-yellow-dark" />
+          <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand-dark" />
         )}
         <div className="flex items-center justify-between gap-2 text-[11px] text-ink-mid">
           <span className="font-extrabold text-ink-dark font-mono">{session.userMaskedId}</span>
@@ -284,7 +284,7 @@ function ConversationListCard({
 function ConversationDetailPanel({ session }: { session: ConversationSession }) {
   const tokens = getSessionTokens(session);
   const dur = formatDuration(session.durationSec);
-  const langfuseUrl = `https://langfuse.kbops.local/project/pb-agent/traces/${session.langfuseTraceId}`;
+  const langfuseUrl = `https://trace.aip.group.local/project/pb-agent/traces/${session.langfuseTraceId}`;
 
   return (
     <div className="card">
@@ -384,7 +384,7 @@ function TurnBubble({ turn }: { turn: ConversationTurn }) {
             'inline-block text-left px-3.5 py-2.5 rounded-lg text-[12.5px] leading-relaxed border whitespace-pre-wrap',
             isUser
               ? 'bg-white border-line-soft text-ink-dark'
-              : 'bg-kb-yellow-tint border-kb-yellow-dark text-ink',
+              : 'bg-brand-tint border-brand-dark text-ink',
           )}
         >
           {isUser ? <MaskedText text={turn.text} /> : turn.text}
@@ -487,7 +487,7 @@ function MultiSelect({
           'h-7 px-2.5 rounded border text-[11px] font-extrabold inline-flex items-center gap-1.5',
           values.length === 0
             ? 'bg-white border-line text-ink-mid'
-            : 'bg-kb-yellow-tint border-kb-yellow-dark text-ink',
+            : 'bg-brand-tint border-brand-dark text-ink',
         )}
       >
         <span className="text-ink-mid font-semibold">{label}</span>
@@ -518,14 +518,14 @@ function MultiSelect({
                     className={cn(
                       'w-full text-left px-2 py-1.5 rounded text-[11.5px] flex items-center gap-2',
                       on
-                        ? 'bg-kb-yellow-tint text-ink font-extrabold'
+                        ? 'bg-brand-tint text-ink font-extrabold'
                         : 'text-ink-dark hover:bg-surface',
                     )}
                   >
                     <span
                       className={cn(
                         'inline-block w-3 h-3 rounded border',
-                        on ? 'bg-kb-yellow-dark border-kb-yellow-dark' : 'border-line',
+                        on ? 'bg-brand-dark border-brand-dark' : 'border-line',
                       )}
                     >
                       {on && <span className="text-white text-[9px] leading-3 block">✓</span>}
@@ -577,8 +577,8 @@ function FeedbackFilter({
           className={cn(
             'h-7 px-2.5 rounded border text-[11px] font-extrabold',
             value === o.v
-              ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-              : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+              ? 'bg-brand-tint border-brand-dark text-ink'
+              : 'bg-white border-line text-ink-dark hover:border-brand-dark',
           )}
         >
           {o.label}

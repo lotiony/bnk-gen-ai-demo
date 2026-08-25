@@ -23,7 +23,7 @@ const REPARSE_CHUNKERS: ChunkingStrategy[] = ['length', 'semantic', 'custom'];
 const EXT_BADGE: Record<string, string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 
@@ -169,7 +169,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                 window.alert(`${editedBlocks.length}개 블록을 저장합니다 (목업).`);
                 setDirty(false);
               }}
-              className="py-2 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               저장
             </button>
@@ -180,7 +180,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
       {/* 사용된 옵션 + 통계 — 상단 단일 행 */}
       <div className="px-4 pt-3.5 pb-2 border-b border-line-soft">
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] mb-2">
-          <OptChip label="파서" value={getParser(file.parserId).short} tone="kb" />
+          <OptChip label="파서" value={getParser(file.parserId).short} tone="brand" />
           <OptChip label="청킹" value={CHUNKING_LABEL[file.settings.chunking]} />
           <OptChip label="이미지" value={IMAGE_LABEL[file.settings.image]} />
           {file.settings.tableToMd && <OptChip value="표→마크다운" />}
@@ -248,7 +248,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
             <select
               value={rpParser}
               onChange={(e) => setRpParser(e.target.value as ParserId)}
-              className="h-7 px-1.5 border border-line rounded text-[11px] font-bold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="h-7 px-1.5 border border-line rounded text-[11px] font-bold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
             >
               {parserChoices.map((p) => (
                 <option key={p.id} value={p.id}>{p.short}</option>
@@ -260,7 +260,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
             <select
               value={rpChunk}
               onChange={(e) => setRpChunk(e.target.value as ChunkingStrategy)}
-              className="h-7 px-1.5 border border-line rounded text-[11px] font-bold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="h-7 px-1.5 border border-line rounded text-[11px] font-bold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
             >
               {REPARSE_CHUNKERS.map((c) => (
                 <option key={c} value={c}>{CHUNKING_LABEL[c]}</option>
@@ -274,7 +274,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
           <button
             onClick={doReparse}
             title="변경한 옵션으로 이 문서를 다시 파싱합니다"
-            className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark inline-flex items-center gap-1"
+            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark inline-flex items-center gap-1"
           >
             ↻ 재파싱
           </button>
@@ -370,8 +370,8 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                     <li
                       key={idx}
                       className={cn(
-                        'py-2 px-3 hover:bg-[#FFFCF3] transition-colors',
-                        isEditing && 'bg-kb-yellow-tint',
+                        'py-2 px-3 hover:bg-[#F3F9F8] transition-colors',
+                        isEditing && 'bg-brand-tint',
                       )}
                     >
                       <div className="flex items-center gap-1.5 mb-1.5">
@@ -382,7 +382,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                           <select
                             value={block.kind}
                             onChange={(e) => updateBlock(idx, { kind: e.target.value })}
-                            className="h-5 px-1.5 border border-kb-yellow-dark rounded text-[10px] font-extrabold text-ink-dark bg-white"
+                            className="h-5 px-1.5 border border-brand-dark rounded text-[10px] font-extrabold text-ink-dark bg-white"
                           >
                             {KIND_OPTS.map((k) => (
                               <option key={k} value={k}>
@@ -403,7 +403,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                           <>
                             <button
                               onClick={() => setEditingIdx(null)}
-                              className="h-6 px-2 bg-kb-yellow border border-kb-yellow-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                              className="h-6 px-2 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
                             >
                               완료
                             </button>
@@ -429,7 +429,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
                           value={block.text}
                           onChange={(e) => updateBlock(idx, { text: e.target.value })}
                           rows={Math.max(2, Math.min(8, Math.ceil(block.text.length / 60)))}
-                          className="w-full text-[12px] text-ink-dark leading-[1.6] border border-kb-yellow-dark rounded p-2 bg-white resize-y focus:outline-none"
+                          className="w-full text-[12px] text-ink-dark leading-[1.6] border border-brand-dark rounded p-2 bg-white resize-y focus:outline-none"
                         />
                       ) : (
                         <div className="text-[12px] text-ink-dark leading-[1.6] whitespace-pre-wrap">
@@ -489,11 +489,11 @@ function OptChip({
 }: {
   label?: string;
   value: string;
-  tone?: 'neutral' | 'kb' | 'warn';
+  tone?: 'neutral' | 'brand' | 'warn';
 }) {
   const toneClass: Record<typeof tone, string> = {
     neutral: 'bg-white border-line-soft text-ink-dark',
-    kb: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink',
+    brand: 'bg-brand-tint border-brand-dark text-ink',
     warn: 'bg-warn-bg border-warn-border text-warn',
   };
   return (

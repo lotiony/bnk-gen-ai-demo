@@ -23,7 +23,7 @@ export default function Topbar({ context, envBadge }: TopbarProps) {
           to="/"
           className="flex items-center gap-2.5 text-sm font-extrabold text-ink pl-1 -ml-1.5"
         >
-          GenAI Portal 2.0
+          BNK 공동 생성형 AI 플랫폼
           {context && (
             <span className="text-[11.5px] font-semibold text-ink-mid ml-1.5 border-l border-line-soft pl-2.5">
               {context}

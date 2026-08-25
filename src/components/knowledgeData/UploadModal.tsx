@@ -28,7 +28,7 @@ const SAMPLE: QueueItem[] = [
 const EXT_BADGE: Record<QueueItem['ext'], string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 
@@ -91,7 +91,7 @@ export default function UploadModal({ open, onClose, onUploaded }: Props) {
                 onUploaded?.(uploaded);
                 onClose();
               }}
-              className="py-2 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               업로드 시작
             </button>
@@ -120,10 +120,10 @@ export default function UploadModal({ open, onClose, onUploaded }: Props) {
         }}
         className={cn(
           'border border-dashed rounded p-5 text-center bg-surface-soft cursor-pointer transition-colors',
-          dragOver ? 'border-kb-yellow-dark bg-kb-yellow-tint' : 'border-line',
+          dragOver ? 'border-brand-dark bg-brand-tint' : 'border-line',
         )}
       >
-        <div className="w-10 h-10 rounded-full bg-white border border-line-soft inline-flex items-center justify-center mb-2 text-lg text-kb-yellow-dark">
+        <div className="w-10 h-10 rounded-full bg-white border border-line-soft inline-flex items-center justify-center mb-2 text-lg text-brand-dark">
           ↑
         </div>
         <div className="text-[13px] font-extrabold text-ink mb-1">파일 또는 폴더를 여기로 드롭하세요</div>
@@ -139,7 +139,7 @@ export default function UploadModal({ open, onClose, onUploaded }: Props) {
               fileInputRef.current?.click();
               simulatePick();
             }}
-            className="h-[30px] px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-xs font-extrabold text-ink hover:bg-kb-yellow-dark"
+            className="h-[30px] px-3.5 bg-brand border border-brand-dark rounded text-xs font-extrabold text-ink hover:bg-brand-dark"
           >
             파일 선택
           </button>

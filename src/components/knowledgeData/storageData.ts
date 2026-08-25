@@ -36,16 +36,16 @@ export const FOLDER_ROWS: FolderRow[] = [
 export const FOLDER_FILES: Record<string, FileRow[]> = {
   '규정 매뉴얼': [
     { id: 'reg-1', name: '금융소비자보호_내규.pdf', ext: 'PDF', sizeMB: 3.2, pages: 74, updatedBy: '준법지원부', updatedAt: '2026-04-14' },
-    { id: 'reg-2', name: 'AI_윤리_가이드라인.pdf', ext: 'PDF', sizeMB: 1.8, pages: 42, updatedBy: 'DT추진부', updatedAt: '2026-03-02' },
+    { id: 'reg-2', name: 'AI_윤리_가이드라인.pdf', ext: 'PDF', sizeMB: 1.8, pages: 42, updatedBy: '디지털혁신부', updatedAt: '2026-03-02' },
     { id: 'reg-3', name: '개인정보_처리방침.pdf', ext: 'PDF', sizeMB: 2.4, pages: 58, updatedBy: '정보보호부', updatedAt: '2026-02-18' },
     { id: 'reg-4', name: '전자금융거래_기본약관.pdf', ext: 'PDF', sizeMB: 1.1, pages: 26, updatedBy: '준법지원부', updatedAt: '2025-12-30' },
     { id: 'reg-5', name: '소비자보호_점검항목.csv', ext: 'CSV', sizeMB: 0.3, updatedBy: '준법지원부', updatedAt: '2026-04-10' },
     { id: 'reg-6', name: '내부통제_기준.doc', ext: 'DOC', sizeMB: 1.4, updatedBy: '준법지원부', updatedAt: '2026-03-20' },
-    { id: 'reg-7', name: 'AI윤리_교육자료.pptx', ext: 'PPTX', sizeMB: 8.6, updatedBy: 'DT추진부', updatedAt: '2026-03-05' },
+    { id: 'reg-7', name: 'AI윤리_교육자료.pptx', ext: 'PPTX', sizeMB: 8.6, updatedBy: '디지털혁신부', updatedAt: '2026-03-05' },
     { id: 'reg-8', name: '컴플라이언스_교육.ppt', ext: 'PPT', sizeMB: 6.2, updatedBy: '준법지원부', updatedAt: '2025-11-12' },
     { id: 'reg-9', name: '리스크_점검표.xlsx', ext: 'XLSX', sizeMB: 0.9, updatedBy: '정보보호부', updatedAt: '2026-02-28' },
     { id: 'reg-10', name: '규정_개정이력.xls', ext: 'XLS', sizeMB: 0.7, updatedBy: '준법지원부', updatedAt: '2025-10-08' },
-    { id: 'reg-11', name: '거버넌스_조직도.png', ext: 'PNG', sizeMB: 0.5, updatedBy: 'DT추진부', updatedAt: '2026-01-15' },
+    { id: 'reg-11', name: '거버넌스_조직도.png', ext: 'PNG', sizeMB: 0.5, updatedBy: '디지털혁신부', updatedAt: '2026-01-15' },
   ],
   archive: Array.from({ length: 14 }, (_, i) => {
     const kinds = ['상품안내', '약관', 'FAQ', '매뉴얼', '정책', '보고서', '가이드'] as const;

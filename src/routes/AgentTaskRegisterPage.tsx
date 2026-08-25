@@ -110,7 +110,7 @@ export default function AgentTaskRegisterPage() {
               <FormField label="담당자" required>
                 <div className="mb-2">
                   <ChipReadonly primary role="책임자">
-                    김국민
+                    김플랫
                   </ChipReadonly>
                   <ChipReadonly>박서연</ChipReadonly>
                 </div>
@@ -201,13 +201,13 @@ export default function AgentTaskRegisterPage() {
                       onClick={() => toggleSet(linkedKnw, k.id, setLinkedKnw)}
                       className={cn(
                         'w-full text-left p-3 rounded border flex items-center gap-3',
-                        on ? 'bg-kb-yellow-tint border-kb-yellow-dark' : 'bg-white border-line hover:border-kb-yellow-dark',
+                        on ? 'bg-brand-tint border-brand-dark' : 'bg-white border-line hover:border-brand-dark',
                       )}
                     >
                       <span
                         className={cn(
                           'w-4 h-4 rounded border-2 inline-flex items-center justify-center text-[10px]',
-                          on ? 'bg-kb-yellow-dark border-kb-yellow-dark text-ink' : 'border-line bg-white',
+                          on ? 'bg-brand-dark border-brand-dark text-ink' : 'border-line bg-white',
                         )}
                       >
                         {on && '✓'}
@@ -355,14 +355,14 @@ function RadioBox({
       className={cn(
         'inline-flex items-center gap-2 py-2 px-3 rounded border cursor-pointer text-[12.5px] font-semibold',
         checked
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
       )}
     >
       <span
         className={cn(
           'w-3.5 h-3.5 rounded-full border-2 inline-block',
-          checked ? 'border-kb-yellow-dark bg-kb-yellow' : 'border-line',
+          checked ? 'border-brand-dark bg-brand' : 'border-line',
         )}
       />
       {label}

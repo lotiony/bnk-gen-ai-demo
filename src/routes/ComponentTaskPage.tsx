@@ -83,7 +83,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
       onClick={onClick}
       className={cn(
         'relative py-2.5 px-3.5 text-[13px] font-bold -mb-px border-b-2',
-        active ? 'text-ink border-kb-yellow-dark' : 'text-ink-mid border-transparent hover:text-ink-dark',
+        active ? 'text-ink border-brand-dark' : 'text-ink-mid border-transparent hover:text-ink-dark',
       )}
     >
       {children}
@@ -321,7 +321,7 @@ function DeployView({ comp }: { comp: CustomComponent }) {
                 return (
                   <tr key={v} className="hover:bg-surface">
                     <td className="py-2 px-3 whitespace-nowrap">
-                      <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-kb-yellow-tint text-ink border-kb-yellow-dark">
+                      <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-brand-tint text-ink border-brand-dark">
                         {v}
                       </span>
                       {i === 0 && (
@@ -370,14 +370,14 @@ function DeployView({ comp }: { comp: CustomComponent }) {
                         <span className="inline-flex items-center gap-1.5">
                           <Link
                             to="/approvals"
-                            className="h-6 px-2 border border-kb-yellow-dark bg-kb-yellow-tint rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow inline-flex items-center"
+                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold text-ink hover:bg-brand inline-flex items-center"
                           >
                             결재함 →
                           </Link>
                         </span>
                       ) : (
                         <button
-                          className="h-6 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                          className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark"
                           title="이 버전을 서빙계로 승격"
                         >
                           ▶ 서빙계로 승격

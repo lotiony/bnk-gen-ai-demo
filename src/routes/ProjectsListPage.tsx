@@ -25,12 +25,12 @@ export default function ProjectsListPage() {
               <input
                 type="text"
                 placeholder="프로젝트명"
-                className="w-full py-2 pl-8 pr-3 border border-line rounded text-[12.5px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+                className="w-full py-2 pl-8 pr-3 border border-line rounded text-[12.5px] bg-white focus:outline-none focus:border-brand-dark"
               />
             </div>
             <Link
               to="/projects/new"
-              className="py-2 px-[18px] bg-kb-yellow border border-kb-yellow-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-kb-yellow-dark inline-flex items-center gap-1.5"
+              className="py-2 px-[18px] bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark inline-flex items-center gap-1.5"
             >
               + 새 프로젝트 등록
             </Link>
@@ -63,7 +63,7 @@ export default function ProjectsListPage() {
           <Link
             key={p.id}
             to={`/projects/${p.id}`}
-            className="grid grid-cols-[4px_1fr_auto] bg-white border border-line-soft rounded overflow-hidden hover:border-kb-yellow-dark hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-colors text-ink-dark"
+            className="grid grid-cols-[4px_1fr_auto] bg-white border border-line-soft rounded overflow-hidden hover:border-brand-dark hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-colors text-ink-dark"
           >
             <div className="bg-ok self-stretch" />
             <div className="px-5 py-4 flex flex-col gap-2.5 min-w-0">
@@ -101,7 +101,7 @@ export default function ProjectsListPage() {
                 <TaskMini ico="🛠" label="개발환경" num={p.counts.env} />
               </div>
             </div>
-            <div className="flex items-center px-5 bg-surface-soft text-[12.5px] font-extrabold text-ink-mid whitespace-nowrap group-hover:bg-kb-yellow-tint group-hover:text-ink">
+            <div className="flex items-center px-5 bg-surface-soft text-[12.5px] font-extrabold text-ink-mid whitespace-nowrap group-hover:bg-brand-tint group-hover:text-ink">
               프로젝트 열기 →
             </div>
           </Link>

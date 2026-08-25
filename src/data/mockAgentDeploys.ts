@@ -113,7 +113,7 @@ export interface ServingDeployData {
 }
 
 const REPO: GitLabRepo = {
-  url: 'git.kbfg.com/kb-agentops/pb-advisor',
+  url: 'git.aip.group.local/aip/pb-advisor',
   branch: 'main',
   lastFetchedAt: '2026-05-20 18:32',
 };
@@ -188,7 +188,7 @@ const HISTORY: DeployRecord[] = [
     deployedAt: '2026-05-19 17:08',
     deployedBy: '박서연',
     status: 'active',
-    approvedBy: '김국민 (프로젝트 오너 그룹)',
+    approvedBy: '김플랫 (프로젝트 오너 그룹)',
   },
   {
     id: 'deploy-204-11',
@@ -196,7 +196,7 @@ const HISTORY: DeployRecord[] = [
     deployedAt: '2026-05-12 16:30',
     deployedBy: '박서연',
     status: 'replaced',
-    approvedBy: '김국민 (프로젝트 오너 그룹)',
+    approvedBy: '김플랫 (프로젝트 오너 그룹)',
   },
   {
     id: 'deploy-204-10',
@@ -204,7 +204,7 @@ const HISTORY: DeployRecord[] = [
     deployedAt: '2026-04-28 12:08',
     deployedBy: '박서연',
     status: 'replaced',
-    approvedBy: '김국민 (프로젝트 오너 그룹)',
+    approvedBy: '김플랫 (프로젝트 오너 그룹)',
   },
   {
     id: 'deploy-204-09',
@@ -347,7 +347,7 @@ const API_KEYS: Record<string, Record<ApiKeyEnv, ApiKey>> = {
       issuedBy: '박서연',
       callCount: 1842,
       lastUsedAt: '2026-05-23 18:14',
-      endpoint: 'https://api-train.kbfg.com/agents/AGT-204',
+      endpoint: 'https://api-dev.aip.group.local/agents/AGT-204',
     },
     serv: {
       env: 'serv',
@@ -357,7 +357,7 @@ const API_KEYS: Record<string, Record<ApiKeyEnv, ApiKey>> = {
       issuedBy: '박서연',
       callCount: 12032,
       lastUsedAt: '2026-05-23 18:20',
-      endpoint: 'https://api.kbfg.com/agents/AGT-204',
+      endpoint: 'https://api.aip.group.local/agents/AGT-204',
     },
   },
 };

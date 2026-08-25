@@ -190,7 +190,7 @@ export default function AgentTaskDetailPage() {
                   onClick={() => setEvalMode(m.k)}
                   className={cn(
                     'h-7 px-3 text-[11.5px] font-extrabold',
-                    evalMode === m.k ? 'bg-kb-yellow-tint text-ink' : 'bg-white text-ink-mid hover:bg-surface',
+                    evalMode === m.k ? 'bg-brand-tint text-ink' : 'bg-white text-ink-mid hover:bg-surface',
                   )}
                 >
                   {m.label}
@@ -219,7 +219,7 @@ export default function AgentTaskDetailPage() {
 
 function DevelopTab({ task }: { task: AgentTask }) {
   const [open, setOpen] = useState<'jenkins' | 'argocd' | null>(null);
-  const repo = `gitlab.kb-internal.local/pb-agent/agents/${task.id.toLowerCase()}`;
+  const repo = `git.aip.group.local/pb-agent/agents/${task.id.toLowerCase()}`;
   const tools = [
     { k: 'jenkins' as const, icon: '⚙️', name: 'Jenkins', desc: '빌드 · 테스트 파이프라인', tone: 'text-accent-purple' },
     { k: 'argocd' as const, icon: '🚀', name: 'ArgoCD', desc: 'GitOps 배포 동기화', tone: 'text-ok' },
@@ -324,7 +324,7 @@ function OpsTab({ task, hasRuns }: { task: AgentTask; hasRuns: boolean }) {
               <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
                 <div className="w-full flex items-end" style={{ height: '110px' }}>
                   <div
-                    className="w-full rounded-t bg-kb-yellow-dark/80"
+                    className="w-full rounded-t bg-brand-dark/80"
                     style={{ height: `${(v / maxV) * 100}%` }}
                     title={`${v}건`}
                   />
@@ -400,7 +400,7 @@ function TabBtn({
       className={cn(
         'inline-flex items-center gap-1.5 px-4 py-2.5 text-[12.5px] font-extrabold border-b-2 -mb-px transition-colors',
         active
-          ? 'text-ink border-kb-yellow-dark bg-kb-yellow-tint'
+          ? 'text-ink border-brand-dark bg-brand-tint'
           : 'text-ink-mid border-transparent hover:text-ink-dark hover:bg-surface',
       )}
     >
@@ -623,13 +623,13 @@ function EvalTab({
                 const ts = testSets.find((t) => t.id === r.testSetId);
                 const ver = versions.find((v) => v.version === r.version);
                 return (
-                  <tr key={r.id} className="hover:bg-[#FFFCF3]">
+                  <tr key={r.id} className="hover:bg-[#F3F9F8]">
                     <td className="py-2 px-2.5 border-b border-line-soft">
                       <span
                         className={cn(
                           'pill border',
                           ver?.isCurrent
-                            ? 'bg-kb-yellow-tint text-ink border-kb-yellow-dark'
+                            ? 'bg-brand-tint text-ink border-brand-dark'
                             : 'bg-surface-soft text-ink-mid border-line-soft',
                         )}
                       >
@@ -853,7 +853,7 @@ function DeployTab({ agentId }: { agentId: string }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="태그명 검색 (예: v4)"
-            className="w-full h-8 py-0 pl-7 pr-2.5 border border-line rounded text-xs focus:outline-none focus:border-kb-yellow-dark"
+            className="w-full h-8 py-0 pl-7 pr-2.5 border border-line rounded text-xs focus:outline-none focus:border-brand-dark"
           />
         </div>
         <ul className="divide-y divide-line-soft border border-line-soft rounded-lg overflow-hidden">
@@ -889,7 +889,7 @@ function DeployTab({ agentId }: { agentId: string }) {
                     <button
                       disabled={!allPreflightPass}
                       title={!allPreflightPass ? '사전 점검 미통과 항목이 있으면 기안할 수 없습니다' : '학습계 배포 기안'}
-                      className="h-7 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[11px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                      className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                     >
                       배포 기안 →
                     </button>
@@ -923,7 +923,7 @@ function DeployTab({ agentId }: { agentId: string }) {
           </thead>
           <tbody>
             {history.map((h) => (
-              <tr key={h.id} className="hover:bg-[#FFFCF3]">
+              <tr key={h.id} className="hover:bg-[#F3F9F8]">
                 <td className="py-2 px-2.5 border-b border-line-soft">
                   <code className="font-mono text-ink-dark font-bold">{h.tagName}</code>
                 </td>
@@ -1101,7 +1101,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
                 className={cn(
                   'text-left p-3 rounded border transition-all',
                   isSel
-                    ? 'bg-kb-yellow-tint border-kb-yellow-dark shadow-sm'
+                    ? 'bg-brand-tint border-brand-dark shadow-sm'
                     : isBlocked
                     ? 'bg-surface-soft/50 border-line-soft hover:border-line opacity-75'
                     : 'bg-white border-line-soft hover:border-info',
@@ -1202,8 +1202,8 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
                           className={cn(
                             'h-6 px-2 rounded text-[11px] font-extrabold tabular-nums border',
                             warmupMinutes === min
-                              ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-                              : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+                              ? 'bg-brand-tint border-brand-dark text-ink'
+                              : 'bg-white border-line text-ink-dark hover:border-brand-dark',
                           )}
                         >
                           {min}분
@@ -1266,7 +1266,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
           </thead>
           <tbody>
             {data.history.map((h) => (
-              <tr key={h.id} className="hover:bg-[#FFFCF3]">
+              <tr key={h.id} className="hover:bg-[#F3F9F8]">
                 <td className="py-2 px-2.5 border-b border-line-soft">
                   <code className="font-mono text-ink-dark font-bold">{h.tagName}</code>
                 </td>
@@ -1331,14 +1331,14 @@ function RadioMini({
       className={cn(
         'inline-flex items-center gap-2 py-1.5 px-3 rounded border text-[11.5px] font-bold',
         checked
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
       )}
     >
       <span
         className={cn(
           'w-3 h-3 rounded-full border-2 inline-block',
-          checked ? 'border-kb-yellow-dark bg-kb-yellow' : 'border-line',
+          checked ? 'border-brand-dark bg-brand' : 'border-line',
         )}
       />
       {label}
@@ -1442,7 +1442,7 @@ function RedTeamTab({ agentId }: { agentId: string }) {
           </span>
           <div className="text-[13px] font-extrabold text-ink">{operator.team}</div>
         </div>
-        <button className="h-9 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12px] font-extrabold text-ink hover:bg-kb-yellow-dark inline-flex items-center">
+        <button className="h-9 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark inline-flex items-center">
           ＋ 레드팀 평가 신청
         </button>
       </div>
@@ -1560,7 +1560,7 @@ function RedTeamTab({ agentId }: { agentId: string }) {
                     return (
                       <tr
                         key={`${g.version}-collapsed`}
-                        className="hover:bg-[#FFFCF3] cursor-pointer"
+                        className="hover:bg-[#F3F9F8] cursor-pointer"
                         onClick={() => toggleVersion(g.version)}
                       >
                         <td
@@ -1603,7 +1603,7 @@ function RedTeamTab({ agentId }: { agentId: string }) {
                       isFirstInGroup && groupBorderTop,
                     );
                     return (
-                      <tr key={r.id} className="hover:bg-[#FFFCF3]">
+                      <tr key={r.id} className="hover:bg-[#F3F9F8]">
                         {isFirstInGroup && (
                           <td
                             rowSpan={g.runs.length}
@@ -1731,14 +1731,14 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
               fullKey: `sk-${env === 'train' ? 'train' : 'live'}-${Math.random().toString(36).slice(2, 18)}${Math.random().toString(36).slice(2, 18)}`.slice(0, env === 'train' ? 41 : 40),
               lastFour: Math.random().toString(36).slice(2, 6),
               issuedAt: new Date().toLocaleString('ko-KR', { hour12: false }).replace(/\./g, '-').slice(0, 16),
-              issuedBy: '김국민',
+              issuedBy: '김플랫',
               callCount: 0,
-              endpoint: `https://api${env === 'train' ? '-train' : ''}.kbfg.com/agents/${agentId}`,
+              endpoint: `https://api${env === 'train' ? '-train' : ''}.aip.group.local/agents/${agentId}`,
             };
             setKey(newKey);
             setRevealed(true);
           }}
-          className="h-8 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+          className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
         >
           ＋ 키 발급
         </button>
@@ -1777,7 +1777,7 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
       fullKey: `sk-${env === 'train' ? 'train' : 'live'}-${Math.random().toString(36).slice(2, 18)}${Math.random().toString(36).slice(2, 18)}`.slice(0, env === 'train' ? 41 : 40),
       lastFour: Math.random().toString(36).slice(2, 6),
       issuedAt: new Date().toLocaleString('ko-KR', { hour12: false }).replace(/\./g, '-').slice(0, 16),
-      issuedBy: '김국민',
+      issuedBy: '김플랫',
       callCount: 0,
       lastUsedAt: undefined,
     };
@@ -2034,7 +2034,7 @@ function PiiFilterDashboard({ agentId }: { agentId: string }) {
           </thead>
           <tbody>
             {events.map((e) => (
-              <tr key={e.id} className="hover:bg-[#FFFCF3]">
+              <tr key={e.id} className="hover:bg-[#F3F9F8]">
                 <td className="py-2 px-2.5 border-b border-line-soft text-ink-mid text-[11px] tabular-nums">
                   {e.ts}
                 </td>
@@ -2158,7 +2158,7 @@ function PiiItemsManagement({ agentId }: { agentId: string }) {
           </span>
           <button
             onClick={handleAdd}
-            className="ml-auto h-7 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[11px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+            className="ml-auto h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark"
           >
             ＋ 항목 추가 (결재)
           </button>
@@ -2179,7 +2179,7 @@ function PiiItemsManagement({ agentId }: { agentId: string }) {
             </thead>
             <tbody>
               {customItems.map((it) => (
-                <tr key={it.id} className="hover:bg-[#FFFCF3]">
+                <tr key={it.id} className="hover:bg-[#F3F9F8]">
                   <td className="py-2 px-2.5 border-b border-line-soft">
                     <div className="text-[12.5px] font-extrabold text-ink">{it.name}</div>
                     <code className="text-[10px] text-ink-mid font-mono">{it.code}</code>
@@ -2426,7 +2426,7 @@ function LoadTestPanel({
             </thead>
             <tbody>
               {runs.map((r) => (
-                <tr key={r.id} className="hover:bg-[#FFFCF3]">
+                <tr key={r.id} className="hover:bg-[#F3F9F8]">
                   <td className="py-2 px-2.5 border-b border-line-soft">
                     <code className="font-mono text-ink-dark font-bold text-[11.5px]">{r.version}</code>
                   </td>
@@ -2478,8 +2478,8 @@ function ChipButton({
       className={cn(
         'h-7 px-2.5 rounded text-[11px] font-extrabold border tabular-nums',
         active
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
       )}
     >
       {children}

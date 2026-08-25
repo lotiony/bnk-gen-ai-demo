@@ -121,8 +121,8 @@ export default function KnowledgeTaskRegisterPage() {
                   className={cn(
                     'text-left p-3 rounded-lg border transition-colors',
                     taskType === t.id
-                      ? 'bg-kb-yellow-tint border-kb-yellow-dark'
-                      : 'bg-white border-line hover:border-kb-yellow-dark',
+                      ? 'bg-brand-tint border-brand-dark'
+                      : 'bg-white border-line hover:border-brand-dark',
                   )}
                 >
                   <div className="text-[18px] mb-1">{t.icon}</div>
@@ -254,7 +254,7 @@ function Progress({
       </div>
       <div className="h-1.5 bg-surface-soft rounded overflow-hidden">
         <div
-          className={cn('h-full', tone === 'bad' ? 'bg-bad' : 'bg-kb-yellow-dark')}
+          className={cn('h-full', tone === 'bad' ? 'bg-bad' : 'bg-brand-dark')}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -280,13 +280,13 @@ function ApprLineStep({
         'flex items-center gap-2 py-1.5 px-2 rounded border',
         tone === 'auto' && 'bg-warn-bg border-warn-border',
         tone === 'normal' && 'bg-white border-line-soft',
-        current && 'bg-kb-yellow-tint border-kb-yellow-dark',
+        current && 'bg-brand-tint border-brand-dark',
       )}
     >
       <span
         className={cn(
           'w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-extrabold flex-shrink-0',
-          current ? 'bg-kb-yellow-dark text-white border border-kb-yellow-dark' : 'bg-white border border-line text-ink-dark',
+          current ? 'bg-brand-dark text-white border border-brand-dark' : 'bg-white border border-line text-ink-dark',
         )}
       >
         {seq}

@@ -73,7 +73,7 @@ export default function SearchPipelineTaskPage() {
     {
       id: 'idx-compliance-rules-v3',
       label: 'idx-compliance-rules-v3',
-      ownerTask: '전사 규정·컴플라이언스 KB',
+      ownerTask: '전사 규정·컴플라이언스 지식',
       mine: false,
       sens: 3,
       chunks: 12407,
@@ -83,7 +83,7 @@ export default function SearchPipelineTaskPage() {
     {
       id: 'idx-product-catalog-2026',
       label: 'idx-product-catalog-2026',
-      ownerTask: '상품 카탈로그 KB',
+      ownerTask: '상품 카탈로그 지식',
       mine: false,
       sens: 1,
       chunks: 2154,
@@ -190,7 +190,7 @@ export default function SearchPipelineTaskPage() {
             </Row>
             <Row>
               <FormField label="소속 부서·팀" info="SSO 디렉토리에서 자동">
-                <Input defaultValue="데이터플랫폼팀 · 금융AI2센터" disabled />
+                <Input defaultValue="데이터플랫폼팀 · AI디지털전략부" disabled />
               </FormField>
               <FormField label="기간" required>
                 <div className="flex items-center gap-2">
@@ -239,15 +239,15 @@ export default function SearchPipelineTaskPage() {
                       className={cn(
                         'w-full text-left p-3 rounded border flex items-center gap-3',
                         on
-                          ? 'bg-kb-yellow-tint border-kb-yellow-dark'
-                          : 'bg-white border-line hover:border-kb-yellow-dark',
+                          ? 'bg-brand-tint border-brand-dark'
+                          : 'bg-white border-line hover:border-brand-dark',
                       )}
                     >
                       <span
                         className={cn(
                           'w-4 h-4 rounded border-2 inline-flex items-center justify-center text-[10px] flex-shrink-0',
                           on
-                            ? 'bg-kb-yellow-dark border-kb-yellow-dark text-ink'
+                            ? 'bg-brand-dark border-brand-dark text-ink'
                             : 'border-line bg-white',
                         )}
                       >
@@ -349,8 +349,8 @@ export default function SearchPipelineTaskPage() {
                       className={cn(
                         'text-left p-3 rounded border transition-colors',
                         on
-                          ? 'bg-kb-yellow-tint border-kb-yellow-dark'
-                          : 'bg-white border-line hover:border-kb-yellow-dark',
+                          ? 'bg-brand-tint border-brand-dark'
+                          : 'bg-white border-line hover:border-brand-dark',
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -358,7 +358,7 @@ export default function SearchPipelineTaskPage() {
                         <span
                           className={cn(
                             'w-4 h-4 rounded-full border-2 inline-block',
-                            on ? 'border-kb-yellow-dark bg-kb-yellow' : 'border-line',
+                            on ? 'border-brand-dark bg-brand' : 'border-line',
                           )}
                         />
                       </div>
@@ -479,7 +479,7 @@ export default function SearchPipelineTaskPage() {
                 <button
                   type="button"
                   onClick={() => setScenarios([...scenarios, { name: '', avg: '', peak: '' }])}
-                  className="h-8 px-3 border border-dashed border-line rounded text-[11.5px] text-ink-dark font-bold hover:bg-kb-yellow-tint hover:border-kb-yellow-dark"
+                  className="h-8 px-3 border border-dashed border-line rounded text-[11.5px] text-ink-dark font-bold hover:bg-brand-tint hover:border-brand-dark"
                 >
                   ＋ 시나리오 추가
                 </button>
@@ -507,7 +507,7 @@ export default function SearchPipelineTaskPage() {
             tag="MVP"
             defaultOpen
           >
-            <div className="mb-3 bg-kb-yellow-tint border border-kb-yellow-dark rounded p-2.5 text-[11.5px] text-ink">
+            <div className="mb-3 bg-brand-tint border border-brand-dark rounded p-2.5 text-[11.5px] text-ink">
               <b>품질 게이트 자동 동작</b> · 아래 임계값은 Stage 4 서빙계 프로모션 결재의 자동 게이트로 동작 ·
               미달 시 결재 차단. 골든셋 <b>{goldenMin}건</b> 이상이어야 Stage 3 진입 가능.
             </div>
@@ -642,7 +642,7 @@ export default function SearchPipelineTaskPage() {
                 />
               </tbody>
               <tfoot>
-                <tr className="bg-kb-yellow-tint">
+                <tr className="bg-brand-tint">
                   <td className="py-2 px-3 font-extrabold text-ink text-[12px]" colSpan={3}>
                     월간 합계 (학습계 + 서빙계)
                   </td>
@@ -661,7 +661,7 @@ export default function SearchPipelineTaskPage() {
             summary="B·C 입력값으로부터 자동 매칭"
             tag="자동"
           >
-            <div className="bg-kb-yellow-tint border border-kb-yellow-dark rounded p-3 space-y-1.5 text-[11.5px] text-ink-dark">
+            <div className="bg-brand-tint border border-brand-dark rounded p-3 space-y-1.5 text-[11.5px] text-ink-dark">
               <AutoLine>
                 <b>인덱스 민감도 승계</b> · 선택한 인덱스 중 최고 등급{' '}
                 <b>{maxSens || 1}등급</b> 자동 승계
@@ -848,14 +848,14 @@ function StageItem({
     <button
       className={cn(
         'flex-1 flex items-center gap-2.5 px-3 py-2 rounded transition-colors text-left',
-        active ? 'bg-kb-yellow-tint border border-kb-yellow-dark' : 'hover:bg-surface-soft',
+        active ? 'bg-brand-tint border border-brand-dark' : 'hover:bg-surface-soft',
       )}
     >
       <span
         className={cn(
           'w-6 h-6 rounded-full inline-flex items-center justify-center font-extrabold text-[11px] border-2 flex-shrink-0',
           active
-            ? 'bg-kb-yellow border-kb-yellow-dark text-ink'
+            ? 'bg-brand border-brand-dark text-ink'
             : 'bg-white border-line text-ink-mid',
         )}
       >
@@ -895,14 +895,14 @@ function RadioBox({
       className={cn(
         'inline-flex items-center gap-2 py-2 px-3 rounded border cursor-pointer text-[12.5px] font-semibold',
         checked
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
       )}
     >
       <span
         className={cn(
           'w-3.5 h-3.5 rounded-full border-2 inline-block',
-          checked ? 'border-kb-yellow-dark bg-kb-yellow' : 'border-line',
+          checked ? 'border-brand-dark bg-brand' : 'border-line',
         )}
       />
       {label}
@@ -1072,7 +1072,7 @@ function AttachRow({
             ? 'border-line-soft bg-surface text-ink-light cursor-not-allowed'
             : attached
             ? 'border-line bg-white text-ink-dark hover:bg-surface'
-            : 'border-kb-yellow-dark bg-kb-yellow text-ink font-extrabold hover:bg-kb-yellow-dark',
+            : 'border-brand-dark bg-brand text-ink font-extrabold hover:bg-brand-dark',
         )}
       >
         {auto ? '미리보기' : attached ? '교체' : '＋ 업로드'}
@@ -1084,7 +1084,7 @@ function AttachRow({
 function AutoLine({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 leading-snug">
-      <span className="text-kb-yellow-dark text-[9px] mt-[5px]">●</span>
+      <span className="text-brand-dark text-[9px] mt-[5px]">●</span>
       <span>{children}</span>
     </div>
   );

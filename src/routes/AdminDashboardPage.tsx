@@ -62,9 +62,9 @@ import {
 type TabId = 'overview' | 'usage' | 'model' | 'infra' | 'gpu' | 'governance' | 'cost';
 
 /** 관리 대시보드 Grafana 패널 URL — 위젯별 직링크. */
-const GRAFANA_BASE = 'https://grafana.kbops.local';
+const GRAFANA_BASE = 'https://monitor.aip.group.local';
 function grafanaAdminPanel(panel: string): string {
-  return `${GRAFANA_BASE}/d/kbops-admin-dashboard/admin-dashboard?viewPanel=${encodeURIComponent(panel)}`;
+  return `${GRAFANA_BASE}/d/aip-admin-dashboard/admin-dashboard?viewPanel=${encodeURIComponent(panel)}`;
 }
 
 const TABS: { id: TabId; label: string }[] = [
@@ -78,7 +78,7 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 /**
- * 플랫폼 관리자 대시보드 — 계열사(KB국민은행) 내 모든 프로젝트의 사용 현황을
+ * 플랫폼 관리자 대시보드 — 계열사(부산은행) 내 모든 프로젝트의 사용 현황을
  * 4개 탭(개요·사용 현황·PTU·자원·안전·거버넌스)으로 분할해 한 레이어 위에서 본다.
  *
  * 비용 모델: 모든 비용은 PTU(Provisioned Throughput Unit) 기반.
@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
         <div>
           <div className="text-[11px] text-ink-mid font-bold tracking-[0.3px] mb-1">
             플랫폼 관리자 대시보드 · 계열사{' '}
-            <span className="text-ink-dark">KB국민은행</span>
+            <span className="text-ink-dark">부산은행</span>
           </div>
           <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">
             사용 현황 대시보드
@@ -115,7 +115,7 @@ export default function AdminDashboardPage() {
             className={cn(
               'py-3 px-[18px] text-[12.5px] font-bold border-b-2 -mb-px',
               tab === t.id
-                ? 'text-ink border-kb-yellow-dark'
+                ? 'text-ink border-brand-dark'
                 : 'text-ink-mid border-transparent hover:text-ink-dark',
             )}
           >
@@ -358,7 +358,7 @@ function Top5Card({ row }: { row: ProjectUsageRow }) {
   return (
     <Link
       to={`/projects/${row.id}`}
-      className="card px-3.5 py-3 hover:border-kb-yellow-dark transition-colors block"
+      className="card px-3.5 py-3 hover:border-brand-dark transition-colors block"
     >
       <div className="text-[10.5px] text-ink-mid font-bold mb-1.5 truncate">
         PM <span className="text-ink-dark">{row.pmName}</span>
@@ -413,7 +413,7 @@ function SignalCard({
 
 function ActivityRow({ item }: { item: ActivityItem }) {
   const kindStyle: Record<ActivityKind, { label: string; cls: string }> = {
-    project_register: { label: '등록', cls: 'bg-kb-yellow text-ink border-kb-yellow-dark' },
+    project_register: { label: '등록', cls: 'bg-brand text-ink border-brand-dark' },
     train_deploy: { label: '학습계', cls: 'bg-info-bg text-info border-info-border' },
     serv_promotion: { label: '서빙계', cls: 'bg-ok-bg text-ok border-ok-border' },
     policy_violation: { label: '정책', cls: 'bg-warn-bg text-warn border-warn-border' },
@@ -718,7 +718,7 @@ function ShareCard({
   grafanaPanel?: string;
 }) {
   const palette = [
-    'bg-kb-yellow-dark',
+    'bg-brand-dark',
     'bg-info',
     'bg-ok',
     'bg-accent-purple',
@@ -842,7 +842,7 @@ function ProjectTokenBarChart({ rows }: { rows: ProjectUsageRow[] }) {
               {/* 입력 (하단) */}
               <rect x={bx} y={ys(d.input)} width={barW} height={inH} fill="#1F5BB8" />
               {/* 출력 (상단) */}
-              <rect x={bx} y={ys(d.input + d.output)} width={barW} height={outH} fill="#E5BD00" />
+              <rect x={bx} y={ys(d.input + d.output)} width={barW} height={outH} fill="#5FA69C" />
               {/* 총합 라벨 (막대 위) */}
               <text
                 x={cx}
@@ -868,7 +868,7 @@ function ProjectTokenBarChart({ rows }: { rows: ProjectUsageRow[] }) {
           입력 토큰
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-kb-yellow-dark" />
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-brand-dark" />
           출력 토큰
         </span>
         <span className="ml-auto text-ink-light">
@@ -1030,7 +1030,7 @@ function GrafanaLink({ panel }: { panel: string }) {
 
 const PTU_COLORS = [
   { stroke: '#1F5BB8', dot: 'bg-info' },
-  { stroke: '#E5BD00', dot: 'bg-kb-yellow-dark' },
+  { stroke: '#5FA69C', dot: 'bg-brand-dark' },
   { stroke: '#1B8A4D', dot: 'bg-ok' },
 ];
 
@@ -1151,7 +1151,7 @@ function PtuByModelList({
   rows: ProjectUsageRow[];
   ptuUsage: ModelPtuUsage[];
 }) {
-  const palette = ['#E5BD00', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+  const palette = ['#5FA69C', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
   const groups = ptuUsage.map((m, mi) => {
     const projects = rows
       .filter((r) => r.primaryModel === m.model && r.monthTokenInput + r.monthTokenOutput > 0)
@@ -1761,8 +1761,8 @@ function GovernanceTab({ rows }: { rows: ProjectUsageRow[] }) {
                     className={cn(
                       'h-6 px-2 rounded text-[10.5px] font-extrabold border',
                       trendMode === m
-                        ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-                        : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+                        ? 'bg-brand-tint border-brand-dark text-ink'
+                        : 'bg-white border-line text-ink-dark hover:border-brand-dark',
                     )}
                   >
                     {m === 'total' ? '합산' : m === 'pii' ? 'PII' : '가드레일'}
@@ -2124,7 +2124,7 @@ function GpuInfraTab() {
           slices={(() => {
             const map = new Map<string, number>();
             for (const n of GPU_NODES) map.set(n.gpuModel, (map.get(n.gpuModel) ?? 0) + n.gpuCount);
-            const palette = ['#1F5BB8', '#E5BD00', '#1B8A4D', '#6E3BBD'];
+            const palette = ['#1F5BB8', '#5FA69C', '#1B8A4D', '#6E3BBD'];
             return Array.from(map.entries())
               .sort((a, b) => b[1] - a[1])
               .map(([label, value], i) => ({ label, value, color: palette[i % palette.length] }));
@@ -2249,7 +2249,7 @@ function LocationCard({ summary, onClick }: { summary: LocationSummary; onClick:
     <button
       type="button"
       onClick={onClick}
-      className="card px-4 py-3.5 text-left hover:border-kb-yellow-dark transition-colors"
+      className="card px-4 py-3.5 text-left hover:border-brand-dark transition-colors"
     >
       <div className="flex items-baseline justify-between mb-1.5">
         <span className={cn('pill border', color.chip)}>
@@ -2451,7 +2451,7 @@ function TtftCompareCard({ deployments }: { deployments: ModelDeployment[] }) {
             d.ttftMs <= 300
               ? 'bg-ok'
               : d.ttftMs <= 600
-              ? 'bg-kb-yellow-dark'
+              ? 'bg-brand-dark'
               : 'bg-warn';
           return (
             <li key={`${d.model}-${d.location}`}>
@@ -2508,7 +2508,7 @@ function GpuRow({
       <tr
         className={cn(
           'border-b border-line-soft cursor-pointer hover:bg-surface-soft/40',
-          expanded && 'bg-kb-yellow-tint/30 hover:bg-kb-yellow-tint/40',
+          expanded && 'bg-brand-tint/30 hover:bg-brand-tint/40',
         )}
         onClick={onToggle}
       >
@@ -2651,7 +2651,7 @@ function GpuMiniCard({ g, gpuModel }: { g: GpuCard; gpuModel: GpuNode['gpuModel'
     : 'bg-white border-line-soft';
 
   const utilTone =
-    g.utilizationPct >= 85 ? 'bg-bad' : g.utilizationPct >= 70 ? 'bg-kb-yellow-dark' : 'bg-ok';
+    g.utilizationPct >= 85 ? 'bg-bad' : g.utilizationPct >= 70 ? 'bg-brand-dark' : 'bg-ok';
   const utilTextTone =
     g.utilizationPct >= 85 ? 'text-bad' : g.utilizationPct >= 70 ? 'text-warn' : 'text-ok';
 
@@ -2919,8 +2919,8 @@ function FilterChip({
       className={cn(
         'h-7 px-2.5 rounded text-[11px] font-extrabold border tabular-nums',
         active
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
       )}
     >
       {children}
@@ -2974,8 +2974,8 @@ function BigLineChart({
           </text>
         </g>
       ))}
-      <path d={area} fill="#FFF7CC" opacity={0.7} />
-      <path d={d} fill="none" stroke="#E5BD00" strokeWidth={1.7} />
+      <path d={area} fill="#E1F0ED" opacity={0.7} />
+      <path d={d} fill="none" stroke="#5FA69C" strokeWidth={1.7} />
       <circle cx={xs(series.length - 1)} cy={ys(series[series.length - 1])} r={2.6} fill="#1A1A1A" />
       {xLabelIdx.map((i) => (
         <text key={i} x={xs(i)} y={H - 6} textAnchor="middle" fontSize="9" fill="#999999">
@@ -3100,7 +3100,7 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
           </div>
           <div className="flex items-center gap-3 text-[11px]">
             <span className="inline-flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5 rounded-sm bg-kb-yellow-dark" />
+              <span className="inline-block w-2.5 h-2.5 rounded-sm bg-brand-dark" />
               <span className="text-ink-dark font-bold">PTU 고정비</span>
             </span>
             <span className="inline-flex items-center gap-1">
@@ -3304,7 +3304,7 @@ function DailyCostChart({
           </g>
         );
       })}
-      <path d={fixedAreaPath} fill="#FFF7CC" />
+      <path d={fixedAreaPath} fill="#E1F0ED" />
       <path d={varAreaPath} fill="#C5D6F6" opacity={0.7} />
       <path d={totalLine} fill="none" stroke="#1F5BB8" strokeWidth={1.7} />
       <circle cx={xs(N - 1)} cy={ys(varTop[N - 1])} r={3} fill="#1F5BB8" />

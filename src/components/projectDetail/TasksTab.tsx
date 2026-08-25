@@ -46,7 +46,7 @@ const ICON_TONE: Record<CategoryId, string> = {
   database: 'bg-accent-purple-bg text-accent-purple',
   component: 'bg-accent-brown-bg text-accent-brown',
   tool: 'bg-warn-bg text-warn',
-  agent: 'bg-kb-yellow-tint text-ink',
+  agent: 'bg-brand-tint text-ink',
   storage: 'bg-surface-soft text-ink-mid',
   develop: 'bg-ok-bg text-ok',
 };
@@ -114,7 +114,7 @@ export default function TasksTab() {
               onClick={() => setActive(c.id)}
               className={cn(
                 'w-full flex items-center gap-2 py-2 px-2 rounded text-left mb-0.5 last:mb-0 transition-colors',
-                on ? 'bg-kb-yellow-tint' : 'hover:bg-surface-soft',
+                on ? 'bg-brand-tint' : 'hover:bg-surface-soft',
               )}
             >
               <span

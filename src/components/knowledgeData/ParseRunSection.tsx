@@ -30,7 +30,7 @@ const FILE_STATE_LABEL: Record<FileState, string> = {
 const EXT_BADGE: Record<string, string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 
@@ -79,7 +79,7 @@ const ParseRunSection = forwardRef<HTMLElement, Props>(function ParseRunSection(
           {totals.done > 0 && (
             <button
               onClick={() => window.alert(`완료된 ${totals.done}개 파일을 인덱스로 보냅니다 (목업).`)}
-              className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
             >
               ▶ 완료분 인덱스로
             </button>
@@ -138,7 +138,7 @@ const ParseRunSection = forwardRef<HTMLElement, Props>(function ParseRunSection(
                     onClick={() => isClickable && onShowResult(f)}
                     className={cn(
                       'transition-colors',
-                      isClickable ? 'cursor-pointer hover:bg-[#FFFCF3]' : 'cursor-default',
+                      isClickable ? 'cursor-pointer hover:bg-[#F3F9F8]' : 'cursor-default',
                     )}
                   >
                     <td className={cn('py-2 px-2.5', !isLast && 'border-b border-line-soft')}>

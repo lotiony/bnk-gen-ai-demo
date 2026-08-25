@@ -145,7 +145,7 @@ function VSCodeMock() {
             className="flex-1 font-mono text-[11px] leading-[1.65] py-2 overflow-x-auto"
             style={{ background: '#1e1e1e', color: '#d4d4d4' }}
           >
-            <CodeLine n={1} text={<><Kw>from</Kw> kbagentops.testing <Kw>import</Kw> evaluate_golden_set</>} />
+            <CodeLine n={1} text={<><Kw>from</Kw> aip.testing <Kw>import</Kw> evaluate_golden_set</>} />
             <CodeLine n={2} text={<><Kw>from</Kw> pb_agent <Kw>import</Kw> PBAdvisor</>} />
             <CodeLine n={3} text="" />
             <CodeLine n={4} text={<><Kw>def</Kw> <Fn>test_pb_eval_golden_set</Fn>():</>} />
@@ -533,7 +533,7 @@ function ArgocdMock() {
       {/* Status bar */}
       <div className="flex items-center px-4 text-[10.5px] h-6 border-t" style={{ background: '#1a2740', borderTopColor: '#1f2937', color: '#9ca3af' }}>
         <span>Cluster: in-cluster · Namespace: argocd</span>
-        <span className="ml-auto">argocd.kbops.local</span>
+        <span className="ml-auto">cd.aip.group.local</span>
       </div>
     </div>
   );
@@ -585,7 +585,7 @@ function ArgocdAppCard({
         revision <span style={{ color: '#d4d4d4' }}>{app.revision}</span>
       </div>
       <div className="text-[10px] font-mono mt-0.5" style={{ color: '#9ca3af' }}>
-        repo <span style={{ color: '#d4d4d4' }}>github.kb.local/kbagentops/pb-agent-deploy</span>
+        repo <span style={{ color: '#d4d4d4' }}>git.aip.group.local/aip/pb-agent-deploy</span>
       </div>
     </div>
   );

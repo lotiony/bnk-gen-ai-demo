@@ -31,7 +31,7 @@ export default function TabNav({ tabs, active, onChange, right }: Props) {
           className={cn(
             'py-3 px-[18px] text-[12.5px] font-bold border-b-2 -mb-px',
             active === tab.id
-              ? 'text-ink border-kb-yellow-dark'
+              ? 'text-ink border-brand-dark'
               : 'text-ink-mid border-transparent hover:text-ink-dark',
           )}
         >

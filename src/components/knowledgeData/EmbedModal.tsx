@@ -41,7 +41,7 @@ interface Props {
 const EXT_BADGE: Record<string, string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 
@@ -142,7 +142,7 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
               });
               onClose();
             }}
-            className="py-2 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ 임베딩 시작
           </button>
@@ -178,17 +178,17 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
                 className={cn(
                   'flex items-start gap-2 py-2 px-2.5 border rounded text-left transition-colors flex-1 min-w-[200px]',
                   isOn
-                    ? 'border-kb-yellow-dark bg-kb-yellow-tint shadow-sm'
-                    : 'border-line bg-white hover:border-kb-yellow-dark hover:bg-kb-yellow-tint',
+                    ? 'border-brand-dark bg-brand-tint shadow-sm'
+                    : 'border-line bg-white hover:border-brand-dark hover:bg-brand-tint',
                 )}
               >
                 <span
                   className={cn(
                     'w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5',
-                    isOn ? 'border-kb-yellow-dark' : 'border-line',
+                    isOn ? 'border-brand-dark' : 'border-line',
                   )}
                 >
-                  {isOn && <span className="w-1.5 h-1.5 rounded-full bg-kb-yellow-dark" />}
+                  {isOn && <span className="w-1.5 h-1.5 rounded-full bg-brand-dark" />}
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[12px] font-extrabold text-ink truncate">{m.short}</span>
@@ -236,17 +236,17 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
                 className={cn(
                   'flex items-start gap-2 py-2 px-2.5 border rounded text-left transition-colors',
                   on
-                    ? 'border-kb-yellow-dark bg-kb-yellow-tint shadow-sm'
-                    : 'border-line bg-white hover:border-kb-yellow-dark hover:bg-kb-yellow-tint',
+                    ? 'border-brand-dark bg-brand-tint shadow-sm'
+                    : 'border-line bg-white hover:border-brand-dark hover:bg-brand-tint',
                 )}
               >
                 <span
                   className={cn(
                     'w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5',
-                    on ? 'border-kb-yellow-dark' : 'border-line',
+                    on ? 'border-brand-dark' : 'border-line',
                   )}
                 >
-                  {on && <span className="w-1.5 h-1.5 rounded-full bg-kb-yellow-dark" />}
+                  {on && <span className="w-1.5 h-1.5 rounded-full bg-brand-dark" />}
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[12px] font-extrabold text-ink">{o.name}</span>
@@ -266,7 +266,7 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
         <select
           value={selectedIndexId}
           onChange={(e) => setSelectedIndexId(e.target.value)}
-          className="w-full h-9 px-3 border border-line rounded text-[12.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+          className="w-full h-9 px-3 border border-line rounded text-[12.5px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
         >
           <optgroup label="내가 만든 인덱스">
             {myIndexes.map((idx) => {
@@ -290,7 +290,7 @@ export default function EmbedModal({ open, onClose, targets, folders = [], index
             onChange={(e) => setNewIndexName(e.target.value)}
             placeholder="새 인덱스 이름 입력"
             autoFocus
-            className="w-full h-9 px-3 mt-2 border border-kb-yellow-dark rounded text-[12.5px] font-semibold text-ink-dark bg-white focus:outline-none"
+            className="w-full h-9 px-3 mt-2 border border-brand-dark rounded text-[12.5px] font-semibold text-ink-dark bg-white focus:outline-none"
           />
         ) : (
           <div className="text-[10.5px] text-ink-mid font-semibold mt-1.5">

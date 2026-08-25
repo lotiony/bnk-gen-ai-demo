@@ -14,7 +14,7 @@ type StatusFilter = MemberStatus | 'all';
 
 const ROLE_TONE: Record<MemberRole, string> = {
   platform_admin: 'bg-warn-bg text-warn border-warn-border',
-  pm: 'bg-kb-yellow-bg text-ink border-kb-yellow-dark',
+  pm: 'bg-brand-bg text-ink border-brand-dark',
   reviewer: 'bg-info-bg text-info border-info-border',
   member: 'bg-surface text-ink-dark border-line',
   viewer: 'bg-surface-soft text-ink-mid border-line-soft',
@@ -77,7 +77,7 @@ export default function AdminMembersPage() {
             플랫폼 전역 역할과 MFA·접근 상태를 관리합니다. 모든 변경은 감사 원장에 기록됩니다.
           </div>
         </div>
-        <button className="h-9 px-4 bg-kb-yellow text-ink text-[12.5px] font-extrabold rounded border border-kb-yellow-dark hover:bg-kb-yellow-dark">
+        <button className="h-9 px-4 bg-brand text-ink text-[12.5px] font-extrabold rounded border border-brand-dark hover:bg-brand-dark">
           + 멤버 초대
         </button>
       </div>
@@ -98,7 +98,7 @@ export default function AdminMembersPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="이름·사번·이메일·부서 검색"
-            className="h-8 w-[260px] px-3 border border-line rounded text-[12px] outline-none focus:border-kb-yellow-dark"
+            className="h-8 w-[260px] px-3 border border-line rounded text-[12px] outline-none focus:border-brand-dark"
           />
           <select
             value={role}
@@ -154,7 +154,7 @@ export default function AdminMembersPage() {
                 <tr key={m.id} className="border-b border-line-soft last:border-0 hover:bg-surface-soft/40">
                   <td className="py-2.5 px-4">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-kb-yellow-bg border border-kb-yellow-dark flex items-center justify-center text-[11px] font-extrabold text-ink">
+                      <div className="w-7 h-7 rounded-full bg-brand-bg border border-brand-dark flex items-center justify-center text-[11px] font-extrabold text-ink">
                         {m.name.slice(0, 1)}
                       </div>
                       <div className="min-w-0">

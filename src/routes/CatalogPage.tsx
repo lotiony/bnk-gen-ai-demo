@@ -8,8 +8,8 @@ import {
   type Tenant,
 } from '@/data/mockCatalogAgents';
 
-/** 현재 로그인 사용자의 계열사 — 김국민 · PB사업부 · KB국민은행. */
-const MY_TENANT: Tenant = 'KB국민은행';
+/** 현재 로그인 사용자의 계열사 — 김플랫 · PB사업부 · 부산은행. */
+const MY_TENANT: Tenant = '부산은행';
 
 type BuilderKindFilter = 'all' | 'low-code' | 'pro-code';
 type HostFilter = 'all' | 'on-prem' | 'csp';
@@ -71,7 +71,7 @@ export default function CatalogPage() {
       <div className="card px-6 py-5 mb-3.5">
         <div className="flex items-baseline gap-2.5 flex-wrap mb-3">
           <span className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">공통 카탈로그</span>
-          <span className="pill bg-kb-yellow-tint text-ink border border-kb-yellow-dark font-extrabold">
+          <span className="pill bg-brand-tint text-ink border border-brand-dark font-extrabold">
             🤖 에이전트
           </span>
           <span className="text-sm text-ink-mid font-semibold">{MOCK_CATALOG_AGENTS.length}건</span>
@@ -86,7 +86,7 @@ export default function CatalogPage() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="에이전트 ID·이름·설명·모델·소유자 검색"
-                className="w-full py-2 pl-8 pr-3 border border-line rounded text-[12.5px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+                className="w-full py-2 pl-8 pr-3 border border-line rounded text-[12.5px] bg-white focus:outline-none focus:border-brand-dark"
               />
             </div>
           </div>
@@ -167,14 +167,14 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
       className={cn(
         'bg-white border rounded-md flex flex-col overflow-hidden transition-colors',
         sameTenant
-          ? 'border-line-soft hover:border-kb-yellow-dark hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
+          ? 'border-line-soft hover:border-brand-dark hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
           : 'border-line-soft',
       )}
     >
       {/* head */}
       <div className="px-3.5 py-3 border-b border-line-soft">
         <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="w-6 h-6 rounded bg-kb-yellow-tint text-ink inline-flex items-center justify-center text-[12px] flex-shrink-0">
+          <span className="w-6 h-6 rounded bg-brand-tint text-ink inline-flex items-center justify-center text-[12px] flex-shrink-0">
             🤖
           </span>
           <span className="text-[10px] font-mono font-bold text-ink-mid">{agent.id}</span>
@@ -194,7 +194,7 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
           className={cn(
             'pill border font-extrabold text-[10px]',
             agent.customerFacing
-              ? 'bg-kb-yellow text-ink border-kb-yellow-dark'
+              ? 'bg-brand text-ink border-brand-dark'
               : 'bg-info-bg text-info border-info-border',
           )}
         >
@@ -239,7 +239,7 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
       {/* footer — owner + 공유 신청 */}
       <div className="px-3.5 py-2.5 mt-auto flex items-center gap-2">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <span className="w-5 h-5 rounded-full bg-gradient-to-br from-kb-yellow to-kb-yellow-dark text-ink text-[9px] font-extrabold inline-flex items-center justify-center border border-kb-yellow-dark flex-shrink-0">
+          <span className="w-5 h-5 rounded-full bg-gradient-to-br from-brand to-brand-dark text-ink text-[9px] font-extrabold inline-flex items-center justify-center border border-brand-dark flex-shrink-0">
             {agent.ownerInitial}
           </span>
           <span className="text-[10.5px] font-bold text-ink-dark truncate">{agent.ownerName}</span>
@@ -248,7 +248,7 @@ function CatalogAgentCard({ agent }: { agent: CatalogAgent }) {
           <button
             type="button"
             onClick={handleShareRequest}
-            className="py-1 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[11px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+            className="py-1 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-ink hover:bg-brand-dark"
           >
             ＋ 공유 신청
           </button>
@@ -301,8 +301,8 @@ function Chip({
             ? 'bg-ok-bg border-ok-border text-ok'
             : tone === 'info'
             ? 'bg-info-bg border-info-border text-info'
-            : 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line-soft text-ink-mid hover:border-kb-yellow-dark hover:text-ink-dark',
+            : 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line-soft text-ink-mid hover:border-brand-dark hover:text-ink-dark',
       )}
     >
       {children}

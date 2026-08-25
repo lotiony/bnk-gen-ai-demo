@@ -68,7 +68,7 @@ export default function DevenvTaskDetailPage() {
                 {task.name}
               </h1>
               <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11.5px] text-ink-mid">
-                <span className="pill bg-kb-yellow-tint text-ink border border-kb-yellow-dark">
+                <span className="pill bg-brand-tint text-ink border border-brand-dark">
                   {task.scope === 'user' ? '개인 워크스페이스' : '프로젝트 도구'}
                 </span>
                 <span className="text-ink-light">|</span>
@@ -135,7 +135,7 @@ function CoderBody({ task, onOpenIde }: { task: DevenvTask; onOpenIde: () => voi
         <div className="text-[12px] text-ink-mid mb-5">
           마지막 활동 {task.lastActivity} · idle 30분 후 자동 정지됨
         </div>
-        <button className="inline-flex items-center gap-2 h-10 px-5 rounded bg-kb-yellow text-ink font-extrabold text-[13px] border border-kb-yellow-dark hover:bg-kb-yellow-dark">
+        <button className="inline-flex items-center gap-2 h-10 px-5 rounded bg-brand text-ink font-extrabold text-[13px] border border-brand-dark hover:bg-brand-dark">
           ▶ 워크스페이스 시작
         </button>
       </section>
@@ -150,10 +150,10 @@ function CoderBody({ task, onOpenIde }: { task: DevenvTask; onOpenIde: () => voi
       <CoderLinkBtn
         icon="📓"
         label="Jupyter"
-        href="https://coder.kbops.local/@박서연/workspace/apps/jupyter/"
+        href="https://ide.aip.group.local/@박서연/workspace/apps/jupyter/"
       />
       <div className="ml-auto text-[10.5px] text-ink-mid font-semibold tabular-nums">
-        coder.kbops.local/@박서연/workspace
+        ide.aip.group.local/@박서연/workspace
       </div>
     </section>
   );
@@ -176,7 +176,7 @@ function CoderLinkBtn({
     'inline-flex items-center gap-1.5 h-8 px-3 rounded border text-[11.5px] font-extrabold',
     primary
       ? 'bg-ink text-white border-ink hover:bg-ink-dark'
-      : 'bg-white text-ink-dark border-line hover:border-kb-yellow-dark',
+      : 'bg-white text-ink-dark border-line hover:border-brand-dark',
   );
   const content = (
     <>
@@ -210,15 +210,15 @@ function JenkinsBody({ task, onOpenConsole }: { task: DevenvTask; onOpenConsole:
       <CoderLinkBtn
         icon="📊"
         label="Blue Ocean"
-        href="https://jenkins.kbagentops.local/blue/organizations/jenkins/"
+        href="https://ci.aip.group.local/blue/organizations/jenkins/"
       />
       <CoderLinkBtn
         icon="🔌"
         label="Webhook 설정"
-        href="https://jenkins.kbagentops.local/configure"
+        href="https://ci.aip.group.local/configure"
       />
       <div className="ml-auto text-[10.5px] text-ink-mid font-semibold tabular-nums">
-        jenkins.kbagentops.local
+        ci.aip.group.local
       </div>
     </section>
   );
@@ -233,15 +233,15 @@ function ArgocdBody({ task, onOpenUi }: { task: DevenvTask; onOpenUi: () => void
       <CoderLinkBtn
         icon="📦"
         label="Git 저장소"
-        href="https://github.kb.local/kbagentops/pb-agent-deploy"
+        href="https://git.aip.group.local/aip/pb-agent-deploy"
       />
       <CoderLinkBtn
         icon="🔁"
         label="Webhook"
-        href="https://argocd.kbops.local/settings/repos"
+        href="https://cd.aip.group.local/settings/repos"
       />
       <div className="ml-auto text-[10.5px] text-ink-mid font-semibold tabular-nums">
-        argocd.kbops.local
+        cd.aip.group.local
       </div>
     </section>
   );

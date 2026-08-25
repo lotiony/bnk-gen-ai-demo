@@ -15,7 +15,7 @@ export default function ChipReadonly({ primary, role, roleVariant = 'primary', c
       className={cn(
         'inline-flex items-center gap-1.5 text-[12px] font-bold py-1 px-2.5 rounded-full border mr-1.5 mb-1.5',
         primary
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
+          ? 'bg-brand-tint border-brand-dark text-ink'
           : 'bg-surface-soft border-line-soft text-ink-dark',
       )}
     >
@@ -25,7 +25,7 @@ export default function ChipReadonly({ primary, role, roleVariant = 'primary', c
           className={cn(
             'text-[9.5px] font-extrabold px-1.5 py-px rounded-md tracking-[0.2px]',
             roleVariant === 'primary'
-              ? 'bg-kb-yellow text-ink'
+              ? 'bg-brand text-ink'
               : 'bg-info-bg text-info border border-info-border',
           )}
         >

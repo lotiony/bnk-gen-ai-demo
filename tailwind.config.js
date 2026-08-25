@@ -21,11 +21,15 @@ export default {
         '2xs': ['10.5px', '1.3'],
       },
       colors: {
-        kb: {
-          yellow: '#FFD200',
-          'yellow-dark': '#E5BD00',
-          'yellow-tint': '#FFF7CC',
-          'yellow-bg': '#FFFBEE',
+        // 데모용 중립 브랜드 팔레트.
+        // 원본의 *명도 구조*를 그대로 승계한다 —
+        // DEFAULT·dark 모두 어두운 텍스트(text-ink)를 얹는 밝은 배경이다.
+        // 색을 진하게 바꾸면 574개소의 대비가 한꺼번에 깨지므로 명도는 건드리지 말 것.
+        brand: {
+          DEFAULT: '#9FCFC8',
+          dark: '#5FA69C',
+          tint: '#E1F0ED',
+          bg: '#F3F9F8',
         },
         ink: {
           DEFAULT: '#1A1A1A',

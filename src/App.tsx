@@ -28,15 +28,8 @@ function PersonaGate({ children }: { children: React.ReactNode }) {
   const persona = useCurrentPersona();
   const location = useLocation();
 
-  // 최초 마운트 직후에는 hook 값이 null(로딩 중)인데, localStorage 조회는 동기라
-  // 렌더 시점에 즉시 판정 가능. useCurrentPersona 훅이 useEffect로 로드하므로
-  // 첫 렌더에 잠깐 로그인 리다이렉트로 튀는 걸 막기 위해 window에서 직접 확인.
-  const raw =
-    typeof window !== 'undefined'
-      ? window.localStorage.getItem('kbops:current-persona')
-      : null;
-  const loggedIn = raw != null || persona != null;
-  if (!loggedIn) {
+  // 페르소나는 메모리 스토어라 렌더 시점에 즉시 확정된다(로딩 상태 없음).
+  if (!persona) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;

@@ -20,7 +20,7 @@
   }
 }
 
-/* KB design helpers */
+/* 공통 디자인 헬퍼 */
 @layer components {
   .card {
     @apply bg-white border border-line-soft rounded-md;

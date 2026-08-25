@@ -10,7 +10,7 @@ interface Props {
 }
 
 const AVATAR_STYLE: Record<RoleKey, string> = {
-  pm: 'bg-kb-yellow text-ink outline outline-1 outline-kb-yellow-dark',
+  pm: 'bg-brand text-ink outline outline-1 outline-brand-dark',
   dev: 'bg-info-bg text-info outline outline-1 outline-info-border',
   data: 'bg-ok-bg text-ok outline outline-1 outline-ok-border',
   gov: 'bg-accent-purple-bg text-accent-purple outline outline-1 outline-accent-purple-border',
@@ -89,7 +89,7 @@ export default function MembersTab({ groups, totalCount, approvalGroupCount }: P
             <h5 className="text-[11px] font-extrabold tracking-[0.4px] uppercase text-ink-mid mb-2 flex items-center gap-2">
               {g.title}
               {g.groupTag && (
-                <span className="bg-kb-yellow-tint text-ink border border-kb-yellow-dark py-[2px] px-2 rounded-lg text-[9.5px] font-extrabold tracking-[0.3px]">
+                <span className="bg-brand-tint text-ink border border-brand-dark py-[2px] px-2 rounded-lg text-[9.5px] font-extrabold tracking-[0.3px]">
                   {g.groupTag}
                 </span>
               )}

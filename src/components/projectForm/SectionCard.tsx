@@ -46,7 +46,7 @@ export default function SectionCard({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
       >
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-kb-yellow-tint text-ink font-extrabold text-[12.5px] border border-kb-yellow-dark">
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-brand-tint text-ink font-extrabold text-[12.5px] border border-brand-dark">
           {letter}
         </span>
         <span className="text-[14px] font-extrabold text-ink">{name}</span>

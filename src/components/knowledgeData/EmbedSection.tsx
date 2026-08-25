@@ -41,7 +41,7 @@ const STATE_LABEL: Record<EmbedFileState, string> = {
 const EXT_BADGE: Record<string, string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 
@@ -193,9 +193,9 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
             {records.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft last:border-b-0 text-[12px] hover:bg-[#FFFCF3]"
+                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft last:border-b-0 text-[12px] hover:bg-[#F3F9F8]"
               >
-                <span className="inline-flex items-center justify-center w-7 h-8 rounded border bg-kb-yellow-tint border-kb-yellow-dark text-[13px] flex-shrink-0">
+                <span className="inline-flex items-center justify-center w-7 h-8 rounded border bg-brand-tint border-brand-dark text-[13px] flex-shrink-0">
                   📦
                 </span>
                 <div className="flex-1 min-w-0">
@@ -290,7 +290,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
 
       {/* 선택 액션 바 (체크된 항목 있을 때만) */}
       {selectionCount > 0 && (
-        <div className="mx-[18px] mb-2.5 py-2 px-3 bg-kb-yellow-tint border border-kb-yellow-dark rounded flex items-center gap-2.5">
+        <div className="mx-[18px] mb-2.5 py-2 px-3 bg-brand-tint border border-brand-dark rounded flex items-center gap-2.5">
           <span className="text-[12px] font-extrabold text-ink">
             선택 {selectionCount}개
           </span>
@@ -312,7 +312,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
           <button
             onClick={() => handleEmbedStart()}
             disabled={selectionCount === 0 || embeddingIds.size > 0}
-            className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ 선택 임베딩
           </button>
@@ -328,16 +328,16 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
             return (
               <div
                 key={folder.name}
-                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft text-[12px] hover:bg-[#FFFCF3]"
+                className="flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft text-[12px] hover:bg-[#F3F9F8]"
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleFolder(folder.name)}
-                  className="w-3.5 h-3.5 cursor-pointer accent-kb-yellow-dark"
+                  className="w-3.5 h-3.5 cursor-pointer accent-brand-dark"
                 />
                 <span className="w-4 flex-shrink-0" />
-                <span className="inline-flex items-center justify-center w-7 h-8 rounded border bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark text-[14px] flex-shrink-0">
+                <span className="inline-flex items-center justify-center w-7 h-8 rounded border bg-brand-tint border-brand-dark text-ink-dark text-[14px] flex-shrink-0">
                   📁
                 </span>
                 <span className="font-bold text-ink flex-1 min-w-0">
@@ -367,7 +367,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
                 className={cn(
                   'flex items-center gap-2.5 py-2.5 px-3 border-b border-line-soft last:border-b-0 text-[12px]',
                   isChild && 'bg-surface-soft pl-9',
-                  !isChild && 'hover:bg-[#FFFCF3]',
+                  !isChild && 'hover:bg-[#F3F9F8]',
                 )}
               >
                 <input
@@ -376,7 +376,7 @@ const EmbedSection = forwardRef<HTMLElement, Props>(function EmbedSection(
                   disabled={!isCheckable}
                   onChange={() => toggleFile(f.id)}
                   className={cn(
-                    'w-3.5 h-3.5 accent-kb-yellow-dark',
+                    'w-3.5 h-3.5 accent-brand-dark',
                     isCheckable ? 'cursor-pointer' : 'cursor-not-allowed opacity-40',
                   )}
                 />

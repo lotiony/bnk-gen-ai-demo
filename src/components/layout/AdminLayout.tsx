@@ -23,7 +23,7 @@ const NAV: AdminNavItem[] = [
 export default function AdminLayout() {
   const groups: AdminNavItem['group'][] = ['모니터링', '운영 관리'];
   const persona = useCurrentPersona();
-  const displayName = persona?.name ?? '김국민';
+  const displayName = persona?.name ?? '김플랫';
   const displayRole = persona?.role ?? '관리자';
 
   return (
@@ -58,7 +58,7 @@ export default function AdminLayout() {
                           cn(
                             'block rounded px-2 py-1.5 text-[12px] border-l-2 -ml-px',
                             isActive
-                              ? 'bg-kb-yellow-bg text-ink font-extrabold border-kb-yellow-dark'
+                              ? 'bg-brand-bg text-ink font-extrabold border-brand-dark'
                               : 'border-transparent text-ink-dark hover:bg-surface-soft hover:text-ink',
                           )
                         }

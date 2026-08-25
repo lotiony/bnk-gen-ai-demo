@@ -8,7 +8,7 @@ import { getVisibleApprovals } from '@/lib/personaView';
 import { useDeployApprovals } from '@/lib/deployApprovalStore';
 
 const APPR_CHIP: Record<string, { cls: string; label: string }> = {
-  register: { cls: 'bg-kb-yellow text-ink border-kb-yellow-dark', label: '프로젝트 생성' },
+  register: { cls: 'bg-brand text-ink border-brand-dark', label: '프로젝트 생성' },
   train: { cls: 'bg-info-bg text-info border-info-border', label: '학습계' },
   serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '서빙계 배포' },
   discard: { cls: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border', label: '폐기' },
@@ -69,7 +69,7 @@ function Section({
               key={a.id}
               to={`/approvals/${a.id}`}
               className={cn(
-                'grid grid-cols-[auto_auto_1fr_auto_auto] gap-2.5 items-center py-3 px-3.5 bg-white border border-line-soft rounded hover:border-kb-yellow-dark',
+                'grid grid-cols-[auto_auto_1fr_auto_auto] gap-2.5 items-center py-3 px-3.5 bg-white border border-line-soft rounded hover:border-brand-dark',
                 muted && 'opacity-80',
               )}
             >

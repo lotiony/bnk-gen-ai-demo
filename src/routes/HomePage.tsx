@@ -12,7 +12,7 @@ import {
 } from '@/lib/personaView';
 
 const APPR_CHIP: Record<string, { cls: string; label: string }> = {
-  register: { cls: 'bg-kb-yellow text-ink border-kb-yellow-dark', label: '프로젝트 생성' },
+  register: { cls: 'bg-brand text-ink border-brand-dark', label: '프로젝트 생성' },
   train: { cls: 'bg-info-bg text-info border-info-border', label: '학습계' },
   serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '서빙계 배포' },
   discard: { cls: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border', label: '폐기' },
@@ -25,7 +25,7 @@ const APPR_CHIP: Record<string, { cls: string; label: string }> = {
 /** 홈 대시보드 — PM 개인 워크스페이스. KPI / 결재 / 프로젝트 빠른 진입 */
 export default function HomePage() {
   const persona = useCurrentPersona();
-  const displayName = persona?.name ?? '김국민';
+  const displayName = persona?.name ?? '김플랫';
   const kpis = getHomeKpis(persona);
   const featuredAgents = getHomeFeaturedAgents(persona);
   const homeApprovals = getHomeApprovals(persona);
@@ -88,7 +88,7 @@ export default function HomePage() {
                 <Link
                   key={a.id}
                   to={`/approvals/${a.id}`}
-                  className="grid grid-cols-[auto_1fr_auto_auto] gap-2.5 items-center py-2.5 px-3 bg-surface-soft border border-line-soft rounded hover:border-kb-yellow-dark"
+                  className="grid grid-cols-[auto_1fr_auto_auto] gap-2.5 items-center py-2.5 px-3 bg-surface-soft border border-line-soft rounded hover:border-brand-dark"
                 >
                   <span
                     className={cn(
@@ -147,7 +147,7 @@ function FeaturedAgentCard({ agent }: { agent: FeaturedAgent }) {
   return (
     <Link
       to={agent.projectHref}
-      className="card px-5 py-4 hover:border-kb-yellow-dark transition-colors block"
+      className="card px-5 py-4 hover:border-brand-dark transition-colors block"
     >
       <div className="mb-2.5">
         <div className="text-[10.5px] font-extrabold text-ink-mid tracking-[0.3px] font-mono mb-0.5">

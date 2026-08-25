@@ -49,7 +49,7 @@ export interface RedTeamRequest {
 }
 
 const OPERATOR: RedTeamOperator = {
-  team: 'KB 금융보안센터 · 레드팀',
+  team: '그룹 금융보안센터 · 레드팀',
   confidential: true,
   contactChannel: '#redteam-request (Slack)',
 };

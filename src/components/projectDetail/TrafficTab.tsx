@@ -15,9 +15,9 @@ interface Props {
  * Grafana 대시보드 URL 생성. 실제 운영에서는 Grafana org/dashboard UID를
  * 환경변수로 주입한다. 현재는 mock URL.
  */
-const GRAFANA_BASE = 'https://grafana.kbops.local';
+const GRAFANA_BASE = 'https://monitor.aip.group.local';
 function grafanaDashUrl(projectId: string): string {
-  return `${GRAFANA_BASE}/d/kbops-agent-monitoring/agent-monitoring?var-project=${projectId}`;
+  return `${GRAFANA_BASE}/d/aip-agent-monitoring/agent-monitoring?var-project=${projectId}`;
 }
 function grafanaPanelUrl(projectId: string, panel: number): string {
   return `${grafanaDashUrl(projectId)}&viewPanel=${panel}`;
@@ -488,8 +488,8 @@ function LineChart({
             opacity={0.7}
           />
         )}
-        <path d={areaPath} fill="#FFF7CC" opacity={0.55} />
-        <path d={d} fill="none" stroke="#E5BD00" strokeWidth={1.6} />
+        <path d={areaPath} fill="#E1F0ED" opacity={0.55} />
+        <path d={d} fill="none" stroke="#5FA69C" strokeWidth={1.6} />
         <circle cx={xs(series.length - 1)} cy={ys(last)} r={2.8} fill="#1A1A1A" />
       </svg>
       <div className="flex justify-between mt-1 text-[10px] text-ink-light font-semibold tabular-nums">
@@ -637,8 +637,8 @@ function ChipButton({
       className={cn(
         'h-7 px-2.5 rounded text-[11px] font-extrabold border tabular-nums',
         active
-          ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-          : 'bg-white border-line text-ink-dark hover:border-kb-yellow-dark',
+          ? 'bg-brand-tint border-brand-dark text-ink'
+          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
       )}
     >
       {children}

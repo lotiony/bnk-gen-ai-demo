@@ -16,8 +16,8 @@ interface Props {
   indexes: IndexWithVersions[];
 }
 
-const DEV_ENDPOINT = 'https://kb-genai-dev.search.windows.net/indexes/pb-consult/docs/search';
-const PROD_ENDPOINT = 'https://kb-genai.search.windows.net/indexes/pb-consult/docs/search';
+const DEV_ENDPOINT = 'https://search-dev.aip.group.local/indexes/pb-consult/docs/search';
+const PROD_ENDPOINT = 'https://search.aip.group.local/indexes/pb-consult/docs/search';
 
 const verLabel = (v: string) => `#${v.replace(/\D/g, '')}`;
 const nowLabel = () =>
@@ -122,7 +122,7 @@ export default function DeploySection({ indexes }: Props) {
                     <td className="py-2 px-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5">
                         <span className="text-ink-mid font-semibold">학습계</span>
-                        <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-kb-yellow-tint text-ink border-kb-yellow-dark">
+                        <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-brand-tint text-ink border-brand-dark">
                           {verLabel(d.version)}
                         </span>
                         {i === 0 && (
@@ -178,7 +178,7 @@ export default function DeploySection({ indexes }: Props) {
                         <span className="inline-flex items-center gap-1.5">
                           <Link
                             to={`/approvals/${servPending!.id}`}
-                            className="h-6 px-2 border border-kb-yellow-dark bg-kb-yellow-tint rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow inline-flex items-center"
+                            className="h-6 px-2 border border-brand-dark bg-brand-tint rounded text-[10.5px] font-extrabold text-ink hover:bg-brand inline-flex items-center"
                           >
                             결재함 →
                           </Link>
@@ -196,7 +196,7 @@ export default function DeploySection({ indexes }: Props) {
                           onClick={() => promote(d)}
                           disabled={!!servPending}
                           title={servPending ? '이미 승인 대기 중인 서빙계 배포가 있습니다' : '이 버전을 서빙계로 승격'}
-                          className="h-6 px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           ▶ 서빙계로 승격
                         </button>

@@ -24,7 +24,7 @@ const EXT_TONE: Record<string, string> = {
   PDF: 'bg-bad-bg text-bad border-bad-border',
   DOC: 'bg-info-bg text-info border-info-border',
   DOCX: 'bg-info-bg text-info border-info-border',
-  HWPX: 'bg-kb-yellow-tint text-ink border-kb-yellow-dark',
+  HWPX: 'bg-brand-tint text-ink border-brand-dark',
   PPT: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border',
   PPTX: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border',
   XLS: 'bg-ok-bg text-ok border-ok-border',
@@ -449,7 +449,7 @@ export default function KnowledgeDataTaskPage() {
 
   // ESC로 모달 닫기는 각 모달 내부에서 처리.
   useEffect(() => {
-    document.title = '지식 데이터 · GenAI Portal 2.0';
+    document.title = '지식 데이터 · BNK 공동 생성형 AI 플랫폼';
   }, []);
 
   return (
@@ -559,7 +559,7 @@ export default function KnowledgeDataTaskPage() {
               <input
                 type="text"
                 placeholder="이 폴더 내 검색"
-                className="w-full h-[30px] py-0 pl-7 pr-2.5 border border-line rounded text-xs font-sans focus:outline-none focus:border-kb-yellow-dark"
+                className="w-full h-[30px] py-0 pl-7 pr-2.5 border border-line rounded text-xs font-sans focus:outline-none focus:border-brand-dark"
               />
             </div>
             <span className="flex-1" />
@@ -602,7 +602,7 @@ export default function KnowledgeDataTaskPage() {
             </button>
             <button
               onClick={() => setUploadOpen(true)}
-              className="h-[30px] px-2.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+              className="h-[30px] px-2.5 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
             >
               ↑ 파일 업로드
             </button>
@@ -624,7 +624,7 @@ export default function KnowledgeDataTaskPage() {
             <tbody>
               {openFolder ? (
                 folderFiles.map((r, i, arr) => (
-                  <tr key={r.id} className="hover:bg-[#FFFCF3]">
+                  <tr key={r.id} className="hover:bg-[#F3F9F8]">
                     <td className={cn('py-2 px-2.5', i < arr.length - 1 && 'border-b border-line-soft')}>
                       <input type="checkbox" />
                     </td>
@@ -656,7 +656,7 @@ export default function KnowledgeDataTaskPage() {
                             'h-[26px] px-2 rounded border text-[11px] font-bold inline-flex items-center gap-0.5 whitespace-nowrap',
                             stagedIds.has(r.id)
                               ? 'bg-info-bg text-info border-info-border hover:bg-white'
-                              : 'bg-white text-ink-dark border-line hover:bg-kb-yellow-tint hover:border-kb-yellow-dark',
+                              : 'bg-white text-ink-dark border-line hover:bg-brand-tint hover:border-brand-dark',
                           )}
                         >
                           {stagedIds.has(r.id) ? '− 빼기' : '＋ 담기'}
@@ -678,7 +678,7 @@ export default function KnowledgeDataTaskPage() {
                 const fFiles = FOLDER_FILES[f.name] ?? [];
                 const fStaged = fFiles.length > 0 && fFiles.every((x) => stagedIds.has(x.id));
                 return (
-                <tr key={f.name} className={cn('hover:bg-[#FFFCF3]', checked.has(f.name) && 'bg-kb-yellow-tint')}>
+                <tr key={f.name} className={cn('hover:bg-[#F3F9F8]', checked.has(f.name) && 'bg-brand-tint')}>
                   <td className="py-2 px-2.5 border-b border-line-soft">
                     <input
                       type="checkbox"
@@ -689,7 +689,7 @@ export default function KnowledgeDataTaskPage() {
                   <td className="py-2 px-2.5 border-b border-line-soft">
                     <div className="flex items-center gap-2 font-bold text-ink">
                       <span className="inline-block w-3" />
-                      <span className="inline-flex items-center justify-center w-7 h-8 rounded bg-kb-yellow-tint border border-kb-yellow-dark text-warn text-[10px] font-extrabold flex-shrink-0">
+                      <span className="inline-flex items-center justify-center w-7 h-8 rounded bg-brand-tint border border-brand-dark text-warn text-[10px] font-extrabold flex-shrink-0">
                         📁
                       </span>
                       <a
@@ -720,7 +720,7 @@ export default function KnowledgeDataTaskPage() {
                             'h-[26px] px-2 rounded border text-[11px] font-bold inline-flex items-center gap-0.5 whitespace-nowrap',
                             fStaged
                               ? 'bg-info-bg text-info border-info-border hover:bg-white'
-                              : 'bg-white text-ink-dark border-line hover:bg-kb-yellow-tint hover:border-kb-yellow-dark',
+                              : 'bg-white text-ink-dark border-line hover:bg-brand-tint hover:border-brand-dark',
                           )}
                         >
                           {fStaged ? '− 빼기' : '＋ 담기'}
@@ -758,10 +758,10 @@ export default function KnowledgeDataTaskPage() {
                       'group transition-colors',
                       // 체크된 행 — 노란 하이라이트
                       isChecked
-                        ? 'bg-kb-yellow-tint'
+                        ? 'bg-brand-tint'
                         : isChild
-                        ? 'bg-surface-soft hover:bg-[#FFFCF3]'
-                        : 'bg-white hover:bg-[#FFFCF3]',
+                        ? 'bg-surface-soft hover:bg-[#F3F9F8]'
+                        : 'bg-white hover:bg-[#F3F9F8]',
                       !isLast && 'border-b border-line-soft',
                     )}
                   >
@@ -830,7 +830,7 @@ export default function KnowledgeDataTaskPage() {
                               'h-[26px] px-2 rounded border text-[11px] font-bold inline-flex items-center gap-0.5 whitespace-nowrap',
                               stagedIds.has(r.id)
                                 ? 'bg-info-bg text-info border-info-border hover:bg-white'
-                                : 'bg-white text-ink-dark border-line hover:bg-kb-yellow-tint hover:border-kb-yellow-dark',
+                                : 'bg-white text-ink-dark border-line hover:bg-brand-tint hover:border-brand-dark',
                             )}
                           >
                             {stagedIds.has(r.id) ? '− 빼기' : '＋ 담기'}
@@ -871,7 +871,7 @@ export default function KnowledgeDataTaskPage() {
                   setFilePageSize(Number(e.target.value));
                   setFilePage(1);
                 }}
-                className="h-[26px] px-1.5 border border-line rounded text-[11px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+                className="h-[26px] px-1.5 border border-line rounded text-[11px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
                 title="페이지당 표시 개수"
               >
                 <option value={10}>10개씩</option>
@@ -897,7 +897,7 @@ export default function KnowledgeDataTaskPage() {
                     className={cn(
                       'h-[26px] min-w-[26px] px-1.5 border rounded text-[11px] font-bold tabular-nums',
                       on
-                        ? 'border-kb-yellow-dark bg-kb-yellow-tint text-ink font-extrabold'
+                        ? 'border-brand-dark bg-brand-tint text-ink font-extrabold'
                         : 'border-line bg-white text-ink-dark hover:bg-surface',
                     )}
                   >
@@ -962,7 +962,7 @@ export default function KnowledgeDataTaskPage() {
                       setManifestPage(1);
                     }}
                     placeholder="담긴 문서 검색"
-                    className="w-full h-8 pl-7 pr-2.5 border border-line rounded text-[12px] bg-surface-soft focus:outline-none focus:border-kb-yellow-dark"
+                    className="w-full h-8 pl-7 pr-2.5 border border-line rounded text-[12px] bg-surface-soft focus:outline-none focus:border-brand-dark"
                   />
                 </div>
               </div>
@@ -1011,7 +1011,7 @@ export default function KnowledgeDataTaskPage() {
                       setManifestPageSize(Number(e.target.value));
                       setManifestPage(1);
                     }}
-                    className="h-[26px] px-1.5 border border-line rounded text-[11px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-kb-yellow-dark"
+                    className="h-[26px] px-1.5 border border-line rounded text-[11px] font-semibold text-ink-dark bg-white focus:outline-none focus:border-brand-dark"
                   >
                     <option value={10}>10개씩</option>
                     <option value={20}>20개씩</option>
@@ -1037,7 +1037,7 @@ export default function KnowledgeDataTaskPage() {
                           className={cn(
                             'h-[26px] min-w-[26px] px-1.5 border rounded text-[11px] font-bold tabular-nums',
                             on
-                              ? 'border-kb-yellow-dark bg-kb-yellow-tint text-ink font-extrabold'
+                              ? 'border-brand-dark bg-brand-tint text-ink font-extrabold'
                               : 'border-line bg-white text-ink-dark hover:bg-surface',
                           )}
                         >
@@ -1065,7 +1065,7 @@ export default function KnowledgeDataTaskPage() {
                 <span className="flex-1" />
                 <button
                   onClick={confirmBatch}
-                  className="h-8 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                  className="h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark"
                 >
                   데이터셋 확정 → 파싱 청킹
                 </button>
@@ -1095,7 +1095,7 @@ export default function KnowledgeDataTaskPage() {
               </button>
               <button
                 onClick={stageChecked}
-                className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
               >
                 ▶ 데이터셋에 담기
               </button>
@@ -1142,7 +1142,7 @@ export default function KnowledgeDataTaskPage() {
                   </button>
                   <button
                     onClick={confirmBatch}
-                    className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+                    className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark"
                   >
                     데이터셋 확정
                   </button>
@@ -1185,9 +1185,9 @@ export default function KnowledgeDataTaskPage() {
                       setManifestPage(1);
                       setManifestQuery('');
                     }}
-                    className="flex items-center gap-3 py-3 px-3.5 border border-line-soft rounded-lg bg-white text-left hover:border-kb-yellow-dark hover:bg-[#FFFCF3] transition-colors"
+                    className="flex items-center gap-3 py-3 px-3.5 border border-line-soft rounded-lg bg-white text-left hover:border-brand-dark hover:bg-[#F3F9F8] transition-colors"
                   >
-                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-kb-yellow-tint border border-kb-yellow-dark text-[16px] flex-shrink-0">
+                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-brand-tint border border-brand-dark text-[16px] flex-shrink-0">
                       📦
                     </span>
                     <div className="flex-1 min-w-0">
@@ -1280,7 +1280,7 @@ function TabButton({
         'inline-flex items-center gap-1.5 px-4 py-2.5 text-[12.5px] font-extrabold border-b-2 -mb-px transition-colors',
         disabled && 'opacity-40 cursor-not-allowed',
         active
-          ? 'text-ink border-kb-yellow-dark bg-kb-yellow-tint'
+          ? 'text-ink border-brand-dark bg-brand-tint'
           : 'text-ink-mid border-transparent hover:text-ink-dark hover:bg-surface',
       )}
     >
@@ -1317,7 +1317,7 @@ function RowActBtn({ title, onClick, children }: { title: string; onClick?: () =
 const EXT_STYLE: Record<string, string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 

@@ -407,7 +407,7 @@ export default function EvalSection() {
               <>
                 <span className="text-ink-light">·</span>
                 <span className="text-ink-mid font-semibold">학습계 버전</span>
-                <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-kb-yellow-tint text-ink border-kb-yellow-dark">
+                <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-brand-tint text-ink border-brand-dark">
                   {deployedVer}
                 </span>
               </>
@@ -429,7 +429,7 @@ export default function EvalSection() {
                 onClick={runEval}
                 disabled={running || !deployed}
                 title={!deployed ? '배포된 학습계 API가 없습니다' : '선택한 평가셋으로 현재 배포된 학습계 API 평가 실행'}
-                className="h-7 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {running ? '평가 중…' : '▶ 평가 실행'}
               </button>
@@ -444,14 +444,14 @@ export default function EvalSection() {
                     className={cn(
                       'inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border text-[12px] font-bold transition-colors',
                       on
-                        ? 'bg-kb-yellow-tint border-kb-yellow-dark text-ink'
-                        : 'bg-white border-line text-ink-mid hover:border-kb-yellow-dark hover:bg-surface',
+                        ? 'bg-brand-tint border-brand-dark text-ink'
+                        : 'bg-white border-line text-ink-mid hover:border-brand-dark hover:bg-surface',
                     )}
                   >
                     <span
                       className={cn(
                         'w-3.5 h-3.5 rounded-full border-2 inline-flex items-center justify-center flex-shrink-0',
-                        on ? 'border-kb-yellow-dark bg-kb-yellow' : 'border-line',
+                        on ? 'border-brand-dark bg-brand' : 'border-line',
                       )}
                     >
                       {on && <span className="w-1.5 h-1.5 rounded-full bg-ink" />}
@@ -460,7 +460,7 @@ export default function EvalSection() {
                     <span
                       className={cn(
                         'inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-1.5 rounded-full',
-                        on ? 'bg-white text-ink border border-kb-yellow-dark' : 'bg-surface-soft text-ink-mid border border-line-soft',
+                        on ? 'bg-white text-ink border border-brand-dark' : 'bg-surface-soft text-ink-mid border border-line-soft',
                       )}
                     >
                       {s.items.length}문항
@@ -506,12 +506,12 @@ export default function EvalSection() {
                       <tr
                         key={g.ver}
                         onClick={() => setSelectedId(rep.id)}
-                        className={cn('cursor-pointer hover:bg-surface', on && 'bg-kb-yellow-tint')}
+                        className={cn('cursor-pointer hover:bg-surface', on && 'bg-brand-tint')}
                       >
                         <td className="py-2 px-3 whitespace-nowrap">
                           <span className="inline-flex items-center gap-1.5">
                             <span className="text-ink-mid font-semibold">학습계</span>
-                            <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-kb-yellow-tint text-ink border-kb-yellow-dark">
+                            <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-brand-tint text-ink border-brand-dark">
                               {g.ver}
                             </span>
                           </span>
@@ -545,7 +545,7 @@ export default function EvalSection() {
               <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">선택 버전 상세</span>
               <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-ink">
                 <span className="text-ink-mid font-semibold">학습계</span>
-                <span className="inline-flex items-center justify-center text-[10px] font-extrabold py-[1px] px-1.5 rounded-full border bg-kb-yellow-tint text-ink border-kb-yellow-dark">
+                <span className="inline-flex items-center justify-center text-[10px] font-extrabold py-[1px] px-1.5 rounded-full border bg-brand-tint text-ink border-brand-dark">
                   {selected.deployVer}
                 </span>
               </span>
@@ -553,7 +553,7 @@ export default function EvalSection() {
             </div>
 
             {/* 종합 점수 배너 */}
-            <div className="flex items-center gap-3 border border-kb-yellow-dark bg-kb-yellow-tint rounded-lg px-4 py-3 mb-3">
+            <div className="flex items-center gap-3 border border-brand-dark bg-brand-tint rounded-lg px-4 py-3 mb-3">
               <span className="text-[10px] uppercase tracking-[0.3px] text-ink-mid font-bold">종합 점수</span>
               <span className="text-[26px] font-extrabold text-ink leading-none">{composite.toFixed(2)}</span>
             </div>
@@ -718,14 +718,14 @@ function RunDetailModal({
       </div>
 
       {/* 종합 점수 */}
-      <div className="flex items-center gap-4 border border-kb-yellow-dark bg-kb-yellow-tint rounded-lg px-4 py-3 mb-3">
+      <div className="flex items-center gap-4 border border-brand-dark bg-brand-tint rounded-lg px-4 py-3 mb-3">
         <div className="flex flex-col">
           <span className="text-[10px] uppercase tracking-[0.3px] text-ink-mid font-bold">종합 점수</span>
           <span className="text-[26px] font-extrabold text-ink leading-none mt-0.5">{composite.toFixed(2)}</span>
         </div>
         {delta !== null && (
           <>
-            <div className="h-9 w-px bg-kb-yellow-dark/40" />
+            <div className="h-9 w-px bg-brand-dark/40" />
             <div className="text-[11.5px] text-ink-dark font-semibold">
               직전 실행 대비{' '}
               <b className={delta >= 0 ? 'text-ok' : 'text-bad'}>
@@ -823,7 +823,7 @@ function RunRow({
   onDetail: () => void;
 }) {
   return (
-    <li className={cn('flex items-center', selected && 'bg-kb-yellow-tint')}>
+    <li className={cn('flex items-center', selected && 'bg-brand-tint')}>
       <button
         onClick={onSelect}
         className="flex-1 min-w-0 flex items-center gap-3 py-2 pl-3.5 pr-2 text-[11.5px] text-left hover:bg-surface"
@@ -903,7 +903,7 @@ function MetricCard({ m, value }: { m: MetricMeta; value: number }) {
         <span className="text-[15px] font-extrabold tabular-nums text-ink">{value.toFixed(2)}</span>
       </div>
       <div className="h-1.5 bg-surface-soft rounded-full overflow-hidden">
-        <div className="h-full rounded-full bg-kb-yellow-dark" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-brand-dark" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

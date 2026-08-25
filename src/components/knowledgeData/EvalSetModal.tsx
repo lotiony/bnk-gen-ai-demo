@@ -136,7 +136,7 @@ export default function EvalSetModal({ open, onClose, sets, activeId, onChangeSe
           </span>
           <button
             onClick={onClose}
-            className="h-8 px-4 bg-kb-yellow border border-kb-yellow-dark rounded text-[12px] font-extrabold text-ink hover:bg-kb-yellow-dark"
+            className="h-8 px-4 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-ink hover:bg-brand-dark"
           >
             완료
           </button>
@@ -150,7 +150,7 @@ export default function EvalSetModal({ open, onClose, sets, activeId, onChangeSe
           <select
             value={current.id}
             onChange={(e) => onSelectActive(e.target.value)}
-            className="h-8 px-2.5 border border-line rounded text-[12px] bg-white font-bold text-ink-dark focus:outline-none focus:border-kb-yellow-dark min-w-[180px]"
+            className="h-8 px-2.5 border border-line rounded text-[12px] bg-white font-bold text-ink-dark focus:outline-none focus:border-brand-dark min-w-[180px]"
           >
             {sets.map((s) => (
               <option key={s.id} value={s.id}>
@@ -164,7 +164,7 @@ export default function EvalSetModal({ open, onClose, sets, activeId, onChangeSe
             value={current.name}
             onChange={(e) => rename(e.target.value)}
             placeholder="평가셋 이름"
-            className="h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark w-[200px]"
+            className="h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark w-[200px]"
           />
           <button
             onClick={addSet}
@@ -216,7 +216,7 @@ export default function EvalSetModal({ open, onClose, sets, activeId, onChangeSe
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addItem()}
             placeholder="질문 (예: ISA 계좌 연간 납입한도는?)"
-            className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+            className="w-full h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark"
           />
           <div className="grid grid-cols-[220px_1fr_auto] gap-2 items-center">
             <input
@@ -224,19 +224,19 @@ export default function EvalSetModal({ open, onClose, sets, activeId, onChangeSe
               onChange={(e) => setGold(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addItem()}
               placeholder="정답 문서 (예: ISA_상품설명서.xlsx)"
-              className="h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark"
             />
             <input
               value={passage}
               onChange={(e) => setPassage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addItem()}
               placeholder="근거 구절 (정답이 담긴 원문 청크 — 검색 청크에 이 구절 포함 시 정답)"
-              className="h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-kb-yellow-dark"
+              className="h-8 px-2.5 border border-line rounded text-[12px] bg-white focus:outline-none focus:border-brand-dark"
             />
             <button
               onClick={addItem}
               disabled={!q.trim() || !gold.trim() || !passage.trim()}
-              className="h-8 px-3 bg-kb-yellow border border-kb-yellow-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="h-8 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               ＋ 추가
             </button>

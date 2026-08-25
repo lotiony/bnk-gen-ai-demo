@@ -67,12 +67,12 @@ const RADIOS: RadioGroup[] = [
 const EXT_BADGE: Record<string, string> = {
   PDF: 'bg-bad-bg border-bad-border text-bad',
   DOCX: 'bg-info-bg border-info-border text-info',
-  HWPX: 'bg-kb-yellow-tint border-kb-yellow-dark text-ink-dark',
+  HWPX: 'bg-brand-tint border-brand-dark text-ink-dark',
   XLSX: 'bg-ok-bg border-ok-border text-ok',
 };
 
 const COMPAT_BADGE: Record<Compat, { className: string; label: string }> = {
-  best: { className: 'bg-kb-yellow text-ink border-kb-yellow-dark', label: '✨ 추천' },
+  best: { className: 'bg-brand text-ink border-brand-dark', label: '✨ 추천' },
   ok: { className: 'bg-surface-soft text-ink-mid border-line', label: '호환' },
   no: { className: 'bg-bad-bg text-bad border-bad-border', label: '비호환' },
 };
@@ -177,7 +177,7 @@ export default function ParseModal({ open, onClose, targets, onStart }: Props) {
               onStart?.(out);
               onClose();
             }}
-            className="py-2 px-3.5 bg-kb-yellow border border-kb-yellow-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-kb-yellow-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-ink hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ 파싱 시작
           </button>
@@ -265,16 +265,16 @@ export default function ParseModal({ open, onClose, targets, onStart }: Props) {
                       className={cn(
                         'inline-flex items-center gap-1.5 py-1.5 px-2.5 border rounded text-left transition-colors',
                         isOn
-                          ? 'border-kb-yellow-dark bg-kb-yellow-tint shadow-sm'
+                          ? 'border-brand-dark bg-brand-tint shadow-sm'
                           : disabled
                           ? 'border-line bg-surface-soft opacity-40 cursor-not-allowed'
-                          : 'border-line bg-white hover:border-kb-yellow-dark hover:bg-kb-yellow-tint',
+                          : 'border-line bg-white hover:border-brand-dark hover:bg-brand-tint',
                       )}
                     >
                       <span
                         className={cn(
                           'w-3.5 h-3.5 rounded-sm border-2 flex-shrink-0 flex items-center justify-center',
-                          isOn ? 'border-kb-yellow-dark bg-kb-yellow' : 'border-line bg-white',
+                          isOn ? 'border-brand-dark bg-brand' : 'border-line bg-white',
                         )}
                       >
                         {isOn && (
@@ -326,17 +326,17 @@ export default function ParseModal({ open, onClose, targets, onStart }: Props) {
                   className={cn(
                     'flex items-start gap-2 py-2 px-2.5 border rounded text-left transition-colors',
                     on
-                      ? 'border-kb-yellow-dark bg-kb-yellow-tint shadow-sm'
-                      : 'border-line bg-white hover:border-kb-yellow-dark hover:bg-kb-yellow-tint',
+                      ? 'border-brand-dark bg-brand-tint shadow-sm'
+                      : 'border-line bg-white hover:border-brand-dark hover:bg-brand-tint',
                   )}
                 >
                   <span
                     className={cn(
                       'w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5',
-                      on ? 'border-kb-yellow-dark' : 'border-line',
+                      on ? 'border-brand-dark' : 'border-line',
                     )}
                   >
-                    {on && <span className="w-1.5 h-1.5 rounded-full bg-kb-yellow-dark" />}
+                    {on && <span className="w-1.5 h-1.5 rounded-full bg-brand-dark" />}
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[12px] font-extrabold text-ink">{c.name}</span>
@@ -363,8 +363,8 @@ export default function ParseModal({ open, onClose, targets, onStart }: Props) {
               className={cn(
                 'flex items-start gap-2.5 py-2.5 px-3 border rounded text-left transition-colors',
                 on
-                  ? 'border-kb-yellow-dark bg-[#FFFEF8]'
-                  : 'border-line bg-white hover:border-kb-yellow-dark hover:bg-kb-yellow-tint',
+                  ? 'border-brand-dark bg-[#F3F9F8]'
+                  : 'border-line bg-white hover:border-brand-dark hover:bg-brand-tint',
               )}
             >
               <span

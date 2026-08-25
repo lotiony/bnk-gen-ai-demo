@@ -46,7 +46,7 @@ export function Input({
       <input
         {...props}
         className={cn(
-          'w-full px-3 py-2 border border-line rounded bg-white text-[12.5px] focus:outline-none focus:border-kb-yellow-dark disabled:bg-surface-soft disabled:text-ink-mid',
+          'w-full px-3 py-2 border border-line rounded bg-white text-[12.5px] focus:outline-none focus:border-brand-dark disabled:bg-surface-soft disabled:text-ink-mid',
           props.className,
         )}
       />
@@ -63,7 +63,7 @@ export function Textarea({
       <textarea
         {...props}
         className={cn(
-          'w-full px-3 py-2 border border-line rounded bg-white text-[12.5px] focus:outline-none focus:border-kb-yellow-dark resize-y',
+          'w-full px-3 py-2 border border-line rounded bg-white text-[12.5px] focus:outline-none focus:border-brand-dark resize-y',
           props.className,
         )}
       />
@@ -76,7 +76,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     <select
       {...props}
       className={cn(
-        'w-full px-3 py-2 border border-line rounded bg-white text-[12.5px] focus:outline-none focus:border-kb-yellow-dark',
+        'w-full px-3 py-2 border border-line rounded bg-white text-[12.5px] focus:outline-none focus:border-brand-dark',
         props.className,
       )}
     />

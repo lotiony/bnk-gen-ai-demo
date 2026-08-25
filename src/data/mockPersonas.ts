@@ -1,7 +1,7 @@
 /**
  * 페르소나 전환용 mock 데이터.
  *
- * GenAI Portal 2.0는 다양한 역할(관리·개발·사용)이 한 플랫폼을 공유한다.
+ * 공동 생성형 AI 플랫폼은 다양한 역할(관리·개발·사용)이 한 플랫폼을 공유한다.
  * 데모/발표에서 페르소나별로 보이는 화면·권한 뉘앙스를 빠르게 전환하기 위해
  * 우상단 사용자 칩을 통해 스위칭.
  *
@@ -42,9 +42,9 @@ export const PERSONAS: Persona[] = [
   {
     id: 'platform_admin',
     role: '플랫폼 관리자',
-    name: '김국민',
+    name: '김플랫',
     initial: '김',
-    dept: '금융AI2센터',
+    dept: 'AI디지털전략부',
     group: '관리자',
     hint: '전체 콘솔·모델·PTU·감사 원장 접근',
   },
@@ -53,7 +53,7 @@ export const PERSONAS: Persona[] = [
     role: '사업 관리자',
     name: '이사업',
     initial: '이',
-    dept: '금융AI1센터',
+    dept: 'IT전략부',
     group: '관리자',
     hint: '비용·예산·계열사 사용 현황 총괄',
   },
@@ -62,7 +62,7 @@ export const PERSONAS: Persona[] = [
     role: '거버넌스 관리자',
     name: '박거버',
     initial: '박',
-    dept: 'DT추진부',
+    dept: '디지털혁신부',
     group: '관리자',
     hint: '정책·결재·감사 원장·SoD 검토',
   },
@@ -82,7 +82,7 @@ export const PERSONAS: Persona[] = [
     role: '프로젝트 오너',
     name: '정오너',
     initial: '정',
-    dept: '금융AI2센터',
+    dept: 'AI디지털전략부',
     group: '개발자',
     hint: '프로젝트 오너 그룹 · 프로젝트 전권',
   },
@@ -91,7 +91,7 @@ export const PERSONAS: Persona[] = [
     role: '에이전트 개발자',
     name: '강개발',
     initial: '강',
-    dept: '금융AI2센터',
+    dept: 'AI디지털전략부',
     group: '개발자',
     hint: '에이전트 코드·프롬프트·배포',
   },
@@ -100,7 +100,7 @@ export const PERSONAS: Persona[] = [
     role: '데이터 개발자',
     name: '조디비',
     initial: '조',
-    dept: '고객컨택혁신부',
+    dept: '고객채널부',
     group: '개발자',
     hint: '지식데이터·파이프라인·인덱스',
   },
@@ -109,7 +109,7 @@ export const PERSONAS: Persona[] = [
     role: '프로젝트 참여자',
     name: '윤참여',
     initial: '윤',
-    dept: '고객컨택혁신부',
+    dept: '고객채널부',
     group: '개발자',
     hint: '지정 프로젝트 조회·기안',
   },

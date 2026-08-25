@@ -5,14 +5,9 @@
 
 import type { AgentBuilder, AgentDeployStage } from './mockAgentTasks';
 
-export type Tenant =
-  | 'KB국민은행'
-  | 'KB증권'
-  | 'KB손해보험'
-  | 'KB라이프'
-  | 'KB국민카드'
-  | 'KB캐피탈'
-  | 'KB자산운용';
+export type { Tenant } from './tenants';
+export { TENANT_LIST } from './tenants';
+import type { Tenant } from './tenants';
 
 export type AgentDomain = 'CX' | 'PB자산' | '컴플라이언스' | '여신심사' | '리스크' | '운영자동화' | '마케팅';
 
@@ -51,7 +46,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-204',
     name: 'PB 자산진단 어시스턴트',
-    tenant: 'KB국민은행',
+    tenant: '부산은행',
     projectName: 'PB 에이전트 프로젝트',
     projectId: 'PRJ-2025-PB-001',
     domain: 'PB자산',
@@ -73,7 +68,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-301',
     name: '보이스피싱 1차 분류 에이전트',
-    tenant: 'KB국민은행',
+    tenant: '부산은행',
     projectName: '보이스피싱탐지 에이전트_디지털전략부',
     projectId: 'PRJ-101',
     domain: 'CX',
@@ -95,7 +90,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-411',
     name: '컴플라이언스 자문 챗봇',
-    tenant: 'KB국민은행',
+    tenant: '부산은행',
     projectName: '컴플라이언스 자문 챗봇',
     projectId: 'PRJ-118',
     domain: '컴플라이언스',
@@ -116,7 +111,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-512',
     name: '비대면 여신 사전심사 보조',
-    tenant: 'KB국민은행',
+    tenant: '부산은행',
     projectName: '디지털여신 보조 에이전트',
     projectId: 'PRJ-204',
     domain: '여신심사',
@@ -138,7 +133,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-602',
     name: '카드 분실신고 응대 봇',
-    tenant: 'KB국민카드',
+    tenant: '경남은행',
     projectName: '카드 콜센터 응대 자동화',
     projectId: 'PRJ-CARD-008',
     domain: 'CX',
@@ -159,7 +154,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-708',
     name: '보험금 청구 서류 자동 분류',
-    tenant: 'KB손해보험',
+    tenant: 'BNK캐피탈',
     projectName: '청구 자동화 1단계',
     projectId: 'PRJ-INS-031',
     domain: '운영자동화',
@@ -180,7 +175,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-812',
     name: '리스크 일일 브리프 봇',
-    tenant: 'KB증권',
+    tenant: 'BNK투자증권',
     projectName: '리스크 데일리 자동화',
     projectId: 'PRJ-SEC-014',
     domain: '리스크',
@@ -201,7 +196,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
   {
     id: 'AGT-905',
     name: '연금 상담 안내봇',
-    tenant: 'KB라이프',
+    tenant: 'BNK저축은행',
     projectName: '연금 가입 디지털화',
     projectId: 'PRJ-LIFE-007',
     domain: 'CX',
@@ -222,7 +217,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
 
 export const DOMAIN_TONE: Record<AgentDomain, string> = {
   CX: 'bg-info-bg text-info border-info-border',
-  PB자산: 'bg-kb-yellow-tint text-ink border-kb-yellow-dark',
+  PB자산: 'bg-brand-tint text-ink border-brand-dark',
   컴플라이언스: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
   여신심사: 'bg-bad-bg text-bad border-bad-border',
   리스크: 'bg-warn-bg text-warn border-warn-border',
@@ -230,12 +225,4 @@ export const DOMAIN_TONE: Record<AgentDomain, string> = {
   마케팅: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border',
 };
 
-export const TENANT_LIST: Tenant[] = [
-  'KB국민은행',
-  'KB증권',
-  'KB손해보험',
-  'KB라이프',
-  'KB국민카드',
-  'KB캐피탈',
-  'KB자산운용',
-];
+
