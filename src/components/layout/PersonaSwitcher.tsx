@@ -6,7 +6,12 @@ import {
   type Persona,
   type PersonaGroup,
 } from '@/data/mockPersonas';
-import { PERSONAS, getStoredPersona, setStoredPersona, clearStoredPersona } from '@/lib/persona';
+import {
+  PERSONAS,
+  setStoredPersona,
+  clearStoredPersona,
+  useCurrentPersona,
+} from '@/lib/persona';
 
 const GROUPS: PersonaGroup[] = ['관리자', '개발자', '사용자'];
 
@@ -17,12 +22,13 @@ const GROUPS: PersonaGroup[] = ['관리자', '개발자', '사용자'];
  */
 export default function PersonaSwitcher() {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState<Persona>(() => findPersona(DEFAULT_PERSONA_ID)!);
+  /*
+   * 스토어를 **구독**한다. 예전에는 로컬 state 로 복사해 두고 마운트 시 한 번만
+   * 동기화했는데, 그러면 프리젠터 내비게이션처럼 코드가 페르소나를 바꿀 때
+   * 상단 칩이 옛 이름을 계속 달고 있는다.
+   */
+  const current = useCurrentPersona() ?? findPersona(DEFAULT_PERSONA_ID)!;
   const rootRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setCurrent(getStoredPersona() ?? findPersona(DEFAULT_PERSONA_ID)!);
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -34,18 +40,24 @@ export default function PersonaSwitcher() {
   }, [open]);
 
   const handleSelect = (p: Persona) => {
-    setCurrent(p);
     setOpen(false);
     setStoredPersona(p.id);
-    // 페이지 전역 mock 데이터가 hard-coded된 이름/이니셜을 참조하는 부분이 많아
-    // 페르소나 전환 효과를 확실히 반영하기 위해 새로고침.
-    window.location.reload();
+    /*
+     * ⚠️ 예전 구현은 여기서 `window.location.reload()` 를 불렀다.
+     *    페르소나 스토어가 메모리 전용(localStorage 금지)으로 바뀐 뒤로는
+     *    새로고침이 곧 **로그아웃**이 된다 — 시연 중 페르소나를 바꾸면 로그인
+     *    화면으로 튕겼다. 스토어가 구독형이라 새로고침 없이도 전 화면이 갱신된다.
+     */
   };
 
   const handleLogout = () => {
     setOpen(false);
+    /*
+     * `window.location.href = '/login'` 은 HashRouter + file:// 에서 파일시스템
+     * 경로로 나가 빈 화면이 된다. 스토어를 비우면 PersonaGate 가 알아서
+     * 로그인 화면으로 보낸다.
+     */
     clearStoredPersona();
-    window.location.href = '/login';
   };
 
   return (
