@@ -27,6 +27,8 @@ import WorkflowBuilderPage from './routes/WorkflowBuilderPage';
 import McpRegisterPage from './routes/McpRegisterPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './routes/AdminDashboardPage';
+import AiGovernancePage from './routes/AiGovernancePage';
+import MeteringPage from './routes/MeteringPage';
 import AdminMembersPage from './routes/AdminMembersPage';
 import AdminFeaturedAgentsPage from './routes/AdminFeaturedAgentsPage';
 
@@ -106,6 +108,8 @@ export default function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="governance" element={<AiGovernancePage />} />
+          <Route path="metering" element={<MeteringPage />} />
           <Route path="members" element={<AdminMembersPage />} />
           <Route path="featured-agents" element={<AdminFeaturedAgentsPage />} />
         </Route>

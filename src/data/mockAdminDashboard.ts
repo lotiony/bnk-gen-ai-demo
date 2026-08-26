@@ -1289,24 +1289,41 @@ export function getProjectDauSeries(rows: ProjectUsageRow[]): ProjectDauSeries[]
     .sort((a, b) => b.daily[b.daily.length - 1] - a.daily[a.daily.length - 1]);
 }
 
-/** 계열사별 토큰 사용량 30일 시계열 (입력+출력 합산, M 단위). */
+/**
+ * 계열사별 토큰 사용량 30일 시계열.
+ *
+ * 입력·출력을 나눠 갖는다 — Chargeback(화면 11)은 둘의 단가가 달라
+ * 합산만으로는 정산이 되지 않는다(LSM-010·ONM-005). 기존 차트가 쓰던
+ * `daily`·`total` 은 두 값의 합이므로 호출부를 바꾸지 않아도 된다.
+ */
 export interface ConglomerateTokenSeries {
   name: string;
-  /** 30일 일별 토큰 사용량 (단위: tokens). */
+  /** 30일 일별 토큰 사용량 (입력+출력, 단위: tokens). */
   daily: number[];
-  /** 30일 합산. */
+  /** 30일 합산 (입력+출력). */
   total: number;
+  /** 30일 합산 — 입력 토큰. */
+  inputTotal: number;
+  /** 30일 합산 — 출력 토큰. */
+  outputTotal: number;
   color: string;
 }
 
 export function getConglomerateTokenSeries(): ConglomerateTokenSeries[] {
   const N = 30;
+  // 계열사 10개 전량. `outRatio` = 출력 토큰 비중 — 업무 성격에 따라 다르다
+  // (상담 요약은 출력이 길고, 조회·분류는 입력이 길다).
   const config = [
-    { name: '부산은행', base: 42_000_000, amp: 8_000_000, drift: 3_000_000, color: '#CB2C10', seed: 11 },
-    { name: '경남은행', base: 24_000_000, amp: 5_000_000, drift: 1_500_000, color: '#1F5BB8', seed: 23 },
-    { name: 'BNK투자증권', base: 12_000_000, amp: 3_000_000, drift: 800_000, color: '#1B8A4D', seed: 31 },
-    { name: 'BNK캐피탈', base: 6_000_000, amp: 1_400_000, drift: 400_000, color: '#6E3BBD', seed: 43 },
-    { name: 'BNK저축은행', base: 2_400_000, amp: 600_000, drift: 200_000, color: '#C9760F', seed: 53 },
+    { name: '부산은행', base: 42_000_000, amp: 8_000_000, drift: 3_000_000, color: '#CB2C10', seed: 11, outRatio: 0.32 },
+    { name: '경남은행', base: 24_000_000, amp: 5_000_000, drift: 1_500_000, color: '#1F5BB8', seed: 23, outRatio: 0.30 },
+    { name: 'BNK투자증권', base: 12_000_000, amp: 3_000_000, drift: 800_000, color: '#1B8A4D', seed: 31, outRatio: 0.37 },
+    { name: 'BNK캐피탈', base: 6_000_000, amp: 1_400_000, drift: 400_000, color: '#6E3BBD', seed: 43, outRatio: 0.28 },
+    { name: 'BNK저축은행', base: 2_400_000, amp: 600_000, drift: 200_000, color: '#C9760F', seed: 53, outRatio: 0.26 },
+    { name: 'BNK시스템', base: 3_100_000, amp: 700_000, drift: 240_000, color: '#6B4F2A', seed: 67, outRatio: 0.22 },
+    { name: 'BNK자산운용', base: 1_450_000, amp: 380_000, drift: 120_000, color: '#0E7C8A', seed: 71, outRatio: 0.35 },
+    { name: 'BNK신용정보', base: 980_000, amp: 240_000, drift: 70_000, color: '#8A1C6B', seed: 83, outRatio: 0.24 },
+    { name: 'BNK벤처투자', base: 420_000, amp: 110_000, drift: 40_000, color: '#3F6212', seed: 89, outRatio: 0.39 },
+    { name: 'BNK엘앤에스', base: 310_000, amp: 80_000, drift: 26_000, color: '#7A5C1E', seed: 97, outRatio: 0.20 },
   ];
   return config.map((c) => {
     let s = c.seed;
@@ -1321,10 +1338,14 @@ export function getConglomerateTokenSeries(): ConglomerateTokenSeries[] {
         c.drift * (i / N);
       daily.push(Math.max(0, Math.round(v)));
     }
+    const total = daily.reduce((a, b) => a + b, 0);
+    const outputTotal = Math.round(total * c.outRatio);
     return {
       name: c.name,
       daily,
-      total: daily.reduce((a, b) => a + b, 0),
+      total,
+      inputTotal: total - outputTotal,
+      outputTotal,
       color: c.color,
     };
   });
@@ -1365,11 +1386,16 @@ export function getCostByConglomerate(): ConglomerateCostRow[] {
   // 카탈로그에서 계열사별 운영·실행 중 에이전트 수 계산은 mockCatalogAgents 의존이라
   // 여기선 시드 기반 추정치로만 채움 (소비처에서 더 정확히 덮어쓸 수 있음).
   const agentCountByTenant: Record<string, number> = {
-    부산은행: 5,
-    경남은행: 2,
-    BNK투자증권: 1,
-    BNK캐피탈: 1,
-    BNK저축은행: 0,
+    부산은행: 14,
+    경남은행: 9,
+    BNK투자증권: 6,
+    BNK캐피탈: 5,
+    BNK저축은행: 3,
+    BNK시스템: 4,
+    BNK자산운용: 2,
+    BNK신용정보: 2,
+    BNK벤처투자: 1,
+    BNK엘앤에스: 1,
   };
 
   return series.map((s) => ({

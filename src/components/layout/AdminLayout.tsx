@@ -12,6 +12,8 @@ interface AdminNavItem {
 
 const NAV: AdminNavItem[] = [
   { label: '대시보드', to: '/admin/dashboard', group: '모니터링', hint: '사용·자원·안전 현황' },
+  { label: 'AI 거버넌스', to: '/admin/governance', group: '모니터링', hint: '원장·라이프사이클·기일' },
+  { label: '미터링·정산', to: '/admin/metering', group: '모니터링', hint: '계열사·부서 Chargeback' },
   { label: '멤버 관리', to: '/admin/members', group: '운영 관리', hint: '역할·초대' },
   { label: '대표 에이전트', to: '/admin/featured-agents', group: '운영 관리', hint: '홈 노출 순서' },
 ];
