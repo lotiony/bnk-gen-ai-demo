@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
-import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
+import { useWorkCrumb, useWorkContainer, useWorkReturnPath, useWorkReturnLabel, useInWorkspace } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import UploadModal from '@/components/knowledgeData/UploadModal';
@@ -62,6 +62,9 @@ const WORK_PID = 'PRJ-2025-PB-001';
 export default function KnowledgeDataTaskPage() {
   const crumbItems = useWorkCrumb('지식 데이터', WORK_PID);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
+  const returnPath = useWorkReturnPath(WORK_PID);
+  const returnLabel = useWorkReturnLabel();
+  const inWorkspace = useInWorkspace();
   // 그룹별 펼침 상태 — 초기엔 모두 접힘(이전 버전 숨김).
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   // 저장소 파일 목록 — 업로드/삭제가 실제로 반영되는 단일 소스. 파싱·임베딩 탭도 이 상태를 공유한다.
@@ -472,10 +475,12 @@ export default function KnowledgeDataTaskPage() {
         <div>
           <h1 className="text-[20px] font-extrabold tracking-[-0.4px] mb-1.5">지식 데이터</h1>
           <div className="flex flex-wrap gap-1.5">
-            <span className="inline-flex items-center gap-1.5 py-[3px] px-2 border border-line-soft rounded-xl bg-white text-[11px] font-bold">
-              <span className="text-[10px] uppercase tracking-[0.3px] text-ink-mid font-bold">과제</span>
-              <span className="text-ink font-extrabold">PB 에이전트 프로젝트</span>
-            </span>
+            {!inWorkspace && (
+              <span className="inline-flex items-center gap-1.5 py-[3px] px-2 border border-line-soft rounded-xl bg-white text-[11px] font-bold">
+                <span className="text-[10px] uppercase tracking-[0.3px] text-ink-mid font-bold">과제</span>
+                <span className="text-ink font-extrabold">PB 에이전트 프로젝트</span>
+              </span>
+            )}
             <span
               title="이 과제의 인프라는 공동존 On-Premise 로 설정되어 있습니다"
               className="inline-flex items-center gap-1.5 py-[3px] px-2 border border-info-border rounded-xl bg-info-bg text-[11px] font-bold"
@@ -1227,8 +1232,8 @@ export default function KnowledgeDataTaskPage() {
 
       {/* Footer actions */}
       <div className="flex items-center">
-        <Link to="/projects/PRJ-101">
-          <Button>← 과제 목록으로</Button>
+        <Link to={returnPath}>
+          <Button>{returnLabel}</Button>
         </Link>
       </div>
 

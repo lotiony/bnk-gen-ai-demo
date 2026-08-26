@@ -21,7 +21,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
-import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
+import { useWorkCrumb, useWorkContainer, useWorkReturnPath, useWorkReturnLabel, useInWorkspace } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import {
@@ -51,6 +51,9 @@ export default function DataRoutingTaskPage() {
   const pid = projectId ?? 'PRJ-2025-PB-001';
   const crumbItems = useWorkCrumb('데이터 라우팅', pid);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
+  const returnPath = useWorkReturnPath(pid);
+  const returnLabel = useWorkReturnLabel();
+  const inWorkspace = useInWorkspace();
 
   /** 게이트 ① 승인권자 결재. */
   const [deployApproved, setDeployApproved] = useState(false);
@@ -93,9 +96,11 @@ export default function DataRoutingTaskPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-[20px] font-extrabold tracking-[-0.4px]">데이터 접근 라우팅</h1>
           <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-            <span className="pill bg-surface text-ink-mid border border-line-soft">
-              과제 <b className="text-ink-dark">PB 에이전트 프로젝트</b>
-            </span>
+            {!inWorkspace && (
+              <span className="pill bg-surface text-ink-mid border border-line-soft">
+                과제 <b className="text-ink-dark">PB 에이전트 프로젝트</b>
+              </span>
+            )}
             <span className="pill bg-surface text-ink-mid border border-line-soft">
               에이전트 <b className="text-ink-dark">AGT-204 PB 자산진단 어시스턴트</b>
             </span>
@@ -361,10 +366,10 @@ export default function DataRoutingTaskPage() {
 
       <div className="mt-4">
         <Link
-          to={`/projects/${pid}`}
+          to={returnPath}
           className="inline-flex items-center h-8 px-3 border border-line rounded text-[12px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
         >
-          ← 과제 목록으로
+          {returnLabel}
         </Link>
       </div>
     </div>

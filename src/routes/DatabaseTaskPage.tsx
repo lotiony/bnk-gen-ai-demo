@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
-import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
+import { useWorkCrumb, useWorkContainer, useWorkReturnPath, useWorkReturnLabel, useInWorkspace } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
@@ -148,6 +148,9 @@ const WORK_PID = 'PRJ-2025-PB-001';
 export default function DatabaseTaskPage() {
   const crumbItems = useWorkCrumb('데이터베이스', WORK_PID);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
+  const returnPath = useWorkReturnPath(WORK_PID);
+  const returnLabel = useWorkReturnLabel();
+  const inWorkspace = useInWorkspace();
   const [tab, setTab] = useState<TabId>('account');
   const [tables, setTables] = useState<Table[]>(INITIAL_TABLES);
   const [savedTables, setSavedTables] = useState<Table[]>(INITIAL_TABLES);
@@ -162,10 +165,12 @@ export default function DatabaseTaskPage() {
         <div>
           <h1 className="text-[20px] font-extrabold tracking-[-0.4px] mb-1.5">데이터베이스</h1>
           <div className="flex flex-wrap gap-1.5">
-            <span className="inline-flex items-center gap-1.5 py-[3px] px-2 border border-line-soft rounded-xl bg-white text-[11px] font-bold">
-              <span className="text-[10px] uppercase tracking-[0.3px] text-ink-mid font-bold">과제</span>
-              <span className="text-ink font-extrabold">PB 에이전트 프로젝트</span>
-            </span>
+            {!inWorkspace && (
+              <span className="inline-flex items-center gap-1.5 py-[3px] px-2 border border-line-soft rounded-xl bg-white text-[11px] font-bold">
+                <span className="text-[10px] uppercase tracking-[0.3px] text-ink-mid font-bold">과제</span>
+                <span className="text-ink font-extrabold">PB 에이전트 프로젝트</span>
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5 py-[3px] px-2 border border-line-soft rounded-xl bg-white text-[11px] font-bold text-ink-mid">
               테이블 생성 요청 · DBA 처리
             </span>
@@ -185,10 +190,10 @@ export default function DatabaseTaskPage() {
         <TabButton active={tab === 'connector'} onClick={() => setTab('connector')}>연결</TabButton>
         <span className="flex-1" />
         <Link
-          to="/projects/PRJ-101"
+          to={returnPath}
           className="text-[11.5px] text-info font-bold py-1.5 px-2.5 hover:underline"
         >
-          ← 과제 목록
+          {returnLabel}
         </Link>
       </div>
 

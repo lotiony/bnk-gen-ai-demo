@@ -9,7 +9,7 @@
  */
 import { Link, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
-import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
+import { useWorkCrumb, useWorkContainer, useWorkReturnPath, useWorkReturnLabel, useInWorkspace } from '@/lib/crumbs';
 import OntologySection from '@/components/ontology/OntologySection';
 
 /** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
@@ -22,6 +22,9 @@ export default function OntologyTaskPage() {
   const pid = projectId ?? 'PRJ-2025-PB-001';
   const crumbItems = useWorkCrumb('온톨로지 · 지식그래프', pid);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
+  const returnPath = useWorkReturnPath(pid);
+  const returnLabel = useWorkReturnLabel();
+  const inWorkspace = useInWorkspace();
 
   return (
     <div className={containerCls}>
@@ -31,9 +34,11 @@ export default function OntologyTaskPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-[20px] font-extrabold tracking-[-0.4px]">온톨로지</h1>
           <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-            <span className="pill bg-surface text-ink-mid border border-line-soft">
-              과제 <b className="text-ink-dark">PB 에이전트 프로젝트</b>
-            </span>
+            {!inWorkspace && (
+              <span className="pill bg-surface text-ink-mid border border-line-soft">
+                과제 <b className="text-ink-dark">PB 에이전트 프로젝트</b>
+              </span>
+            )}
             <span className="pill bg-info-bg text-info border border-info-border">
               인프라 🏢 <b>공동존 On-Prem</b>
             </span>
@@ -50,10 +55,10 @@ export default function OntologyTaskPage() {
 
       <div className="mt-4">
         <Link
-          to={`/projects/${pid}`}
+          to={returnPath}
           className="inline-flex items-center h-8 px-3 border border-line rounded text-[12px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
         >
-          ← 과제 목록으로
+          {returnLabel}
         </Link>
       </div>
     </div>

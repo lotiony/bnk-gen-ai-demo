@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
-import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
+import { useWorkCrumb, useWorkContainer, useWorkReturnPath } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import StatusPill from '@/components/ui/StatusPill';
 import SectionCard from '@/components/projectForm/SectionCard';
@@ -26,6 +26,7 @@ export default function SearchPipelineTaskPage() {
   const pid = projectId ?? 'PRJ-101';
   const crumbItems = useWorkCrumb('검색 파이프라인 등록', pid);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
+  const returnPath = useWorkReturnPath(pid);
 
   // A
   const [name, setName] = useState('규정검색_컴플라이언스');
@@ -820,7 +821,7 @@ export default function SearchPipelineTaskPage() {
             결재 상신 전까지 자유롭게 저장 가능
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link to={`/projects/${pid}`}>
+            <Link to={returnPath}>
               <Button variant="ghost">취소</Button>
             </Link>
             <Button>임시 저장</Button>

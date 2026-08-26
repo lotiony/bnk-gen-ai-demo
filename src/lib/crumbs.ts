@@ -47,6 +47,14 @@ export function useWorkReturnPath(pid: string): string {
   return `/projects/${pid}`;
 }
 
+/** 돌아가기 버튼 라벨 — 진입 경로에 맞춰 목적지를 그대로 말한다. */
+export function useWorkReturnLabel(): string {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/studio')) return '← AI Studio로';
+  if (pathname.startsWith('/knowledge')) return '← 지식·데이터로';
+  return '← 과제 목록으로';
+}
+
 /**
  * 워크스페이스 셸(좌측 사이드바) 안에서 열렸는지.
  *

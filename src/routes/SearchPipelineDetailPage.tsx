@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
-import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
+import { useWorkCrumb, useWorkContainer, useWorkReturnPath } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import KpiCard from '@/components/ui/KpiCard';
 import { cn } from '@/lib/utils';
@@ -52,10 +52,11 @@ export default function SearchPipelineDetailPage() {
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
   const { projectId, pipelineId } = useParams();
   const pid = projectId ?? 'PRJ-101';
+  const returnPath = useWorkReturnPath(pid);
   const task = pipelineId ? findPipelineTask(pipelineId) : undefined;
   const [tab, setTab] = useState<TabId>('overview');
 
-  if (!task) return <Navigate to={`/projects/${pid}`} replace />;
+  if (!task) return <Navigate to={returnPath} replace />;
 
   const stateTone = STATE_TONE[task.state] ?? STATE_TONE['기획'];
   const maxSens = Math.max(...task.indexes.map((i) => i.sens));
