@@ -11,7 +11,7 @@ interface FeaturedRow extends FeaturedAgent {
 
 /**
  * 홈 화면 "대표 에이전트" 노출 카드의 순서·표시 여부를 관리한다.
- * 카탈로그의 운영 중 에이전트 중에서 후보를 골라 추가할 수 있고,
+ * 마켓플레이스의 운영 중 에이전트 중에서 후보를 골라 추가할 수 있고,
  * 위·아래 버튼으로 순서를 바꾸고, 토글로 노출을 끄거나 켤 수 있다.
  */
 export default function AdminFeaturedAgentsPage() {
@@ -215,7 +215,7 @@ export default function AdminFeaturedAgentsPage() {
           <div className="px-5 py-3 border-b border-line-soft">
             <h2 className="text-[14px] font-extrabold text-ink">후보 풀</h2>
             <div className="text-[10.5px] text-ink-mid mt-0.5">
-              카탈로그 “운영 중” 에이전트 — 추가하면 위 목록 맨 아래로 들어갑니다.
+              마켓플레이스 “운영 중” 에이전트 — 추가하면 위 목록 맨 아래로 들어갑니다.
             </div>
           </div>
           {candidates.length === 0 ? (
@@ -251,9 +251,9 @@ export default function AdminFeaturedAgentsPage() {
             </ul>
           )}
           <div className="px-5 py-2.5 border-t border-line-soft text-[10.5px] text-ink-mid">
-            카탈로그 전체 보기 →{' '}
+            마켓플레이스 전체 보기 →{' '}
             <Link to="/catalog" className="text-info font-bold hover:underline">
-              공통 카탈로그
+              마켓플레이스
             </Link>
           </div>
         </section>

@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
 import { useTenant } from '@/lib/tenantStore';
+import { PERSONAL_DOCS } from '@/data/mockPersonalDocs';
 import type { QueryScenario } from '@/data/ontologyQueries';
 import {
   CHAT_AGENTS,
@@ -259,13 +260,12 @@ export default function ChatPage() {
                 blocked ? 'border-bad ring-1 ring-bad/30' : 'border-line focus-within:border-brand-dark',
               )}
             >
-              <Link
-                to="/documents"
-                className="text-[15px] leading-none pb-1 text-ink-light hover:text-brand"
-                title="문서 업로드 — 내 문서(개인별 격리 RAG)로 이동"
+              <button
+                className="text-[15px] leading-none pb-1 text-ink-light hover:text-ink-mid"
+                title="파일 첨부 — 데모 범위 밖"
               >
                 📎
-              </Link>
+              </button>
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -319,6 +319,42 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/*
+            개인 문서 저장소(19) — 대화창 첨부(18)와는 다른 축이다. 여기 쌓인
+            문서는 개인별 격리 인덱스에 들어가 에이전트 개발·대화에 계속
+            활용되고, 첨부는 그 턴에서만 쓰이는 일회성이다.
+          */}
+          <div className="border-t border-line-soft px-4 py-3 flex-shrink-0">
+            <div className="flex items-center gap-1.5 mb-2">
+              <h3 className="text-[11.5px] font-extrabold text-ink">개인 문서 저장소</h3>
+              <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal text-[9px]">
+                2-1 개인문서 RAG
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              {PERSONAL_DOCS.slice(0, 3).map((d) => (
+                <div key={d.id} className="flex items-center gap-1.5 text-[10.5px]">
+                  <span className="text-ink-light flex-shrink-0">📄</span>
+                  <span className="font-bold text-ink-dark truncate flex-1">{d.name}</span>
+                  <span
+                    className={cn(
+                      'text-[9px] font-extrabold flex-shrink-0',
+                      d.state === '적재 완료' ? 'text-ok' : d.state === '실패' ? 'text-bad' : 'text-info',
+                    )}
+                  >
+                    {d.state}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <Link
+              to="/documents"
+              className="mt-2 inline-flex items-center gap-1 text-[10.5px] font-extrabold text-info hover:underline"
+            >
+              + 문서 등록 →
+            </Link>
           </div>
         </aside>
       </div>

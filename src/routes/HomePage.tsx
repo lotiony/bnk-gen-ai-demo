@@ -73,7 +73,7 @@ export default function HomePage() {
         <div className="flex items-baseline justify-between mb-2.5">
           <h3 className="text-base font-extrabold text-ink">대표 에이전트</h3>
           <Link to="/catalog" className="text-[11.5px] font-bold text-info hover:underline">
-            공통 카탈로그 →
+            마켓플레이스 →
           </Link>
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -108,7 +108,7 @@ export default function HomePage() {
           <h3 className="text-[13px] font-extrabold text-ink mb-2">즐겨찾기</h3>
           {favorites.length === 0 ? (
             <p className="text-[11px] text-ink-mid font-semibold">
-              카탈로그에서 ★ 를 눌러 자주 쓰는 자산을 등록하세요
+              마켓플레이스에서 ★ 를 눌러 자주 쓰는 자산을 등록하세요
             </p>
           ) : (
             <div className="flex flex-col gap-1.5">

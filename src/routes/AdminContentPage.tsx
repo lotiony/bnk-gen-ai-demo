@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 import StatusPill from '@/components/ui/StatusPill';
 import { toast } from '@/lib/toast';
 import { TENANT_SHORT } from '@/data/tenants';
-import { NOTICES, BOARD_POSTS, type Notice, type BoardPost } from '@/data/mockContent';
+import type { Notice, BoardPost } from '@/data/mockContent';
+import { useNotices, usePosts, setNoticeState, setPostState } from '@/lib/contentStore';
 
 type Tab = 'notice' | 'board';
 
@@ -17,8 +18,8 @@ const POST_TONE: Record<BoardPost['state'], 'ok' | 'warn' | 'bad'> = { 정상: '
 
 export default function AdminContentPage() {
   const [tab, setTab] = useState<Tab>('notice');
-  const [notices, setNotices] = useState<Notice[]>(NOTICES);
-  const [posts, setPosts] = useState<BoardPost[]>(BOARD_POSTS);
+  const notices = useNotices();
+  const posts = usePosts();
 
   return (
     <div>
@@ -70,7 +71,7 @@ export default function AdminContentPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setNotices((arr) => arr.map((x) => x.id === n.id ? { ...x, state: x.state === '종료' ? '게시 중' : '종료' } : x));
+                    setNoticeState(n.id, n.state === '종료' ? '게시 중' : '종료');
                     toast(n.state === '종료' ? '다시 게시했습니다' : '게시를 종료했습니다');
                   }}
                   className="text-[10.5px] font-extrabold text-ink-dark border border-line rounded px-2 py-1 hover:border-brand-dark hover:text-brand"
@@ -97,13 +98,13 @@ export default function AdminContentPage() {
               {p.state !== '숨김' ? (
                 <button
                   type="button"
-                  onClick={() => { setPosts((arr) => arr.map((x) => x.id === p.id ? { ...x, state: '숨김' } : x)); toast('게시글을 숨겼습니다'); }}
+                  onClick={() => { setPostState(p.id, '숨김'); toast('게시글을 숨겼습니다'); }}
                   className="text-[10.5px] font-extrabold text-ink-dark border border-line rounded px-2 py-1 hover:border-bad hover:text-bad"
                 >숨김 처리</button>
               ) : (
                 <button
                   type="button"
-                  onClick={() => { setPosts((arr) => arr.map((x) => x.id === p.id ? { ...x, state: '정상' } : x)); toast('게시글을 복원했습니다'); }}
+                  onClick={() => { setPostState(p.id, '정상'); toast('게시글을 복원했습니다'); }}
                   className="text-[10.5px] font-extrabold text-ink-dark border border-line rounded px-2 py-1 hover:border-brand-dark hover:text-brand"
                 >복원</button>
               )}

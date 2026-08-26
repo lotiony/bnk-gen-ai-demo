@@ -85,7 +85,7 @@ export default function TenantLandingPage() {
               </span>
             </div>
             <div className="text-[11.5px] text-ink-mid font-semibold mt-0.5">
-              공통 카탈로그 · 그룹 공용 에이전트 · AI 거버넌스 원장 — 계열사 간 공유는 이 경로로만 이뤄진다
+              마켓플레이스 · 그룹 공용 에이전트 · AI 거버넌스 원장 — 계열사 간 공유는 이 경로로만 이뤄진다
             </div>
           </div>
           <div className="ml-auto flex items-center gap-5 flex-shrink-0">

@@ -27,7 +27,7 @@ const items: GnbItem[] = [
   { label: 'AI 어시스턴트', to: '/chat', area: 'chat', matchPrefix: '/chat' },
   { label: 'AI Studio', to: '/studio', area: 'studio', matchPrefix: '/studio' },
   { label: '지식 · 데이터', to: '/knowledge', area: 'knowledge', matchPrefix: '/knowledge' },
-  { label: '공통 카탈로그', to: '/catalog', area: 'catalog', matchPrefix: '/catalog' },
+  { label: '마켓플레이스', to: '/catalog', area: 'catalog', matchPrefix: '/catalog' },
   { label: '관리', to: '/admin', area: 'admin', matchPrefix: '/admin' },
 ];
 

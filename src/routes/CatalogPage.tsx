@@ -1,7 +1,8 @@
 /**
- * 공통 카탈로그 (마켓플레이스) — 핸드오프 §2 화면 6.
+ * 마켓플레이스 — RFP 2-1 「사용자 포털: 마켓 플레이스」
  *
- * RFP: 마켓플레이스 요건
+ * 핸드오프 §2 화면 6. 「AI 자산」 탭은 24~30·32 번 항목(카탈로그·검색·공유범위·
+ * 별점)을, 「공지사항·커뮤니티·지식공유 게시판」 탭은 31번 항목을 담당한다.
  *
  * 원본 mockup 의 카탈로그를 두 군데 뒤집었다.
  *  ① **계열사 간 공유 금지 → 공유 범위 기반 허용.** BNK 는 그룹 공동 플랫폼이고,
@@ -35,6 +36,8 @@ import {
   type GroupAgent,
 } from '@/data/mockGroupAgents';
 import StatusPill from '@/components/ui/StatusPill';
+import { useNotices, usePosts } from '@/lib/contentStore';
+import { TENANT_SHORT } from '@/data/tenants';
 
 type SortKey = 'usage' | 'rating' | 'installs' | 'recent';
 
@@ -51,8 +54,11 @@ const SORT_LABEL: Record<SortKey, string> = {
   recent: '최근 갱신 순',
 };
 
+type PageTab = 'assets' | 'notice' | 'community' | 'knowledge';
+
 export default function CatalogPage() {
   const myTenant = useTenant();
+  const [pageTab, setPageTab] = useState<PageTab>('assets');
   const all = useMemo(() => getCatalogItems(), []);
 
   const [q, setQ] = useState('');
@@ -104,7 +110,7 @@ export default function CatalogPage() {
       {/* ── 헤더 ── */}
       <div className="card px-6 py-5 mb-3.5">
         <div className="flex items-baseline gap-2.5 flex-wrap mb-3">
-          <span className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">공통 카탈로그</span>
+          <span className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">마켓플레이스</span>
           <span className="text-sm text-ink-mid font-semibold">{visible.length}건</span>
           <span className="text-xs text-ink-mid font-medium ml-2.5">
             에이전트 · 프롬프트 · MCP Tool 통합 — <b className="text-ink-dark">그룹 범위</b>로 공개된
@@ -155,6 +161,32 @@ export default function CatalogPage() {
         </div>
       </div>
 
+      {/* ── 페이지 탭: AI 자산 / 공지 / 커뮤니티 / 지식공유 (RFP 2-1 [24~30,32] · [31]) ── */}
+      <div className="flex items-center gap-1 border-b border-line mb-3.5">
+        {([
+          { k: 'assets' as const, label: 'AI 자산' },
+          { k: 'notice' as const, label: '공지사항' },
+          { k: 'community' as const, label: '커뮤니티' },
+          { k: 'knowledge' as const, label: '지식공유 게시판' },
+        ]).map((t) => (
+          <button
+            key={t.k}
+            type="button"
+            onClick={() => setPageTab(t.k)}
+            className={cn(
+              'px-3.5 py-2 text-[12.5px] font-extrabold border-b-2 -mb-px',
+              pageTab === t.k ? 'text-brand border-brand' : 'text-ink-mid border-transparent hover:text-ink-dark',
+            )}
+          >{t.label}</button>
+        ))}
+      </div>
+
+      {pageTab === 'notice' && <NoticeTab myTenant={myTenant} />}
+      {pageTab === 'community' && <CommunityTab myTenant={myTenant} />}
+      {pageTab === 'knowledge' && <KnowledgeBoardTab myTenant={myTenant} />}
+
+      {pageTab === 'assets' && (
+      <>
       {/* ── 그룹 공동 사용 에이전트 (AGB-006 필수 Use Case 10종) ── */}
       <GroupAgentSection />
 
@@ -194,6 +226,107 @@ export default function CatalogPage() {
           ))}
         </div>
       )}
+      </>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════ 공지사항 · 커뮤니티 · 지식공유 (RFP 2-1 [31]) ═══════════════════════ */
+
+function NoticeTab({ myTenant }: { myTenant: string }) {
+  const notices = useNotices();
+  const visible = notices.filter(
+    (n) => n.state === '게시 중' && (n.scope === '그룹 전체' || n.scope === myTenant),
+  );
+  return (
+    <div className="flex flex-col gap-1.5">
+      {visible.length === 0 && (
+        <div className="card px-5 py-8 text-center text-[12px] text-ink-light font-semibold">
+          게시 중인 공지사항이 없습니다
+        </div>
+      )}
+      {visible.map((n) => (
+        <div key={n.id} className="grid grid-cols-[24px_1fr_100px_auto] gap-3 items-center px-4 py-3 bg-white border border-line-soft rounded">
+          <span>{n.pinned ? '📌' : ''}</span>
+          <div className="min-w-0">
+            <div className="text-[12.5px] font-extrabold text-ink truncate">{n.title}</div>
+            <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">{n.author} · {n.publishedAt}</div>
+          </div>
+          <span className="pill bg-surface-soft text-ink-mid border border-line-soft">
+            {n.scope === '그룹 전체' ? n.scope : TENANT_SHORT[n.scope]}
+          </span>
+          <span className="text-[10.5px] font-bold text-ink-light">공지</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CommunityTab({ myTenant }: { myTenant: string }) {
+  const posts = usePosts().filter((p) => p.board === '커뮤니티' && p.state !== '숨김');
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2.5">
+        <p className="text-[11.5px] text-ink-mid font-semibold">
+          계열사·부서 과제의 산출물을 등록하고 공유합니다 · 현재 계열사 <b className="text-ink-dark">{myTenant}</b>
+        </p>
+        <button
+          type="button"
+          onClick={() => toast('과제 산출물 등록 — 데모 범위 밖')}
+          className="py-1.5 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
+        >+ 산출물 등록</button>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {posts.length === 0 && (
+          <div className="card px-5 py-8 text-center text-[12px] text-ink-light font-semibold">
+            등록된 산출물이 없습니다
+          </div>
+        )}
+        {posts.map((p) => (
+          <div key={p.id} className="px-4 py-3 bg-white border border-line-soft rounded">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[12.5px] font-extrabold text-ink">{p.title}</span>
+              <span className="ml-auto pill bg-surface-soft text-ink-mid border border-line-soft">{TENANT_SHORT[p.tenant]}</span>
+            </div>
+            <div className="text-[10.5px] text-ink-mid font-semibold">{p.author} · {p.createdAt}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KnowledgeBoardTab({ myTenant }: { myTenant: string }) {
+  const posts = usePosts().filter((p) => p.board === '지식공유' && p.state !== '숨김');
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2.5">
+        <p className="text-[11.5px] text-ink-mid font-semibold">
+          그룹 전체가 함께 보는 지식·노하우 공유 게시판입니다
+        </p>
+        <button
+          type="button"
+          onClick={() => toast('게시글 작성 — 데모 범위 밖')}
+          className="py-1.5 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
+        >+ 글쓰기</button>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {posts.length === 0 && (
+          <div className="card px-5 py-8 text-center text-[12px] text-ink-light font-semibold">
+            게시글이 없습니다
+          </div>
+        )}
+        {posts.map((p) => (
+          <div key={p.id} className="px-4 py-3 bg-white border border-line-soft rounded">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[12.5px] font-extrabold text-ink">{p.title}</span>
+              <span className="ml-auto pill bg-surface-soft text-ink-mid border border-line-soft">{TENANT_SHORT[p.tenant]}</span>
+            </div>
+            <div className="text-[10.5px] text-ink-mid font-semibold">{p.author} · {p.createdAt}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
