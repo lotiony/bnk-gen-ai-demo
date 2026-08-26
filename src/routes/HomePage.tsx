@@ -9,6 +9,8 @@ import {
   getHomeFeaturedAgents,
   getHomeApprovals,
   getHomeGreetingSummary,
+  canAccessArea,
+  canAccessGovernance,
 } from '@/lib/personaView';
 
 const APPR_CHIP: Record<string, { cls: string; label: string }> = {
@@ -22,7 +24,7 @@ const APPR_CHIP: Record<string, { cls: string; label: string }> = {
   redteam: { cls: 'bg-warn-bg text-bad border-bad-border', label: '레드팀 신청' },
 };
 
-/** 홈 대시보드 — PM 개인 워크스페이스. KPI / 결재 / 프로젝트 빠른 진입 */
+/** 홈 대시보드 — 개인 워크스페이스. KPI / 결재 / AI Studio · 거버넌스 포탈 진입 */
 export default function HomePage() {
   const persona = useCurrentPersona();
   const displayName = persona?.name ?? '김플랫';
@@ -30,6 +32,9 @@ export default function HomePage() {
   const featuredAgents = getHomeFeaturedAgents(persona);
   const homeApprovals = getHomeApprovals(persona);
   const greetingSummary = getHomeGreetingSummary(persona);
+  // 권한 밖 진입 타일은 그리지 않는다(RFP 2-1 권한 기반 화면 구성).
+  const showStudio = canAccessArea(persona, 'studio');
+  const showGovernance = canAccessGovernance(persona);
 
   return (
     <div className="max-w-[1360px] mx-auto px-6 py-6">
@@ -45,7 +50,7 @@ export default function HomePage() {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <KpiCard
           tone="ok"
-          label="내 프로젝트"
+          label="내 과제"
           value={`${kpis.myProjectCount}`}
           unit="건"
         />
@@ -129,14 +134,48 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 내 프로젝트 */}
-        <div className="card col-span-4 p-5">
-          <div className="flex items-baseline justify-between mb-3">
-            <h3 className="text-base font-extrabold text-ink">내 프로젝트</h3>
-            <Link to="/projects" className="text-[11.5px] font-bold text-info hover:underline">
-              프로젝트 목록 →
-            </Link>
-          </div>
+        <div className="col-span-4 flex flex-col gap-3.5">
+          {/* 내 과제 — 프로젝트 계층을 걷어내고 AI Studio 로 바로 보낸다 */}
+          {showStudio && (
+          <Link to="/studio" className="card p-5 block hover:border-brand-dark transition-colors">
+            <div className="flex items-baseline justify-between mb-2">
+              <h3 className="text-base font-extrabold text-ink">AI Studio</h3>
+              <span className="pill bg-info-bg text-info border border-info-border">제작</span>
+            </div>
+            <p className="text-[11.5px] text-ink-dark font-semibold leading-relaxed">
+              에이전트 · 워크플로우 · Tool 을 만들고, 플레이그라운드에서 시험한 뒤 승인 절차를
+              거쳐 배포한다.
+            </p>
+            <div className="mt-2.5 pt-2.5 border-t border-line-soft text-[11px] font-extrabold text-info">
+              내 과제 보기 →
+            </div>
+          </Link>
+          )}
+
+          {/*
+            별도 포탈 진입 — RFP 2-3 이 AI거버넌스를 "포탈 내 별도 기능" 으로 규정하므로
+            GNB 메뉴에서 빼고 홈의 진입 타일로만 노출한다.
+          */}
+          {showGovernance && (
+          <Link
+            to="/governance"
+            className="card p-5 block hover:border-brand-dark transition-colors"
+          >
+            <div className="flex items-baseline justify-between mb-2">
+              <h3 className="text-base font-extrabold text-ink">AI 거버넌스 포탈</h3>
+              <span className="pill bg-accent-brown-bg text-accent-brown border border-accent-brown-border">
+                별도 포탈
+              </span>
+            </div>
+            <p className="text-[11.5px] text-ink-dark font-semibold leading-relaxed">
+              AI기본법 대응 원장 · 라이프사이클 관문 · 연 1회 재평가 기일을 그룹 단위로
+              관리한다.
+            </p>
+            <div className="mt-2.5 pt-2.5 border-t border-line-soft text-[11px] font-extrabold text-info">
+              포탈 열기 →
+            </div>
+          </Link>
+          )}
         </div>
       </div>
     </div>

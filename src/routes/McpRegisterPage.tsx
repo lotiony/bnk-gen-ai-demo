@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import { cn } from '@/lib/utils';
 import {
   OPENAPI_SAMPLE,
@@ -24,9 +25,16 @@ import {
   type McpTool,
 } from '@/data/mockMcp';
 
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1600px] mx-auto px-8 pt-3.5 pb-10';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-10';
+
 export default function McpRegisterPage() {
   const { projectId } = useParams();
   const pid = projectId ?? 'PRJ-2025-PB-001';
+  const crumbItems = useWorkCrumb('Tool · MCP', pid);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
   const [spec, setSpec] = useState('');
   const [stepIdx, setStepIdx] = useState(-1);
@@ -48,15 +56,8 @@ export default function McpRegisterPage() {
   const approvalCount = PARSED_TOOLS.length - readyCount;
 
   return (
-    <div className="max-w-[1600px] mx-auto px-8 pt-3.5 pb-10">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: 'MCP Tool 등록' },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       <div className="flex items-start gap-3 mt-2 mb-3.5">
         <div className="min-w-0 flex-1">

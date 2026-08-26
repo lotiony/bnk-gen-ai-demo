@@ -52,6 +52,8 @@ export default function ChatPage() {
   const persona = useCurrentPersona();
   const tenant = useTenant();
   const [agent, setAgent] = useState<ChatAgentOption>(CHAT_AGENTS[0]);
+  /** 전체 프롬프트 보기 — 해당 에이전트 관리자에게만 열린다(2-1). */
+  const [showPrompt, setShowPrompt] = useState(false);
   const [model, setModel] = useState(CHAT_MODELS[0]);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -183,7 +185,25 @@ export default function ChatPage() {
             ) : (
               <span className="pill bg-surface text-ink-mid border border-line-soft">문서 RAG</span>
             )}
+            {/*
+              RFP 2-1 사용자 포털: "전체 프롬프트 보기 기능(**해당 AI 에이전트 관리자인 경우**)".
+              관리자가 아니면 버튼 자체를 그리지 않는다 — 잠긴 버튼을 보여 주면
+              "프롬프트가 저기 있다" 를 알려 주는 셈이다.
+            */}
+            {persona && agent.admins.includes(persona.id) && (
+              <button
+                type="button"
+                onClick={() => setShowPrompt(true)}
+                className="pill bg-white text-ink-dark border border-line font-extrabold hover:border-brand-dark hover:text-brand"
+              >
+                ⌘ 전체 프롬프트 보기
+              </button>
+            )}
           </div>
+
+          {showPrompt && (
+            <SystemPromptModal agent={agent} onClose={() => setShowPrompt(false)} />
+          )}
 
           {/* 대화 영역 */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 min-h-0">
@@ -723,6 +743,66 @@ function Picker({
           {hint}
         </span>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════════════ 전체 프롬프트 보기 ═══════════════════════ */
+
+/**
+ * RFP 2-1 사용자 포털: "전체 프롬프트 보기 기능(해당 AI 에이전트 관리자인 경우)".
+ *
+ * 프롬프트는 재사용 자산이므로 아무에게나 열지 않는다. 열람 자체가 감사 대상이라
+ * 하단에 그 사실을 적어 둔다(SEC-009).
+ */
+function SystemPromptModal({
+  agent,
+  onClose,
+}: {
+  agent: ChatAgentOption;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      <div className="absolute inset-0 bg-ink/25" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-[640px] max-h-[80vh] bg-white border border-line rounded-lg shadow-xl flex flex-col">
+        <div className="px-5 pt-4 pb-3 border-b border-line-soft flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[14.5px] font-extrabold text-ink">전체 시스템 프롬프트</h2>
+            <p className="text-[11px] text-ink-mid font-semibold mt-0.5">
+              {agent.id} · {agent.name}
+            </p>
+          </div>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            2-1 사용자 포털
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[16px] font-black text-ink-light hover:text-ink-dark leading-none"
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0">
+          <pre className="whitespace-pre-wrap text-[11.5px] text-ink-dark font-mono leading-relaxed border border-line-soft bg-surface-soft rounded px-3 py-3">
+            {agent.systemPrompt}
+          </pre>
+        </div>
+        <div className="px-5 py-3 border-t border-line-soft text-[10px] text-ink-mid font-semibold leading-snug">
+          🔒 이 에이전트의 관리자에게만 노출됩니다. 프롬프트 열람 행위는 감사 원장에
+          기록됩니다(SEC-009).
+        </div>
+      </div>
     </div>
   );
 }

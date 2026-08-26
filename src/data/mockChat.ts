@@ -32,6 +32,16 @@ export interface ChatAgentOption {
   /** 온톨로지 근거 그래프를 쓰는 에이전트인지. 아니면 확정 답변을 못 낸다. */
   ontology: boolean;
   tenant: Tenant;
+  /**
+   * 이 에이전트의 관리자(소유자) 계정 id 목록.
+   *
+   * RFP 2-1 사용자 포털: "**전체 프롬프트 보기 기능(해당 AI 에이전트 관리자인 경우)**"
+   * — 아무나 시스템 프롬프트를 볼 수 있으면 프롬프트가 곧 자산인 구조가 깨진다.
+   * 그래서 소유자만 펼칠 수 있게 계정을 명시한다.
+   */
+  admins: string[];
+  /** 전체 시스템 프롬프트 — 관리자에게만 노출된다. */
+  systemPrompt: string;
 }
 
 export const CHAT_AGENTS: ChatAgentOption[] = [
@@ -42,6 +52,23 @@ export const CHAT_AGENTS: ChatAgentOption[] = [
     grounding: '여신 온톨로지(ONT-101) + 여신업무규정·전결규정·책무구조도',
     ontology: true,
     tenant: '그룹 공통',
+    admins: ['governance_admin', 'project_owner', 'platform_admin'],
+    systemPrompt: `당신은 BNK금융그룹의 규정·책무 어시스턴트입니다.
+
+[역할]
+- 내규·전결규정·책무구조도에 근거해서만 답합니다.
+- 근거를 찾지 못하면 "확인되지 않습니다"라고 답하고 추측하지 않습니다.
+
+[출력 형식]
+1) 결론 한 문장
+2) 근거 조항 (규정명 · 조문 위치)
+3) 개정 이력이 있으면 개정 전후 비교
+4) 관련 책무 보유자
+
+[금칙]
+- 조문 번호를 추정해서 쓰지 않습니다.
+- 고객 개인정보를 답변에 포함하지 않습니다.
+- 법률 자문으로 오인될 표현("법적으로 문제없습니다")을 쓰지 않습니다.`,
   },
   {
     id: 'AGT-204',
@@ -50,6 +77,19 @@ export const CHAT_AGENTS: ChatAgentOption[] = [
     grounding: 'PB_상담_지식인덱스 v4 (문서 RAG)',
     ontology: false,
     tenant: '부산은행',
+    admins: ['project_owner', 'agent_dev', 'platform_admin'],
+    systemPrompt: `당신은 PB 자산진단 어시스턴트입니다.
+
+[역할]
+- PB_상담_지식인덱스 v4 에 근거해 상품·시장 정보를 안내합니다.
+- 투자 권유가 아니라 상담 초안 작성을 돕는 것이 목적입니다.
+
+[출력 형식]
+- 자산 위험도 / 분산도 / 유동성 점수를 JSON 으로 반환하고, 개선안을 문장으로 덧붙입니다.
+
+[금칙]
+- 특정 상품의 수익률을 단정하지 않습니다.
+- 고객 식별정보를 응답에 되쓰지 않습니다.`,
   },
   {
     id: 'AGT-118',
@@ -58,6 +98,15 @@ export const CHAT_AGENTS: ChatAgentOption[] = [
     grounding: '그룹 공통 인사규정 인덱스 (문서 RAG)',
     ontology: false,
     tenant: '그룹 공통',
+    admins: ['platform_admin'],
+    systemPrompt: `당신은 사내 규정 안내 봇입니다.
+
+[역할]
+- 복리후생·근태·인사 규정 문의에 사내 규정집 근거로 답합니다.
+
+[금칙]
+- 개별 직원의 인사 정보를 조회하거나 언급하지 않습니다.
+- 규정 해석이 갈리는 사안은 담당 부서 문의를 안내합니다.`,
   },
 ];
 

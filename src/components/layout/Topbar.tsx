@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import TenantSwitcher from './TenantSwitcher';
 import PersonaSwitcher from './PersonaSwitcher';
+import HelpDrawer from './HelpDrawer';
 import { useCurrentPersona } from '@/lib/persona';
 import { getApprovalBadgeCount } from '@/lib/personaView';
 
@@ -38,7 +39,7 @@ export default function Topbar({ envBadge }: TopbarProps) {
             📥
             <CountBadge count={approvalCount} />
           </Link>
-          <span className="cursor-pointer">❔</span>
+          <HelpDrawer />
           <PersonaSwitcher />
         </div>
       </div>

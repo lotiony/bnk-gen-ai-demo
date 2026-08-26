@@ -172,11 +172,58 @@ export function canViewPtuPool(persona: PersonaLike): boolean {
 
 /**
  * 관리 콘솔 접근 가능 여부.
- * 관리자 4역할만 진입 허용.
+ * 관리자 역할만 진입 허용.
  */
 export function canAccessAdminConsole(persona: PersonaLike): boolean {
   if (!persona) return false;
   return persona.group === '관리자';
+}
+
+/* ═══════════════════════ 메뉴 노출 통제 ═══════════════════════ */
+
+/**
+ * GNB 에 노출할 영역.
+ *
+ * RFP 2-1 포탈 구축 공통:
+ *   "로그인 후 사용자 권한에 따라 **접근 가능한 워크스페이스· 메뉴·기능만 노출**
+ *    (계열사별 SSO 등 통합인증기능 연동 등 권한 기반 화면 구성"
+ *
+ * 그래서 권한 밖 메뉴는 비활성화가 아니라 **아예 그리지 않는다.** 회색 처리는
+ * "있긴 있다" 를 알려 주는 셈이라 요건의 취지에서 벗어난다.
+ */
+export type NavArea = 'home' | 'chat' | 'studio' | 'knowledge' | 'catalog' | 'admin';
+
+export function canAccessArea(persona: PersonaLike, area: NavArea): boolean {
+  if (!persona) return false;
+  switch (area) {
+    // 전 임직원 공통 — 사용자 포털의 기본 동선
+    case 'home':
+    case 'chat':
+    case 'catalog':
+      return true;
+    // 제작 워크스페이스 — 에이전트 개발자·모델러·과제 오너 및 관리자
+    case 'studio':
+      return persona.group === '개발자' || persona.group === '관리자';
+    // 데이터 워크스페이스 — 데이터 담당자·모델러·에이전트 개발자 및 관리자
+    case 'knowledge':
+      return (
+        persona.rfpRole === '데이터 담당자' ||
+        persona.rfpRole === '모델러' ||
+        persona.rfpRole === '에이전트 개발자' ||
+        persona.group === '관리자'
+      );
+    case 'admin':
+      return canAccessAdminConsole(persona);
+  }
+}
+
+/**
+ * AI 거버넌스 포탈 진입 가능 여부.
+ * 원장·결재 화면이므로 거버넌스/준법 성격의 관리자와 과제 오너까지만 연다.
+ */
+export function canAccessGovernance(persona: PersonaLike): boolean {
+  if (!persona) return false;
+  return persona.group === '관리자' || persona.rfpRole === '관리자';
 }
 
 /** 페르소나별 홈 헤더 인사말에 붙는 요약 문구 조립용 헬퍼. */

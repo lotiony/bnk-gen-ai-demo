@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import KpiCard from '@/components/ui/KpiCard';
 import { cn } from '@/lib/utils';
@@ -39,7 +40,16 @@ const SENS_TONE: Record<number, string> = {
  * 지식 파이프라인 과제 상세 — 헤더 + 4단계 stepper + 5개 탭(개요·인덱스·학습계·평가·서빙계).
  * 에이전트 과제 상세와 동일한 max-w/padding/Header card/TabBtn 패턴.
  */
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1360px] mx-auto px-8 pt-3.5 pb-14';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-14';
+/** 과제 상세가 프로젝트 경로로 열릴 때 브레드크럼에 끼울 기준 프로젝트. */
+const WORK_PID = 'PRJ-2025-PB-001';
+
 export default function SearchPipelineDetailPage() {
+  const crumbItems = useWorkCrumb('검색 파이프라인', WORK_PID);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
   const { projectId, pipelineId } = useParams();
   const pid = projectId ?? 'PRJ-101';
   const task = pipelineId ? findPipelineTask(pipelineId) : undefined;
@@ -53,15 +63,8 @@ export default function SearchPipelineDetailPage() {
   const passedAll = task.metrics.every((m) => m.passed === true);
 
   return (
-    <div className="max-w-[1360px] mx-auto px-8 pt-3.5 pb-14">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: task.name },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       {/* Header */}
       <div className="card px-6 py-5 mb-3.5">

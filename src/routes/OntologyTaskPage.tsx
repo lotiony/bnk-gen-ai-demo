@@ -9,22 +9,23 @@
  */
 import { Link, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import OntologySection from '@/components/ontology/OntologySection';
+
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1360px] mx-auto px-6 py-5';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-5';
 
 export default function OntologyTaskPage() {
   const { projectId } = useParams();
   const pid = projectId ?? 'PRJ-2025-PB-001';
+  const crumbItems = useWorkCrumb('온톨로지 · 지식그래프', pid);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
   return (
-    <div className="max-w-[1360px] mx-auto px-6 py-5">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: '온톨로지' },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       <div className="flex items-start gap-3 mt-2 mb-3">
         <div className="min-w-0 flex-1">

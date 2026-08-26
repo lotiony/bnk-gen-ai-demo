@@ -218,3 +218,169 @@ export const BILLING_RULES: { k: string; v: string }[] = [
     v: '월 1회 마감. 마감 후 조정은 차월 정산에 반영하며, 원 데이터는 감사 원장에 보존된다.',
   },
 ];
+
+/* ═══════════════════════ 사용자별 분해 ═══════════════════════ */
+
+/**
+ * RFP LSM-010 은 "회사별, 부서별, **개별 사용자별** 토큰 사용량(Input/Output 및
+ * 컨텍스트 구분)의 실시간 정밀 측정 및 적산" 을 요구한다. 계열사 → 부서까지만
+ * 내려가면 "개별 사용자별" 이 비므로 한 단계 더 판다.
+ *
+ * 이름은 전부 가상 창작물이며, 실제 운영 화면에서는 사번 기반 마스킹 ID 를 쓴다.
+ */
+export interface UserRow {
+  /** 마스킹 ID — 감사 목적 외에는 실명을 노출하지 않는다. */
+  maskedId: string;
+  name: string;
+  dept: string;
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  /** 이 부서 안에서의 사용 비중(%). */
+  pct: number;
+}
+
+/** 부서 내 상위 사용자 분포 — 상위 5명이 부서 사용량의 대부분을 차지하는 형태. */
+const USER_SHAPE: { maskedId: string; name: string; ratio: number }[] = [
+  { maskedId: 'usr_3f81', name: '김OO', ratio: 0.19 },
+  { maskedId: 'usr_a27c', name: '이OO', ratio: 0.15 },
+  { maskedId: 'usr_9d04', name: '박OO', ratio: 0.12 },
+  { maskedId: 'usr_c5b2', name: '최OO', ratio: 0.09 },
+  { maskedId: 'usr_71ea', name: '정OO', ratio: 0.07 },
+];
+
+export function getUserRows(tenantName: string, dept: string): UserRow[] {
+  const d = getDeptRows(tenantName).find((x) => x.dept === dept);
+  if (!d) return [];
+  const rows = USER_SHAPE.map((u) => ({
+    maskedId: u.maskedId,
+    name: u.name,
+    dept,
+    inputTokens: Math.round(d.inputTokens * u.ratio),
+    outputTokens: Math.round(d.outputTokens * u.ratio),
+    cost: Math.round(d.cost * u.ratio),
+    pct: u.ratio * 100,
+  }));
+  // 나머지는 "그 외" 로 묶는다 — 합계가 부서 총액과 어긋나면 정산 화면의 신뢰가 깨진다.
+  const restRatio = 1 - USER_SHAPE.reduce((a, u) => a + u.ratio, 0);
+  rows.push({
+    maskedId: '—',
+    name: `그 외 ${Math.max(d.users - USER_SHAPE.length, 0).toLocaleString('ko-KR')}명`,
+    dept,
+    inputTokens: Math.round(d.inputTokens * restRatio),
+    outputTokens: Math.round(d.outputTokens * restRatio),
+    cost: Math.round(d.cost * restRatio),
+    pct: restRatio * 100,
+  });
+  return rows;
+}
+
+/* ═══════════════════════ 월별 정산 리포트 ═══════════════════════ */
+
+/**
+ * RFP ONM-005 는 "월별 사내 과금(Internal Billing) 및 비용 정산 리포트를
+ * **자동 생성**하는 정산 기능" 을 요구한다. 화면에 숫자만 있고 산출물이 없으면
+ * 요건의 뒤쪽 절반이 빈다.
+ */
+export interface SettlementReport {
+  id: string;
+  month: string;
+  /** 산출 상태. */
+  state: 'issued' | 'scheduled';
+  /** 자동 산출 시각(예정 포함). */
+  runAt: string;
+  /** 포함 계열사 수. */
+  tenants: number;
+  totalCost: number;
+  formats: string[];
+}
+
+export const SETTLEMENT_REPORTS: SettlementReport[] = [
+  {
+    id: 'STL-2026-01',
+    month: '2026-01',
+    state: 'scheduled',
+    runAt: '2026-02-01 06:00 자동 산출 예정',
+    tenants: 10,
+    totalCost: 0, // 화면에서 현재 합계로 채운다
+    formats: ['XLSX', 'PDF'],
+  },
+  {
+    id: 'STL-2025-12',
+    month: '2025-12',
+    state: 'issued',
+    runAt: '2026-01-01 06:00',
+    tenants: 10,
+    totalCost: 41_820_000,
+    formats: ['XLSX', 'PDF'],
+  },
+  {
+    id: 'STL-2025-11',
+    month: '2025-11',
+    state: 'issued',
+    runAt: '2025-12-01 06:00',
+    tenants: 9,
+    totalCost: 37_140_000,
+    formats: ['XLSX', 'PDF'],
+  },
+];
+
+/* ═══════════════════════ 에이전트별 미터링 (AGB-010) ═══════════════════════ */
+
+/**
+ * RFP AGB-010 에이전트별 미터링 (권고)
+ *   "생성된 **에이전트별**, 사용자/회사 단위별 **호출 빈도 및 발생 토큰 사용량**에 대한
+ *    실시간 미터링 및 통계 제공"
+ *
+ * 계열사·부서·사용자 축(LSM-010)과 별개로 **에이전트 축**이 필요하다.
+ * "어느 조직이 썼나" 와 "무엇이 비용을 먹나" 는 다른 질문이고,
+ * 후자가 있어야 비싼 에이전트를 골라 최적화할 수 있다.
+ */
+export interface AgentMeteringRow {
+  agentId: string;
+  name: string;
+  /** 제작 주관 계열사. */
+  tenant: string;
+  /** 이번 달 호출 수. */
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  /** 호출 1건당 평균 비용(원). */
+  costPerCall: number;
+  /** 전월 대비 호출 증감(%). */
+  deltaPct: number;
+}
+
+const AGENT_SEED: { agentId: string; name: string; tenant: string; calls: number; inTok: number; outTok: number; deltaPct: number }[] = [
+  { agentId: 'GRP-003', name: '회의 보조 에이전트', tenant: '그룹 공통', calls: 164_800, inTok: 412_000_000, outTok: 68_400_000, deltaPct: 12.4 },
+  { agentId: 'GRP-004', name: '품의 · 보고서 작성 도우미', tenant: '그룹 공통', calls: 106_800, inTok: 214_000_000, outTok: 94_200_000, deltaPct: 8.1 },
+  { agentId: 'GRP-008', name: '여신업무 어시스턴트', tenant: '부산은행', calls: 98_400, inTok: 388_000_000, outTok: 41_600_000, deltaPct: 21.7 },
+  { agentId: 'GRP-001', name: '규정 · 책무 어시스턴트', tenant: '그룹 공통', calls: 89_600, inTok: 296_000_000, outTok: 38_200_000, deltaPct: 4.2 },
+  { agentId: 'GRP-002', name: '그룹웨어 문서 어시스턴트', tenant: '그룹 공통', calls: 75_600, inTok: 182_000_000, outTok: 52_800_000, deltaPct: -2.6 },
+  { agentId: 'GRP-005', name: '고객 · 민원 분석 에이전트', tenant: '부산은행', calls: 63_600, inTok: 148_000_000, outTok: 33_400_000, deltaPct: 6.8 },
+  { agentId: 'AGT-204', name: 'PB 자산진단 어시스턴트', tenant: '부산은행', calls: 49_920, inTok: 156_000_000, outTok: 24_200_000, deltaPct: 15.3 },
+  { agentId: 'GRP-009', name: '외환업무 어시스턴트', tenant: '경남은행', calls: 24_400, inTok: 78_000_000, outTok: 11_800_000, deltaPct: 3.1 },
+  { agentId: 'GRP-006', name: '광고심의 지원 에이전트', tenant: 'BNK캐피탈', calls: 19_200, inTok: 42_000_000, outTok: 14_600_000, deltaPct: -8.4 },
+];
+
+export function getAgentRows(): AgentMeteringRow[] {
+  const totals = getMeteringTotals();
+  // 토큰 비중대로 총 정산액을 나눈다 — 조직 축 합계와 어긋나면 화면이 서로 다른 말을 한다.
+  const weighted = AGENT_SEED.map((a) => a.inTok + a.outTok * OUTPUT_WEIGHT);
+  const sum = weighted.reduce((x, y) => x + y, 0);
+  return AGENT_SEED.map((a, i) => {
+    const cost = Math.round((totals.cost * weighted[i]) / sum);
+    return {
+      agentId: a.agentId,
+      name: a.name,
+      tenant: a.tenant,
+      calls: a.calls,
+      inputTokens: a.inTok,
+      outputTokens: a.outTok,
+      cost,
+      costPerCall: Math.round(cost / a.calls),
+      deltaPct: a.deltaPct,
+    };
+  }).sort((x, y) => y.cost - x.cost);
+}

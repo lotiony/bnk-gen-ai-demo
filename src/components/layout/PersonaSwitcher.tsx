@@ -3,21 +3,20 @@ import { cn } from '@/lib/utils';
 import {
   DEFAULT_PERSONA_ID,
   findPersona,
+  PERSONA_TENANT_ORDER,
+  personasByTenant,
   type Persona,
-  type PersonaGroup,
 } from '@/data/mockPersonas';
-import {
-  PERSONAS,
-  setStoredPersona,
-  clearStoredPersona,
-  useCurrentPersona,
-} from '@/lib/persona';
-
-const GROUPS: PersonaGroup[] = ['관리자', '개발자', '사용자'];
+import { TENANTS } from '@/data/tenants';
+import { setStoredPersona, clearStoredPersona, useCurrentPersona } from '@/lib/persona';
 
 /**
  * Topbar 우측 사용자 칩 — 클릭 시 페르소나 전환 드롭다운.
- * 9개 페르소나(관리자 4 / 개발자 3 / 사용자 2)를 그룹별로 나눠서 표시.
+ *
+ * 계정을 **계열사별로** 묶어 보여 준다. 계열사는 SSO/AD 클레임이므로 계정을
+ * 바꾸면 소속 Namespace 도 함께 바뀐다(`setStoredPersona` 가 테넌트를 동기화).
+ * 이것이 "계열사별 SSO 로 로그인하면 보이는 것이 달라진다" 를 시연하는 경로다.
+ *
  * 선택값은 메모리 스토어에만 보존된다(새로고침 시 초기화).
  */
 export default function PersonaSwitcher() {
@@ -100,17 +99,25 @@ export default function PersonaSwitcher() {
         <div className="absolute top-full right-0 mt-1.5 w-[300px] bg-white border border-line rounded-md shadow-lg z-40 overflow-hidden">
           <div className="px-3 py-2 border-b border-line-soft bg-surface-soft/60">
             <div className="text-[10.5px] text-ink-mid font-bold tracking-[0.3px] uppercase">
-              페르소나 전환
+              계정 전환
+            </div>
+            <div className="text-[10px] text-ink-light font-semibold mt-0.5">
+              계정을 바꾸면 소속 Namespace 도 함께 바뀝니다
             </div>
           </div>
 
-          <div className="py-1">
-            {GROUPS.map((g) => {
-              const list = PERSONAS.filter((p) => p.group === g);
+          <div className="py-1 max-h-[440px] overflow-auto">
+            {PERSONA_TENANT_ORDER.map((t) => {
+              const list = personasByTenant(t);
+              if (list.length === 0) return null;
+              const meta = TENANTS.find((m) => m.name === t);
               return (
-                <div key={g} className="pb-1">
-                  <div className="px-3 pt-2 pb-1 text-[9.5px] font-extrabold tracking-[0.4px] uppercase text-ink-light">
-                    {g}
+                <div key={t} className="pb-1">
+                  <div className="px-3 pt-2 pb-1 flex items-baseline gap-1.5">
+                    <span className="text-[10px] font-extrabold text-ink-dark">{t}</span>
+                    <span className="text-[9px] font-mono font-semibold text-ink-light">
+                      {meta?.namespace}
+                    </span>
                   </div>
                   <ul>
                     {list.map((p) => {
@@ -147,6 +154,11 @@ export default function PersonaSwitcher() {
                               <span className="text-[10.5px] text-ink-mid font-semibold truncate">
                                 · {p.name}
                               </span>
+                              {p.canSwitchTenant && (
+                                <span className="ml-auto text-[9px] font-bold text-ink-light whitespace-nowrap">
+                                  전환 가능
+                                </span>
+                              )}
                             </div>
                             <span
                               className={cn(

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
@@ -137,22 +138,24 @@ const APPR_STEPS = [
 
 /* ---------------- Page ---------------- */
 
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1200px] mx-auto px-6 py-6';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-6';
+/** 과제 상세가 프로젝트 경로로 열릴 때 브레드크럼에 끼울 기준 프로젝트. */
+const WORK_PID = 'PRJ-2025-PB-001';
+
 export default function DatabaseTaskPage() {
+  const crumbItems = useWorkCrumb('데이터베이스', WORK_PID);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
   const [tab, setTab] = useState<TabId>('account');
   const [tables, setTables] = useState<Table[]>(INITIAL_TABLES);
   const [savedTables, setSavedTables] = useState<Table[]>(INITIAL_TABLES);
   const [accounts, setAccounts] = useState<Account[]>(ACCOUNTS_SEED);
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-6">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: '/projects/PRJ-101' },
-          { label: '데이터베이스' },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       {/* Page head */}
       <div className="flex items-end justify-between gap-6 mb-3.5">

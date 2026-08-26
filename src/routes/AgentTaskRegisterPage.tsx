@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import SectionCard from '@/components/projectForm/SectionCard';
 import SidebarCard from '@/components/projectForm/SidebarCard';
@@ -14,10 +15,17 @@ import { addAgentTask, BUILDER_LABEL, type AgentBuilder } from '@/data/mockAgent
  * 에이전트 과제 등록 — 프로젝트 내 에이전트 1개를 정의 (시스템 프롬프트·모델·도구·연결 지식).
  * 프로젝트 등록 폼과 동일한 디자인 토큰을 사용한다.
  */
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1360px] mx-auto px-6 py-6 pb-[120px]';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-[120px]';
+
 export default function AgentTaskRegisterPage() {
   const navigate = useNavigate();
   const { projectId } = useParams();
   const pid = projectId ?? 'PRJ-101';
+  const crumbItems = useWorkCrumb('에이전트 빌더', pid);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
   const [name, setName] = useState('보이스피싱 1차 분류 에이전트');
   const [stage, setStage] = useState<'학습계' | '서빙계'>('학습계');
@@ -67,15 +75,8 @@ export default function AgentTaskRegisterPage() {
   };
 
   return (
-    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: '에이전트 과제 등록' },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       <div className="card px-6 py-5 mb-3.5 flex justify-between items-end">
         <div>

@@ -16,7 +16,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 import {
   NODE_KINDS,
   KIND_META,
@@ -29,6 +31,13 @@ import {
   type NodeKind,
   type WfNode,
   type WfEdge,
+  TRACE_FAIL,
+  TRACE_FAIL_TOTAL,
+  COMPENSATION_BY_NODE,
+  CHECKPOINTS,
+  LONG_RUNS,
+  NL_GENERATION,
+  type TraceStep,
 } from '@/data/mockWorkflow';
 
 /**
@@ -55,15 +64,33 @@ function edgePath(a: { x: number; y: number }, b: { x: number; y: number }) {
   return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
 }
 
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1760px] mx-auto px-8 pt-3.5 pb-10';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-10';
+
 export default function WorkflowBuilderPage() {
   const { projectId } = useParams();
   const pid = projectId ?? 'PRJ-2025-PB-001';
+  const crumbItems = useWorkCrumb('워크플로우 빌더', pid);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
   const [nodes, setNodes] = useState<WfNode[]>(SEED_NODES);
   const [edges, setEdges] = useState<WfEdge[]>(SEED_EDGES);
   const [sel, setSel] = useState<string | null>('n3');
-  const [tab, setTab] = useState<'prop' | 'trace'>('prop');
+  const [tab, setTab] = useState<'prop' | 'trace' | 'longrun'>('prop');
   const [runIdx, setRunIdx] = useState(-1);
+  /*
+   * 실행 모드 —
+   *  'ok'   : 정상 경로 (조건 분기가 갈리는 것을 보여 준다)
+   *  'fail' : MCP 호출 실패 → **Saga 보상 트랜잭션**이 역순으로 되돌린다(AGB-008 후단)
+   * 성공 경로만 보여 주면 AGB-008 의 절반("일부 단계 실패 시 원상 복구")이 빈다.
+   */
+  const [runMode, setRunMode] = useState<'ok' | 'fail'>('ok');
+  /** 자연어 생성(AGB-003) — 입력 문장과 해석 결과 노출 여부. */
+  const [nlText, setNlText] = useState('');
+  const [nlParsed, setNlParsed] = useState(false);
+  const activeTrace: TraceStep[] = runMode === 'fail' ? TRACE_FAIL : TRACE;
   const [linking, setLinking] = useState<{ from: string; port: number; x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasW, setCanvasW] = useState(1200);
@@ -85,20 +112,23 @@ export default function WorkflowBuilderPage() {
 
   /* ── 실행 재생 ── */
   useEffect(() => {
-    if (runIdx < 0 || runIdx >= TRACE.length) return;
-    // 실제 지연을 그대로 쓰면 1.8초짜리 스텝에서 시연이 멈춘다. 상한을 둔다.
-    const t = setTimeout(() => setRunIdx((i) => i + 1), Math.min(900, 180 + TRACE[runIdx].ms / 3));
+    if (runIdx < 0 || runIdx >= activeTrace.length) return;
+    // 실제 지연을 그대로 쓰면 30초짜리 타임아웃 스텝에서 시연이 멈춘다. 상한을 둔다.
+    const t = setTimeout(
+      () => setRunIdx((i) => i + 1),
+      Math.min(900, 180 + activeTrace[runIdx].ms / 3),
+    );
     return () => clearTimeout(t);
-  }, [runIdx]);
+  }, [runIdx, activeTrace]);
 
   const run = () => {
     setTab('trace');
     setRunIdx(0);
   };
 
-  const ranNodes = runIdx < 0 ? [] : TRACE.slice(0, runIdx + 1).map((t) => t.nodeId);
-  const running = runIdx >= 0 && runIdx < TRACE.length;
-  const doneAll = runIdx >= TRACE.length;
+  const ranNodes = runIdx < 0 ? [] : activeTrace.slice(0, runIdx + 1).map((t) => t.nodeId);
+  const running = runIdx >= 0 && runIdx < activeTrace.length;
+  const doneAll = runIdx >= activeTrace.length;
 
   /* ── 좌표 변환 ── */
   const toCanvas = useCallback((e: { clientX: number; clientY: number }) => {
@@ -195,15 +225,8 @@ export default function WorkflowBuilderPage() {
   const selNode = sel ? nodeById[sel] : null;
 
   return (
-    <div className="max-w-[1760px] mx-auto px-8 pt-3.5 pb-10">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: '워크플로우 빌더' },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       {/* 헤더 */}
       <div className="flex items-start gap-3 mt-2 mb-3">
@@ -224,6 +247,29 @@ export default function WorkflowBuilderPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 pt-1">
+          {/* 실행 모드 — 정상 / 실패→보상. AGB-008 후단을 시연하는 스위치다. */}
+          <div className="inline-flex rounded border border-line overflow-hidden">
+            {(
+              [
+                { k: 'ok' as const, label: '정상' },
+                { k: 'fail' as const, label: '실패 → 보상' },
+              ]
+            ).map((m) => (
+              <button
+                key={m.k}
+                onClick={() => {
+                  setRunMode(m.k);
+                  setRunIdx(-1);
+                }}
+                className={cn(
+                  'h-8 px-2.5 text-[11.5px] font-extrabold',
+                  runMode === m.k ? 'bg-brand-dark text-white' : 'bg-white text-ink-dark hover:bg-surface',
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => {
               setNodes(SEED_NODES);
@@ -240,7 +286,7 @@ export default function WorkflowBuilderPage() {
             disabled={running}
             className="inline-flex items-center h-8 px-4 rounded bg-brand border border-brand-dark text-white text-[12px] font-extrabold hover:bg-brand-dark disabled:opacity-50"
           >
-            {running ? '실행 중…' : '▶ 실행'}
+            {running ? '실행 중…' : runMode === 'fail' ? '▶ 실패 시나리오 실행' : '▶ 실행'}
           </button>
         </div>
       </div>
@@ -277,6 +323,93 @@ export default function WorkflowBuilderPage() {
           <div className="mt-3 pt-2.5 border-t border-line-soft text-[10px] text-ink-mid font-semibold leading-snug">
             캔버스로 끌어다 놓아 추가합니다. 노드 오른쪽 <b className="text-ink-dark">●</b> 를 끌면
             다음 노드로 연결됩니다.
+          </div>
+
+          {/*
+            AGB-003 자연어 기반 워크플로우 생성 (권고).
+            문장을 넣으면 노드가 툭 나오는 것처럼 보이면 신뢰가 떨어진다 —
+            무엇을 어떻게 해석했는지를 먼저 펼친다.
+          */}
+          <div className="mt-3 pt-2.5 border-t border-line-soft">
+            <div className="flex items-baseline gap-1.5 mb-1.5">
+              <span className="text-[11px] font-extrabold text-ink">자연어로 만들기</span>
+              <span className="ml-auto text-[9px] font-mono font-bold text-ink-light">AGB-003</span>
+            </div>
+            <textarea
+              value={nlText}
+              onChange={(e) => {
+                setNlText(e.target.value);
+                setNlParsed(false);
+              }}
+              rows={3}
+              placeholder="수행할 업무 절차를 문장으로 쓰세요"
+              className="w-full py-1.5 px-2 border border-line rounded text-[10.5px] bg-white leading-snug focus:outline-none focus:border-brand-dark resize-none"
+            />
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setNlText(NL_GENERATION.prompt);
+                  setNlParsed(false);
+                }}
+                className="text-[10px] font-extrabold text-ink-mid hover:text-brand"
+              >
+                예시 넣기
+              </button>
+              <button
+                type="button"
+                disabled={!nlText.trim()}
+                onClick={() => {
+                  setNodes(SEED_NODES);
+                  setEdges(SEED_EDGES);
+                  setRunIdx(-1);
+                  setNlParsed(true);
+                  toast('문장을 해석해 파이프라인을 생성했습니다 — 해석 결과를 확인하세요');
+                }}
+                className="ml-auto py-1 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ✦ 생성
+              </button>
+            </div>
+
+            {nlParsed && (
+              <div className="mt-2 border border-line-soft rounded px-2.5 py-2 bg-surface-soft">
+                <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1">
+                  해석 결과
+                </div>
+                <ul className="space-y-1 mb-2">
+                  {NL_GENERATION.parsed.map((l) => {
+                    const m = KIND_META[l.nodeKind];
+                    return (
+                      <li key={l.phrase} className="leading-snug">
+                        <div className="text-[10px] font-bold text-ink-dark">"{l.phrase}"</div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span
+                            className="pill border text-[9px]"
+                            style={{ background: m.bg, color: m.color, borderColor: m.bg }}
+                          >
+                            {m.label}
+                          </span>
+                          <span className="text-[9.5px] text-ink-mid font-semibold truncate">
+                            {l.as}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1 pt-1.5 border-t border-line-soft">
+                  확인이 필요한 것
+                </div>
+                <ul className="space-y-0.5">
+                  {NL_GENERATION.todo.map((t) => (
+                    <li key={t} className="text-[9.5px] text-warn font-semibold leading-snug">
+                      · {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -455,6 +588,7 @@ export default function WorkflowBuilderPage() {
               [
                 { k: 'prop', label: '속성' },
                 { k: 'trace', label: '실행 Trace' },
+                { k: 'longrun', label: '장기 실행' },
               ] as const
             ).map((t) => (
               <button
@@ -480,8 +614,10 @@ export default function WorkflowBuilderPage() {
                   추가할 수 있습니다.
                 </div>
               )
+            ) : tab === 'trace' ? (
+              <TracePanel runIdx={runIdx} nodeById={nodeById} trace={activeTrace} mode={runMode} />
             ) : (
-              <TracePanel runIdx={runIdx} nodeById={nodeById} />
+              <LongRunPanel />
             )}
           </div>
         </aside>
@@ -552,71 +688,228 @@ function PropPanel({ node, onTitle }: { node: WfNode; onTitle: (v: string) => vo
 
 /* ═══════════════════════ Trace 패널 ═══════════════════════ */
 
+/** 스텝 상태별 시각 규칙 — 실패와 보상은 색으로 구분해야 한 눈에 읽힌다. */
+const STEP_TONE = {
+  ok: { box: 'border-line-soft', badge: '', label: '' },
+  fail: { box: 'border-bad bg-bad-bg', badge: 'bg-bad text-white', label: '실패' },
+  compensated: {
+    box: 'border-warn bg-warn-bg',
+    badge: 'bg-warn text-white',
+    label: '보상',
+  },
+} as const;
+
 function TracePanel({
   runIdx,
   nodeById,
+  trace,
+  mode,
 }: {
   runIdx: number;
   nodeById: Record<string, WfNode>;
+  trace: TraceStep[];
+  mode: 'ok' | 'fail';
 }) {
   if (runIdx < 0) {
     return (
       <div className="text-[11.5px] text-ink-mid font-semibold leading-relaxed">
         상단 <b className="text-ink-dark">▶ 실행</b> 을 누르면 노드별 입·출력과 소요 시간이 여기에
         기록됩니다.
+        {mode === 'fail' && (
+          <>
+            <br />
+            <br />
+            <b className="text-ink-dark">실패 → 보상</b> 모드에서는 MCP 호출이 타임아웃되고, 이미
+            완료된 단계가 <b className="text-ink-dark">역순으로</b> 되돌려집니다(Saga 보상
+            트랜잭션).
+          </>
+        )}
       </div>
     );
   }
-  const shown = TRACE.slice(0, runIdx + 1);
-  const done = runIdx >= TRACE.length;
+  const shown = trace.slice(0, runIdx + 1);
+  const done = runIdx >= trace.length;
 
   return (
     <div>
-      {done && (
-        <div className="border border-ok-border bg-ok-bg rounded px-3 py-2 mb-2.5">
-          <div className="text-[11.5px] font-extrabold text-ok mb-0.5">실행 완료</div>
-          <div className="text-[10.5px] text-ink-dark font-semibold leading-snug">
-            총 {TRACE_TOTAL.ms.toLocaleString('ko-KR')}ms · 토큰 입력{' '}
-            {TRACE_TOTAL.tokensIn.toLocaleString('ko-KR')} / 출력{' '}
-            {TRACE_TOTAL.tokensOut.toLocaleString('ko-KR')}
-          </div>
-          {TRACE_TOTAL.skipped.length > 0 && (
-            <div className="text-[10.5px] text-ink-mid font-semibold mt-1 leading-snug">
-              미실행: {TRACE_TOTAL.skipped.join(' · ')} — 조건 분기가 다른 경로를 탔다
+      {done &&
+        (mode === 'fail' ? (
+          <div className="border border-warn-border bg-warn-bg rounded px-3 py-2 mb-2.5">
+            <div className="text-[11.5px] font-extrabold text-warn mb-0.5">
+              실행 실패 · 보상 완료
             </div>
-          )}
-        </div>
-      )}
+            <div className="text-[10.5px] text-ink-dark font-semibold leading-snug">
+              {nodeById[TRACE_FAIL_TOTAL.failedAt]?.title ?? TRACE_FAIL_TOTAL.failedAt} 에서
+              실패 · 완료된 단계 {TRACE_FAIL_TOTAL.compensated}건을 역순으로 원상 복구했다.
+              <br />
+              부수효과가 없는 조회·분기 노드는 보상 대상이 아니다.
+            </div>
+          </div>
+        ) : (
+          <div className="border border-ok-border bg-ok-bg rounded px-3 py-2 mb-2.5">
+            <div className="text-[11.5px] font-extrabold text-ok mb-0.5">실행 완료</div>
+            <div className="text-[10.5px] text-ink-dark font-semibold leading-snug">
+              총 {TRACE_TOTAL.ms.toLocaleString('ko-KR')}ms · 토큰 입력{' '}
+              {TRACE_TOTAL.tokensIn.toLocaleString('ko-KR')} / 출력{' '}
+              {TRACE_TOTAL.tokensOut.toLocaleString('ko-KR')}
+            </div>
+            {TRACE_TOTAL.skipped.length > 0 && (
+              <div className="text-[10.5px] text-ink-mid font-semibold mt-1 leading-snug">
+                미실행: {TRACE_TOTAL.skipped.join(' · ')} — 조건 분기가 다른 경로를 탔다
+              </div>
+            )}
+          </div>
+        ))}
       <ol className="space-y-2">
         {shown.map((s, i) => {
           const n = nodeById[s.nodeId];
           const m = n ? KIND_META[n.kind] : null;
+          const st = s.status ?? 'ok';
+          const tone = STEP_TONE[st];
+          const comp = COMPENSATION_BY_NODE[s.nodeId];
           return (
-            <li key={`${s.nodeId}-${i}`} className="og-step border border-line-soft rounded px-2.5 py-2">
+            <li
+              key={`${s.nodeId}-${i}`}
+              className={cn('og-step border rounded px-2.5 py-2', tone.box)}
+            >
               <div className="flex items-center gap-1.5 mb-1">
-                <span className="w-[17px] h-[17px] rounded-full bg-surface text-ink-mid border border-line inline-flex items-center justify-center text-[9.5px] font-extrabold">
-                  {i + 1}
+                <span
+                  className={cn(
+                    'w-[17px] h-[17px] rounded-full inline-flex items-center justify-center text-[9.5px] font-extrabold',
+                    st === 'ok'
+                      ? 'bg-surface text-ink-mid border border-line'
+                      : tone.badge,
+                  )}
+                >
+                  {st === 'fail' ? '!' : st === 'compensated' ? '↩' : i + 1}
                 </span>
                 <span className="text-[11.5px] font-extrabold text-ink truncate">
                   {n?.title ?? s.nodeId}
                 </span>
-                {m && (
-                  <span className="pill border" style={{ background: m.bg, color: m.color, borderColor: m.bg }}>
+                {m && st === 'ok' && (
+                  <span
+                    className="pill border"
+                    style={{ background: m.bg, color: m.color, borderColor: m.bg }}
+                  >
                     {m.label}
                   </span>
                 )}
-                <span className="ml-auto text-[10px] font-bold text-ink-mid tabular-nums">{s.ms}ms</span>
+                {st !== 'ok' && (
+                  <span className={cn('pill', tone.badge)}>{tone.label}</span>
+                )}
+                <span className="ml-auto text-[10px] font-bold text-ink-mid tabular-nums">
+                  {s.ms.toLocaleString('ko-KR')}ms
+                </span>
               </div>
               <KV k="입력" v={s.input} />
               <KV k="출력" v={s.output} />
               {s.branch && <KV k="분기" v={`'${s.branch}' 경로 선택`} strong />}
               {s.tokens && (
-                <KV k="토큰" v={`입력 ${s.tokens.in.toLocaleString('ko-KR')} · 출력 ${s.tokens.out.toLocaleString('ko-KR')}`} />
+                <KV
+                  k="토큰"
+                  v={`입력 ${s.tokens.in.toLocaleString('ko-KR')} · 출력 ${s.tokens.out.toLocaleString('ko-KR')}`}
+                />
+              )}
+              {st === 'compensated' && s.compensation && (
+                <KV k="역연산" v={s.compensation} strong />
+              )}
+              {st === 'fail' && comp && !comp.compensable && (
+                <KV k="보상" v="이 노드는 부수효과가 없어 되돌릴 것이 없다" />
+              )}
+              {s.checkpoint && (
+                <div className="mt-1 inline-flex items-center gap-1 text-[9.5px] font-extrabold text-info">
+                  ⚑ 체크포인트 저장 · {s.checkpoint}
+                </div>
               )}
             </li>
           );
         })}
       </ol>
+    </div>
+  );
+}
+
+/* ═══════════════════════ 장기 실행 패널 ═══════════════════════ */
+
+/**
+ * AGB-002 후단: "수시간~수일에 걸친 장기 실행(Long-running) 워크플로우에 대한
+ * 체크포인트 기반 장애 복구 기능 제공".
+ *
+ * 여신 상담은 서류 보완·심사역 검토로 실제로 수일이 걸린다. 그래서 실행이 며칠째
+ * 멈춰 있는 것이 정상이고, 장애가 나도 **처음이 아니라 마지막 체크포인트에서** 재개한다.
+ */
+function LongRunPanel() {
+  return (
+    <div>
+      <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
+        체크포인트 정의
+      </div>
+      <ol className="space-y-1.5 mb-3">
+        {CHECKPOINTS.map((c) => (
+          <li key={c.id} className="border border-line-soft rounded px-2.5 py-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] font-mono font-extrabold text-info">{c.id}</span>
+              <span className="text-[11.5px] font-extrabold text-ink">{c.label}</span>
+              <span className="ml-auto text-[9.5px] font-bold text-ink-mid">보존 {c.ttl}</span>
+            </div>
+            <p className="text-[10.5px] text-ink-dark font-semibold mt-0.5 leading-snug">
+              {c.state}
+            </p>
+          </li>
+        ))}
+      </ol>
+
+      <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
+        재개 대기 실행 {LONG_RUNS.length}건
+      </div>
+      <ul className="space-y-1.5">
+        {LONG_RUNS.map((r) => {
+          const broken = r.state === '장애 · 재개 가능';
+          return (
+            <li
+              key={r.runId}
+              className={cn(
+                'border rounded px-2.5 py-2',
+                broken ? 'border-warn bg-warn-bg' : 'border-line-soft',
+              )}
+            >
+              <div className="flex items-baseline gap-1.5 mb-0.5">
+                <span className="text-[10.5px] font-mono font-extrabold text-ink">{r.runId}</span>
+                <span
+                  className={cn(
+                    'pill border',
+                    broken
+                      ? 'bg-warn text-white border-warn'
+                      : 'bg-surface-soft text-ink-mid border-line-soft',
+                  )}
+                >
+                  {r.state}
+                </span>
+                <span className="ml-auto text-[9.5px] font-bold text-ink-mid tabular-nums">
+                  경과 {r.elapsed}
+                </span>
+              </div>
+              <p className="text-[10.5px] text-ink-dark font-semibold leading-snug">
+                {r.waitingOn}
+              </p>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="text-[9.5px] font-extrabold text-info">
+                  ⚑ {r.lastCheckpoint}
+                </span>
+                {broken && (
+                  <button
+                    type="button"
+                    onClick={() => toast(`${r.runId} · ${r.lastCheckpoint} 에서 재개합니다`)}
+                    className="ml-auto text-[10px] font-extrabold text-ink-dark border border-line rounded px-2 py-[2px] bg-white hover:border-brand-dark hover:text-brand"
+                  >
+                    ↻ 체크포인트에서 재개
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

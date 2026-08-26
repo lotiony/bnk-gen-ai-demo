@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
+import AreaGuard from './AreaGuard';
 
 interface AdminNavItem {
   label: string;
@@ -12,8 +13,14 @@ interface AdminNavItem {
 
 const NAV: AdminNavItem[] = [
   { label: '대시보드', to: '/admin/dashboard', group: '모니터링', hint: '사용·자원·안전 현황' },
-  { label: 'AI 거버넌스', to: '/admin/governance', group: '모니터링', hint: '원장·라이프사이클·기일' },
   { label: '미터링·정산', to: '/admin/metering', group: '모니터링', hint: '계열사·부서 Chargeback' },
+  {
+    label: '반입 승인',
+    to: '/admin/intake',
+    group: '운영 관리',
+    hint: '모델·데이터 반입 검사',
+  },
+  { label: '계열사 DRM', to: '/admin/drm', group: '운영 관리', hint: '문서보안 자동 복호화' },
   { label: '멤버 관리', to: '/admin/members', group: '운영 관리', hint: '역할·초대' },
   { label: '대표 에이전트', to: '/admin/featured-agents', group: '운영 관리', hint: '홈 노출 순서' },
 ];
@@ -29,6 +36,7 @@ export default function AdminLayout() {
   const displayRole = persona?.role ?? '관리자';
 
   return (
+    <AreaGuard area="admin">
     <div className="max-w-[1360px] mx-auto px-6 pt-[18px] pb-14">
       <div className="grid grid-cols-[200px_1fr] gap-5">
         {/* 좌측 사이드바 */}
@@ -92,5 +100,6 @@ export default function AdminLayout() {
         </main>
       </div>
     </div>
+    </AreaGuard>
   );
 }

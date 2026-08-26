@@ -17,11 +17,17 @@ import KpiCard from '@/components/ui/KpiCard';
 import {
   getMeteringRows,
   getDeptRows,
+  getUserRows,
   getMeteringTotals,
   BILLING_MONTH,
   BILLING_RULES,
   OUTPUT_WEIGHT,
+  SETTLEMENT_REPORTS,
+  getAgentRows,
 } from '@/data/mockMetering';
+import { useTenant } from '@/lib/tenantStore';
+import { toast } from '@/lib/toast';
+import StatusPill from '@/components/ui/StatusPill';
 
 const fmtTok = (n: number) => `${(n / 1_000_000).toFixed(1)}M`;
 const fmtKRW = (n: number) => n.toLocaleString('ko-KR');
@@ -29,9 +35,30 @@ const fmtKRW = (n: number) => n.toLocaleString('ko-KR');
 export default function MeteringPage() {
   const rows = useMemo(() => getMeteringRows(), []);
   const totals = useMemo(() => getMeteringTotals(), []);
-  const [picked, setPicked] = useState<string>(rows[0]?.name ?? '');
+  /*
+   * 상단 Namespace 스위처를 따라간다 — 계열사를 바꾸면 부서 분해가 그 계열사로
+   * 열린다. 그룹 공통을 고르면 사용액 1위 계열사를 기본으로 잡는다.
+   */
+  const tenant = useTenant();
+  const initialPick = rows.some((r) => r.name === tenant) ? tenant : (rows[0]?.name ?? '');
+  const [picked, setPicked] = useState<string>(initialPick);
+  const [pickedTenant, setPickedTenant] = useState<string>(tenant);
+  if (pickedTenant !== tenant) {
+    // 렌더 중 동기화 — 테넌트가 바뀌면 부서/사용자 선택을 새 계열사로 리셋한다.
+    setPickedTenant(tenant);
+    setPicked(rows.some((r) => r.name === tenant) ? tenant : (rows[0]?.name ?? ''));
+  }
   const depts = useMemo(() => getDeptRows(picked), [picked]);
+  const [pickedDept, setPickedDept] = useState<string | null>(null);
+  const effectiveDept = pickedDept && depts.some((d) => d.dept === pickedDept)
+    ? pickedDept
+    : (depts[0]?.dept ?? null);
+  const users = useMemo(
+    () => (effectiveDept ? getUserRows(picked, effectiveDept) : []),
+    [picked, effectiveDept],
+  );
   const maxCost = Math.max(...rows.map((r) => r.monthCost), 1);
+  const agentRows = useMemo(() => getAgentRows(), []);
 
   return (
     <div>
@@ -253,7 +280,14 @@ export default function MeteringPage() {
               </thead>
               <tbody>
                 {depts.map((d) => (
-                  <tr key={d.dept} className="border-b border-line-soft last:border-b-0">
+                  <tr
+                    key={d.dept}
+                    onClick={() => setPickedDept(d.dept)}
+                    className={cn(
+                      'border-b border-line-soft last:border-b-0 cursor-pointer',
+                      effectiveDept === d.dept ? 'bg-brand-bg' : 'hover:bg-surface-soft',
+                    )}
+                  >
                     <td className="px-2.5 py-[7px] text-[11.5px] font-extrabold text-ink-dark whitespace-nowrap">
                       {d.dept}
                     </td>
@@ -269,6 +303,168 @@ export default function MeteringPage() {
           </div>
         </section>
       </div>
+
+      {/* ── 사용자별 분해 (LSM-010 "개별 사용자별") ── */}
+      <section className="card px-5 py-4 mb-3.5">
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-[14px] font-extrabold text-ink">사용자별 분해</h2>
+          <span className="pill bg-brand-tint text-brand border border-brand-tint">
+            {picked} · {effectiveDept ?? '-'}
+          </span>
+          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            LSM-010
+          </span>
+        </div>
+        <p className="text-[11px] text-ink-mid font-semibold mb-3">
+          부서 표에서 행을 누르면 해당 부서의 상위 이용자로 내려간다 · 이름은 감사 목적 외
+          노출하지 않으므로 마스킹 ID 로 적산한다
+        </p>
+        <div className="border border-line-soft rounded overflow-hidden">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-surface-soft">
+                <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
+                  사용자
+                </th>
+                {['입력', '출력', '정산액', '부서 내 비중'].map((h) => (
+                  <th
+                    key={h}
+                    className="text-right text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.maskedId + u.name} className="border-b border-line-soft last:border-b-0">
+                  <td className="px-2.5 py-[7px] text-[11.5px] whitespace-nowrap">
+                    <span className="font-mono font-bold text-ink-mid">{u.maskedId}</span>
+                    <span className="ml-2 font-extrabold text-ink-dark">{u.name}</span>
+                  </td>
+                  <Num v={fmtTok(u.inputTokens)} />
+                  <Num v={fmtTok(u.outputTokens)} />
+                  <Num v={`₩${fmtKRW(u.cost)}`} bold />
+                  <Num v={`${u.pct.toFixed(0)}%`} muted />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── 에이전트별 미터링 (AGB-010) ── */}
+      <section className="card px-5 py-4 mb-3.5">
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-[14px] font-extrabold text-ink">에이전트별 미터링</h2>
+          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            AGB-010
+          </span>
+        </div>
+        <p className="text-[11px] text-ink-mid font-semibold mb-3">
+          조직 축(계열사·부서·사용자)과 별개로 <b className="text-ink-dark">무엇이 비용을 쓰는지</b>를
+          본다 · 호출 1건당 비용이 높은 에이전트가 최적화 대상이다
+        </p>
+        <div className="border border-line-soft rounded overflow-hidden">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-surface-soft">
+                <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
+                  에이전트
+                </th>
+                {['호출', '입력', '출력', '정산액', '건당', '전월비'].map((h) => (
+                  <th
+                    key={h}
+                    className="text-right text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {agentRows.map((a) => (
+                <tr key={a.agentId} className="border-b border-line-soft last:border-b-0">
+                  <td className="px-2.5 py-[7px] whitespace-nowrap">
+                    <span className="text-[10px] font-mono font-bold text-ink-mid">
+                      {a.agentId}
+                    </span>
+                    <span className="ml-2 text-[11.5px] font-extrabold text-ink-dark">
+                      {a.name}
+                    </span>
+                    <span className="ml-2 pill bg-surface-soft text-ink-mid border border-line-soft">
+                      {a.tenant}
+                    </span>
+                  </td>
+                  <Num v={a.calls.toLocaleString('ko-KR')} />
+                  <Num v={fmtTok(a.inputTokens)} />
+                  <Num v={fmtTok(a.outputTokens)} />
+                  <Num v={`₩${fmtKRW(a.cost)}`} bold />
+                  <Num v={`₩${fmtKRW(a.costPerCall)}`} muted />
+                  <td
+                    className={cn(
+                      'px-2.5 py-[7px] text-right text-[11px] font-bold tabular-nums whitespace-nowrap',
+                      a.deltaPct > 0 ? 'text-bad' : 'text-ok',
+                    )}
+                  >
+                    {a.deltaPct > 0 ? '▲' : '▼'} {Math.abs(a.deltaPct).toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── 월별 정산 리포트 자동 생성 (ONM-005) ── */}
+      <section className="card px-5 py-4 mb-3.5">
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-[14px] font-extrabold text-ink">월별 정산 리포트</h2>
+          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            ONM-005
+          </span>
+        </div>
+        <p className="text-[11px] text-ink-mid font-semibold mb-3">
+          매월 1일 06:00 에 전 계열사 정산 리포트가 자동 산출된다 · 산출물은 사내 과금 근거로
+          그대로 쓰인다
+        </p>
+        <div className="grid grid-cols-3 gap-2.5">
+          {SETTLEMENT_REPORTS.map((r) => {
+            const cost = r.state === 'scheduled' ? totals.cost : r.totalCost;
+            return (
+              <div key={r.id} className="border border-line-soft rounded px-3 py-2.5 bg-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[12.5px] font-extrabold text-ink tabular-nums">
+                    {r.month}
+                  </span>
+                  <StatusPill tone={r.state === 'issued' ? 'ok' : 'warn'}>
+                    {r.state === 'issued' ? '산출 완료' : '산출 예정'}
+                  </StatusPill>
+                </div>
+                <div className="text-[11px] text-ink-mid font-semibold">{r.runAt}</div>
+                <div className="text-[11px] text-ink-dark font-semibold mt-1">
+                  계열사 {r.tenants}개 · 합계{' '}
+                  <b className="text-ink tabular-nums">₩{fmtKRW(cost)}</b>
+                </div>
+                <div className="flex items-center gap-1.5 mt-2">
+                  {r.formats.map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      disabled={r.state === 'scheduled'}
+                      onClick={() => toast(`${r.month} 정산 리포트 · ${f} 내려받기`)}
+                      className="text-[10.5px] font-extrabold text-ink-dark border border-line rounded px-2 py-[3px] hover:border-brand-dark hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      ↓ {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ── 정산 규칙 ── */}
       <section className="card px-5 py-4">

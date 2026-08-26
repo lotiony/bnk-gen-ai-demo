@@ -21,6 +21,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import {
@@ -40,9 +41,16 @@ import {
 
 type GateTone = 'done' | 'current' | 'upcoming';
 
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1760px] mx-auto px-8 pt-3.5 pb-14';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-14';
+
 export default function DataRoutingTaskPage() {
   const { projectId } = useParams();
   const pid = projectId ?? 'PRJ-2025-PB-001';
+  const crumbItems = useWorkCrumb('데이터 라우팅', pid);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
   /** 게이트 ① 승인권자 결재. */
   const [deployApproved, setDeployApproved] = useState(false);
@@ -77,15 +85,8 @@ export default function DataRoutingTaskPage() {
   };
 
   return (
-    <div className="max-w-[1760px] mx-auto px-8 pt-3.5 pb-14">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: '데이터 접근 라우팅' },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       {/* ── 헤더 ── */}
       <div className="flex items-start gap-3 mt-2 mb-3.5">

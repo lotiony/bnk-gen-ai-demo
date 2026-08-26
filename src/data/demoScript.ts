@@ -47,7 +47,7 @@ export const DEMO_STOPS: DemoStop[] = [
     reqs: ['LSM-002', 'RAG-007', 'AGB-006①'],
   },
   {
-    screen: '4', act: 1, title: 'Graph RAG 근거 그래프 ★', path: `/projects/${PID}/tasks/ontology`,
+    screen: '4', act: 1, title: 'Graph RAG 근거 그래프 ★', path: '/knowledge/ontology',
     persona: 'service_user',
     cue: 'Query 탭에서 순회 재생 — "확률적 추측이 아니라 규칙과 계산으로 확정"',
     reqs: ['RAG-007', 'RAG-008'],
@@ -63,19 +63,19 @@ export const DEMO_STOPS: DemoStop[] = [
     reqs: ['마켓플레이스'],
   },
   {
-    screen: '7', act: 2, title: '노코드 워크플로우 빌더', path: `/projects/${PID}/tasks/workflow`,
+    screen: '7', act: 2, title: '노코드 워크플로우 빌더', path: '/studio/workflow',
     persona: 'project_owner',
     cue: '노드를 끌어 옮기고 ▶ 실행 — 조건 분기가 갈려 LLM 노드가 미실행으로 남는다',
     reqs: ['AGB-002', 'AGB-005', 'AGB-008'],
   },
   {
-    screen: '8', act: 2, title: 'MCP Tool 자동 등록', path: `/projects/${PID}/tasks/mcp`,
+    screen: '8', act: 2, title: 'MCP Tool 자동 등록', path: '/studio/tools',
     persona: 'project_owner',
     cue: '샘플 스펙 붙여넣기 → 변환. 쓰기 도구 1건이 결재 대기로 남는 것을 짚는다',
     reqs: ['AGB-004'],
   },
   {
-    screen: '9', act: 2, title: '승인 기반 DB 동적 라우팅 ★', path: `/projects/${PID}/tasks/routing`,
+    screen: '9', act: 2, title: '승인 기반 DB 동적 라우팅 ★', path: '/knowledge/routing',
     persona: 'project_owner',
     cue: '배포 승인만 먼저 눌러 1/2 상태를 보여주고, 그 다음 동의 권원 확인',
     reqs: ['LSM-009', 'EDA-005', 'SEC-006', 'SEC-007', 'ONM-003'],
@@ -103,7 +103,7 @@ export const DEMO_STOPS: DemoStop[] = [
     reqs: ['SEC-002', '관리자 포털'],
   },
   {
-    screen: '14', act: 3, title: 'AI 거버넌스 포탈 ★', path: '/admin/governance', persona: 'governance_admin',
+    screen: '14', act: 3, title: 'AI 거버넌스 포탈 ★', path: '/governance', persona: 'governance_admin',
     cue: '라이프사이클 단계를 눌러 관문·결재선을 펴고, 기일 경과 건으로 마무리한다',
     reqs: ['2-3 AI거버넌스 포탈'],
   },

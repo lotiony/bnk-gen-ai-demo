@@ -28,6 +28,12 @@ import {
   type CatalogItem,
   type ShareScope,
 } from '@/data/mockCatalog';
+import {
+  GROUP_AGENTS,
+  GROUP_AGENT_STATUS_TONE,
+  type GroupAgent,
+} from '@/data/mockGroupAgents';
+import StatusPill from '@/components/ui/StatusPill';
 
 type SortKey = 'usage' | 'rating' | 'installs' | 'recent';
 
@@ -141,6 +147,9 @@ export default function CatalogPage() {
           </Group>
         </div>
       </div>
+
+      {/* ── 그룹 공동 사용 에이전트 (AGB-006 필수 Use Case 10종) ── */}
+      <GroupAgentSection />
 
       {/* ── 결과 요약 ── */}
       <div className="flex items-center gap-2 px-1 mb-2.5 flex-wrap">
@@ -305,5 +314,134 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
     >
       {children}
     </button>
+  );
+}
+
+/* ═══════════════════════ 그룹 공동 사용 에이전트 ═══════════════════════ */
+
+/**
+ * RFP AGB-006 은 필수 포함 Use Case 를 **번호까지 지정해서** 10종 요구한다.
+ * 일반 자산 격자에 섞어 두면 "10종을 다 제공하는가" 를 그 자리에서 확인할 수 없다.
+ * 그래서 번호 순서 그대로 별도 블록으로 세우고, 카드마다 RFP 세부설명이 요구한
+ * 기능을 그대로 나열한다.
+ */
+function GroupAgentSection() {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const live = GROUP_AGENTS.filter((a) => a.status === '운영 중').length;
+
+  return (
+    <section className="card px-5 py-4 mb-3.5">
+      <div className="flex items-baseline gap-2.5 flex-wrap mb-1">
+        <h2 className="text-[15px] font-extrabold text-ink">그룹 공동 사용 에이전트</h2>
+        <span className="pill bg-brand-tint text-brand border border-brand-tint">
+          필수 Use Case {GROUP_AGENTS.length}종
+        </span>
+        <span className="text-[11.5px] text-ink-mid font-semibold">
+          운영 중 {live} · 검증/개발 중 {GROUP_AGENTS.length - live}
+        </span>
+        <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+          AGB-006
+        </span>
+      </div>
+      <p className="text-[11.5px] text-ink-mid font-semibold mb-3">
+        그룹 공통 Namespace 에 배포되어 10개 계열사 전 임직원이 자기 Namespace 에서 그대로
+        호출한다 · 카드를 누르면 제공 기능과 연계 자산이 펼쳐진다
+      </p>
+
+      <div className="grid grid-cols-5 gap-2">
+        {GROUP_AGENTS.map((a) => (
+          <GroupAgentCard
+            key={a.id}
+            agent={a}
+            open={openId === a.id}
+            onToggle={() => setOpenId((v) => (v === a.id ? null : a.id))}
+          />
+        ))}
+      </div>
+
+      {openId && (
+        <GroupAgentDetail agent={GROUP_AGENTS.find((a) => a.id === openId)!} />
+      )}
+    </section>
+  );
+}
+
+function GroupAgentCard({
+  agent,
+  open,
+  onToggle,
+}: {
+  agent: GroupAgent;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        'text-left px-3 py-2.5 rounded border transition-colors',
+        open ? 'bg-brand-bg border-brand-dark' : 'bg-white border-line-soft hover:border-brand-dark',
+      )}
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-[12px] font-extrabold text-brand">{agent.no}</span>
+        <StatusPill tone={GROUP_AGENT_STATUS_TONE[agent.status]} className="ml-auto">
+          {agent.status}
+        </StatusPill>
+      </div>
+      <div className="text-[12px] font-extrabold text-ink leading-tight">{agent.useCase}</div>
+      <div className="text-[10px] text-ink-mid font-semibold mt-1 tabular-nums">
+        {agent.callsWeekly > 0
+          ? `주 ${agent.callsWeekly.toLocaleString('ko-KR')}회`
+          : '배포 전'}
+      </div>
+    </button>
+  );
+}
+
+function GroupAgentDetail({ agent }: { agent: GroupAgent }) {
+  return (
+    <div className="mt-3 border border-brand-dark rounded px-4 py-3 bg-brand-bg/40">
+      <div className="flex items-baseline gap-2 mb-2">
+        <span className="text-[13px] font-extrabold text-brand">{agent.no}</span>
+        <span className="text-[14px] font-extrabold text-ink">{agent.name}</span>
+        <span className="text-[10px] font-mono font-bold text-ink-light">{agent.id}</span>
+        <StatusPill tone={GROUP_AGENT_STATUS_TONE[agent.status]}>{agent.status}</StatusPill>
+        <span className="ml-auto text-[10.5px] text-ink-mid font-semibold">
+          제작 주관 {agent.ownerTenant} · 배포 범위 그룹 전체
+        </span>
+      </div>
+      <div className="grid grid-cols-[1fr_260px] gap-4">
+        <div>
+          <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1">
+            제공 기능
+          </div>
+          <ul className="space-y-0.5">
+            {agent.features.map((f) => (
+              <li key={f} className="text-[11.5px] text-ink-dark font-semibold leading-snug">
+                · {f}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1">
+            연계 자산
+          </div>
+          <div className="flex flex-wrap gap-1 mb-2.5">
+            {agent.depends.map((d) => (
+              <span key={d} className="pill bg-white text-ink-mid border border-line-soft">
+                {d}
+              </span>
+            ))}
+          </div>
+          <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1">
+            주력 모델
+          </div>
+          <div className="text-[11px] font-mono font-bold text-ink-dark">{agent.model}</div>
+        </div>
+      </div>
+    </div>
   );
 }

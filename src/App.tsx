@@ -27,9 +27,22 @@ import WorkflowBuilderPage from './routes/WorkflowBuilderPage';
 import McpRegisterPage from './routes/McpRegisterPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './routes/AdminDashboardPage';
+import StudioLayout from './components/layout/StudioLayout';
+import KnowledgeLayout from './components/layout/KnowledgeLayout';
+import StudioTasksPage from './routes/StudioTasksPage';
+import KnowledgeListPage from './routes/KnowledgeListPage';
+import PlaygroundPage from './routes/PlaygroundPage';
+import DevenvListPage from './routes/DevenvListPage';
+import MetadataApprovalPage from './routes/MetadataApprovalPage';
+import Nl2SqlPage from './routes/Nl2SqlPage';
+import ReindexPage from './routes/ReindexPage';
+import GovernanceLayout from './components/layout/GovernanceLayout';
 import AiGovernancePage from './routes/AiGovernancePage';
+import GovernanceAdminPage from './routes/GovernanceAdminPage';
 import MeteringPage from './routes/MeteringPage';
 import AdminMembersPage from './routes/AdminMembersPage';
+import AdminIntakePage from './routes/AdminIntakePage';
+import AdminDrmPage from './routes/AdminDrmPage';
 import AdminFeaturedAgentsPage from './routes/AdminFeaturedAgentsPage';
 
 function PersonaGate({ children }: { children: React.ReactNode }) {
@@ -104,14 +117,50 @@ export default function App() {
         <Route path="/projects/:projectId/tasks/routing" element={<DataRoutingTaskPage />} />
         <Route path="/projects/:projectId/tasks/workflow" element={<WorkflowBuilderPage />} />
         <Route path="/projects/:projectId/tasks/mcp" element={<McpRegisterPage />} />
+        {/*
+          AI Studio — RFP 기술요건 구분 4(AGB) + 검증 도구(LSM-005 · RAG-009) + 개발환경(ONM-008).
+          프로젝트 메뉴를 대체한다. 무거운 빌더는 같은 셸 안에서 전폭으로 렌더된다.
+        */}
+        <Route path="/studio" element={<StudioLayout />}>
+          <Route index element={<StudioTasksPage />} />
+          <Route path="agents" element={<AgentTaskRegisterPage />} />
+          <Route path="workflow" element={<WorkflowBuilderPage />} />
+          <Route path="tools" element={<McpRegisterPage />} />
+          <Route path="playground" element={<PlaygroundPage />} />
+          <Route path="devenv" element={<DevenvListPage />} />
+          <Route path="devenv/:taskId" element={<DevenvTaskDetailPage />} />
+        </Route>
+
+        {/* 지식 · 데이터 — RFP 구분 2(EDA) · 3(RAG). 온톨로지가 여기로 옮겨 왔다. */}
+        <Route path="/knowledge" element={<KnowledgeLayout />}>
+          <Route index element={<KnowledgeListPage />} />
+          <Route path="data" element={<KnowledgeDataTaskPage />} />
+          <Route path="ontology" element={<OntologyTaskPage />} />
+          <Route path="pipeline" element={<SearchPipelineTaskPage />} />
+          <Route path="pipeline/:pipelineId" element={<SearchPipelineDetailPage />} />
+          <Route path="db" element={<DatabaseTaskPage />} />
+          <Route path="routing" element={<DataRoutingTaskPage />} />
+          <Route path="metadata" element={<MetadataApprovalPage />} />
+          <Route path="nl2sql" element={<Nl2SqlPage />} />
+          <Route path="reindex" element={<ReindexPage />} />
+        </Route>
+
         <Route path="/catalog" element={<CatalogPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboardPage />} />
-          <Route path="governance" element={<AiGovernancePage />} />
+          {/* 거버넌스는 최상위 /governance 로 분리됐다 — 기존 링크 보존용 리다이렉트 */}
+          <Route path="governance" element={<Navigate to="/governance" replace />} />
           <Route path="metering" element={<MeteringPage />} />
+          <Route path="intake" element={<AdminIntakePage />} />
+          <Route path="drm" element={<AdminDrmPage />} />
           <Route path="members" element={<AdminMembersPage />} />
           <Route path="featured-agents" element={<AdminFeaturedAgentsPage />} />
+        </Route>
+        {/* AI 거버넌스 포탈 — RFP 2-3 "AI플랫폼 포탈 내 별도 기능" · 독립 셸 */}
+        <Route path="/governance" element={<GovernanceLayout />}>
+          <Route index element={<AiGovernancePage />} />
+          <Route path="admin" element={<GovernanceAdminPage />} />
         </Route>
         <Route path="/approvals" element={<ApprovalInboxPage />} />
         <Route path="/approvals/:approvalId" element={<ApprovalDetailPage />} />

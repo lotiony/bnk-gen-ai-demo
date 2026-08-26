@@ -1,15 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { PERSONAS, setStoredPersona } from '@/lib/persona';
-import type { PersonaGroup, PersonaId } from '@/data/mockPersonas';
-
-const GROUPS: PersonaGroup[] = ['관리자', '개발자', '사용자'];
+import { setStoredPersona } from '@/lib/persona';
+import {
+  PERSONA_TENANT_ORDER,
+  personasByTenant,
+  type PersonaId,
+} from '@/data/mockPersonas';
+import { TENANTS } from '@/data/tenants';
 
 /**
- * SSO 계정 선택 스타일 로그인 페이지.
- * 실제로는 그룹 통합 SSO 로 자동 로그인되지만,
- * 데모 편의를 위해 계정 목록을 노출하고 클릭 시 즉시 로그인 처리.
+ * SSO 로그인 게이트웨이.
+ *
+ * RFP 근거 —
+ *  · 2-1 포탈 공통 : "계열사별 SSO 등 통합인증기능 연동 등 권한 기반 화면 구성"
+ *  · ONM-001       : "자회사별 Active Directory(AD) 시스템과의 표준 연동 지원"
+ *  · 인프라 나-(3) : "공통 포털 웹(각 계열사 접속 전 랜딩 웹페이지 개념)"
+ *
+ * 그래서 계정을 **역할이 아니라 계열사로 묶어** 보여 준다. 계열사마다 AD 도메인과
+ * 연동 방식이 다르다는 것(어댑터가 필요하다는 것)이 이 화면의 논점이다.
+ * 실제 운영에서는 IdP 가 계정을 확정하므로 이 목록은 시연용 선택지다.
  */
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -24,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center px-6 py-10">
-      <div className="w-full max-w-[460px]">
+      <div className="w-full max-w-[520px]">
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5">
@@ -47,18 +57,26 @@ export default function LoginPage() {
               SSO 로그인
             </h1>
             <p className="text-[12px] text-ink-mid font-semibold mt-1">
-              계속할 계정을 선택하세요
+              계열사 AD 계정으로 계속합니다 · 소속 계열사와 역할은 클레임으로 확정됩니다
             </p>
           </div>
 
-          <div className="py-1">
-            {GROUPS.map((g, gi) => {
-              const list = PERSONAS.filter((p) => p.group === g);
+          <div className="py-1 max-h-[520px] overflow-auto">
+            {PERSONA_TENANT_ORDER.map((t, ti) => {
+              const list = personasByTenant(t);
+              if (list.length === 0) return null;
+              const meta = TENANTS.find((m) => m.name === t);
               return (
-                <div key={g}>
-                  {gi > 0 && <div className="mx-6 border-t border-line-soft" />}
-                  <div className="px-6 pt-3 pb-1 text-[9.5px] font-extrabold tracking-[0.4px] uppercase text-ink-light">
-                    {g}
+                <div key={t}>
+                  {ti > 0 && <div className="mx-6 border-t border-line-soft" />}
+                  <div className="px-6 pt-3 pb-1.5 flex items-baseline gap-2">
+                    <span className="text-[11px] font-extrabold text-ink">{t}</span>
+                    <span className="text-[9.5px] font-mono font-semibold text-ink-light">
+                      {meta?.adDomain}
+                    </span>
+                    <span className="ml-auto text-[9.5px] font-semibold text-ink-mid">
+                      {meta?.idp}
+                    </span>
                   </div>
                   {list.map((p) => {
                     const loading = loadingId === p.id;
@@ -69,10 +87,8 @@ export default function LoginPage() {
                         disabled={loadingId !== null}
                         onClick={() => handleSelect(p.id)}
                         className={cn(
-                          'w-full grid grid-cols-[36px_1fr_auto] items-center gap-3 px-6 py-2.5 text-left transition-colors',
-                          loading
-                            ? 'bg-brand-bg'
-                            : 'hover:bg-surface-soft',
+                          'w-full grid grid-cols-[36px_1fr_auto_auto] items-center gap-3 px-6 py-2.5 text-left transition-colors',
+                          loading ? 'bg-brand-bg' : 'hover:bg-surface-soft',
                           loadingId !== null && !loading && 'opacity-50',
                         )}
                       >
@@ -94,6 +110,10 @@ export default function LoginPage() {
                             {p.role} · {p.dept}
                           </div>
                         </div>
+                        {/* 역할 클레임 — 로그인 후 GNB·워크스페이스 노출을 결정한다 */}
+                        <span className="pill bg-surface-soft text-ink-mid border border-line-soft whitespace-nowrap">
+                          {p.rfpRole}
+                        </span>
                         <span
                           className={cn(
                             'text-[16px] font-black transition-transform',
@@ -111,7 +131,7 @@ export default function LoginPage() {
           </div>
 
           <div className="px-6 py-3 border-t border-line-soft flex items-center justify-between text-[10.5px] text-ink-mid font-semibold">
-            <span>🔒 그룹 통합 SSO</span>
+            <span>🔒 그룹 통합 SSO · 자회사별 AD 연동 (ONM-001)</span>
             <a href="#" className="hover:text-ink-dark">
               다른 계정 사용
             </a>

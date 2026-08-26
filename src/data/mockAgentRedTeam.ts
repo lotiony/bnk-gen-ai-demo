@@ -74,6 +74,23 @@ const DATASETS: Record<string, RedTeamDataset[]> = {
       category: 'PII / 신용정보 추출 시도',
       updatedAt: '2026-05-01',
     },
+    /*
+     * RFP AGB-012 는 점검 축으로 "성능, **편향성, 윤리성** 등" 을 명시한다.
+     * 탈옥·인젝션·PII 세 축만으로는 요건의 절반이 빈다. 금융 도메인에서
+     * 편향은 곧 차별적 여신·상품 권유로 이어지므로 별도 셋으로 분리한다.
+     */
+    {
+      code: 'RT-D',
+      name: '편향 · 공정성',
+      category: '성별·연령·지역·직업군 차별 응답 유도',
+      updatedAt: '2026-05-14',
+    },
+    {
+      code: 'RT-E',
+      name: '윤리 · 유해표현',
+      category: '불완전판매 유도 · 과장 수익 표현 · 유해 발언',
+      updatedAt: '2026-05-14',
+    },
   ],
 };
 
@@ -107,6 +124,26 @@ const RUNS: Record<string, RedTeamRun[]> = {
       ranAt: '2026-05-19 14:52',
       blockRate: 99.0,
       status: 'pass',
+      reviewer: '정태우',
+    },
+    {
+      id: 'rt-9f37',
+      agentId: 'AGT-204',
+      version: 'v4.2',
+      datasetCode: 'RT-D',
+      ranAt: '2026-05-19 15:06',
+      blockRate: 96.0,
+      status: 'pass',
+      reviewer: '이수연',
+    },
+    {
+      id: 'rt-9f36',
+      agentId: 'AGT-204',
+      version: 'v4.2',
+      datasetCode: 'RT-E',
+      ranAt: '2026-05-19 15:21',
+      blockRate: 93.5,
+      status: 'fail',
       reviewer: '정태우',
     },
     {
@@ -169,10 +206,10 @@ const REQUESTS: Record<string, RedTeamRequest[]> = {
       agentId: 'AGT-204',
       requestedAt: '2026-05-20 11:00',
       requestedBy: '박서연',
-      scope: ['RT-A', 'RT-B', 'RT-C'],
+      scope: ['RT-A', 'RT-B', 'RT-C', 'RT-D', 'RT-E'],
       status: 'in-progress',
       estimatedAt: '2026-05-25',
-      reason: '서빙계 프로모션 사전 검증',
+      reason: '서빙계 프로모션 사전 검증 · v4.2 윤리 셋 미달(RT-E) 재검 포함',
       targetVersion: 'v4.3.0-rc1',
     },
     {
@@ -180,9 +217,9 @@ const REQUESTS: Record<string, RedTeamRequest[]> = {
       agentId: 'AGT-204',
       requestedAt: '2026-05-15 09:30',
       requestedBy: '박서연',
-      scope: ['RT-A', 'RT-B', 'RT-C'],
+      scope: ['RT-A', 'RT-B', 'RT-C', 'RT-D', 'RT-E'],
       status: 'done',
-      completedAt: '2026-05-19 14:52',
+      completedAt: '2026-05-19 15:21',
       reason: '서빙계 프로모션 사전 검증',
       targetVersion: 'v4.2.0',
     },

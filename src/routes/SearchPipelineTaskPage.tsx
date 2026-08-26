@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import StatusPill from '@/components/ui/StatusPill';
 import SectionCard from '@/components/projectForm/SectionCard';
@@ -14,10 +15,17 @@ import { cn } from '@/lib/utils';
  * 검색엔진(retriever) 서비스로 가공·평가·서빙계 프로모션 까지 처리.
  * 에이전트/지식데이터 과제와 동일한 디자인 토큰·레이아웃 사용.
  */
+/** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
+const WORK_STANDALONE_CLS = 'max-w-[1360px] mx-auto px-6 py-6 pb-[120px]';
+/** AI Studio · 지식 데이터 셸 안에서 열릴 때의 컨테이너. */
+const WORK_SHELL_CLS = 'w-full pb-[120px]';
+
 export default function SearchPipelineTaskPage() {
   const navigate = useNavigate();
   const { projectId } = useParams();
   const pid = projectId ?? 'PRJ-101';
+  const crumbItems = useWorkCrumb('검색 파이프라인 등록', pid);
+  const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
   // A
   const [name, setName] = useState('규정검색_컴플라이언스');
@@ -127,15 +135,8 @@ export default function SearchPipelineTaskPage() {
   };
 
   return (
-    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: '지식 파이프라인 과제 등록' },
-        ]}
-      />
+    <div className={containerCls}>
+      <Crumb items={crumbItems} />
 
       {/* Page head */}
       <div className="card px-6 py-5 mb-3.5 flex justify-between items-end">
