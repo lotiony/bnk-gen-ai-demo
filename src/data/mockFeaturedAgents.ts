@@ -22,7 +22,7 @@ export interface FeaturedAgent {
 
 export const FEATURED_AGENTS: FeaturedAgent[] = [
   {
-    id: 'AGT-204',
+    id: 'AGT-205',
     name: '시황 분석 에이전트',
     icon: '📈',
     description:

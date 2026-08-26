@@ -46,7 +46,8 @@ export interface ChatAgentOption {
 
 export const CHAT_AGENTS: ChatAgentOption[] = [
   {
-    id: 'AGT-301',
+    /** 그룹 공통 필수 Use Case ①(AGB-006) — GROUP_AGENTS·SERVICE_ITEMS 와 동일한 GRP-001. */
+    id: 'GRP-001',
     name: '규정·책무 어시스턴트',
     desc: '여신·전결·책무구조 질의에 근거를 붙여 답한다',
     grounding: '여신 온톨로지(ONT-101) + 여신업무규정·전결규정·책무구조도',

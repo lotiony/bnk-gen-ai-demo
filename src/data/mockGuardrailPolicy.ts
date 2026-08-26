@@ -85,7 +85,7 @@ export interface ViolationLog {
 }
 
 export const VIOLATION_LOGS: ViolationLog[] = [
-  { at: '2026-06-03 09:12:04', serviceId: 'AGT-411', serviceName: '금융상담 챗봇', tenant: '부산은행', category: 'PII 탐지', action: '차단', detail: '주민등록번호 패턴 검출 — 입력 차단' },
+  { at: '2026-06-03 09:12:04', serviceId: 'AGT-411', serviceName: '컴플라이언스 자문 챗봇', tenant: '부산은행', category: 'PII 탐지', action: '차단', detail: '주민등록번호 패턴 검출 — 입력 차단' },
   { at: '2026-06-03 08:58:41', serviceId: 'AGT-701', serviceName: '자금세탁 방지 에이전트', tenant: '그룹 공통', category: '프롬프트 인젝션', action: '차단', detail: '"이전 지시 무시" 패턴 검출' },
   { at: '2026-06-02 17:22:10', serviceId: 'GRP-006', serviceName: '광고심의 지원 에이전트', tenant: 'BNK캐피탈', category: '금칙어', action: '경고', detail: '예외 정책(EXC-102) 적용 — 경고만 기록' },
   { at: '2026-06-02 14:03:55', serviceId: 'AGT-621', serviceName: 'CS 챗봇 코파일럿', tenant: 'BNK시스템', category: '유해콘텐츠', action: '차단', detail: '혐오 표현 유도 질의 차단' },

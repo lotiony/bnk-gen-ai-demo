@@ -58,6 +58,11 @@ export const AGENT_META: Record<string, CatalogMeta> = {
   'AGT-708': { scope: '그룹', rating: 4.5, ratingCount: 44, installs: 18, tags: ['보험금', '서류분류', 'OCR'] },
   'AGT-812': { scope: '부서', rating: 3.9, ratingCount: 8, installs: 1, tags: ['리스크', '브리핑'] },
   'AGT-905': { scope: '개인', rating: 0, ratingCount: 0, installs: 0, tags: ['연금', '상담'] },
+  'AGT-205': { scope: '계열사', rating: 4.3, ratingCount: 15, installs: 5, tags: ['시황', '리서치', 'PB'] },
+  'AGT-318': { scope: '그룹', rating: 4.7, ratingCount: 61, installs: 33, tags: ['수신', '예적금', '상담'] },
+  'AGT-072': { scope: '그룹', rating: 4.5, ratingCount: 47, installs: 26, tags: ['외환', '환전', '상담'] },
+  'AGT-621': { scope: '계열사', rating: 4.0, ratingCount: 12, installs: 3, tags: ['CS', '코파일럿'] },
+  'AGT-701': { scope: '개인', rating: 0, ratingCount: 0, installs: 0, tags: ['자금세탁방지', 'AML'] },
 };
 
 /* ═══════════════════════ 프롬프트 ═══════════════════════ */
