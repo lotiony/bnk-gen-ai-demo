@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
 import { useTenant } from '@/lib/tenantStore';
 import type { QueryScenario } from '@/data/ontologyQueries';
@@ -258,12 +259,13 @@ export default function ChatPage() {
                 blocked ? 'border-bad ring-1 ring-bad/30' : 'border-line focus-within:border-brand-dark',
               )}
             >
-              <button
-                className="text-[15px] leading-none pb-1 text-ink-light hover:text-ink-mid"
-                title="파일 첨부 — 데모 범위 밖"
+              <Link
+                to="/documents"
+                className="text-[15px] leading-none pb-1 text-ink-light hover:text-brand"
+                title="문서 업로드 — 내 문서(개인별 격리 RAG)로 이동"
               >
                 📎
-              </button>
+              </Link>
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -543,6 +545,79 @@ function AnswerBlock({
         </div>
         <p className="text-[11.5px] text-ink-dark font-semibold leading-relaxed">{sc.caveat}</p>
       </div>
+
+      <AnswerActions answerId={sc.id} />
+    </div>
+  );
+}
+
+/**
+ * 답변 피드백(17) · 문서 출력(23).
+ *
+ * RFP 2-1: "답변 피드백(rating, 좋아요/싫어요, 의견) 제공(**사용자**) 및 조회(관리자)"
+ *          "문서 출력 기능 제공"
+ *
+ * 조회(관리자) 쪽은 ConversationsTab 에 이미 있었다 — 여기는 그 짝인 "제공(사용자)" 다.
+ * 실제 PDF 렌더링·서버 저장은 데모 범위 밖이라 클릭 결과만 토스트로 알린다.
+ */
+function AnswerActions({ answerId }: { answerId: string }) {
+  const [picked, setPicked] = useState<'up' | 'down' | null>(null);
+  const [showComment, setShowComment] = useState(false);
+  const [comment, setComment] = useState('');
+  const [sent, setSent] = useState(false);
+
+  const pick = (v: 'up' | 'down') => {
+    setPicked(v);
+    if (v === 'down') {
+      setShowComment(true);
+    } else {
+      toast('피드백을 남겼습니다 — 감사합니다');
+      setSent(true);
+    }
+  };
+
+  return (
+    <div className="mt-2.5 pt-2 border-t border-line-soft">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] text-ink-light font-semibold">이 답변이 도움이 됐나요?</span>
+        <button
+          type="button"
+          onClick={() => pick('up')}
+          className={cn(
+            'w-[22px] h-[22px] rounded inline-flex items-center justify-center text-[12px] border',
+            picked === 'up' ? 'bg-ok-bg border-ok-border' : 'border-line-soft hover:border-line',
+          )}
+        >👍</button>
+        <button
+          type="button"
+          onClick={() => pick('down')}
+          className={cn(
+            'w-[22px] h-[22px] rounded inline-flex items-center justify-center text-[12px] border',
+            picked === 'down' ? 'bg-bad-bg border-bad-border' : 'border-line-soft hover:border-line',
+          )}
+        >👎</button>
+        <button
+          type="button"
+          onClick={() => toast(`답변 ${answerId} 을(를) 문서로 출력합니다`)}
+          className="ml-auto text-[10.5px] font-extrabold text-ink-mid hover:text-brand"
+        >⇩ 문서로 출력</button>
+      </div>
+
+      {showComment && !sent && (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <input
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="어떤 점이 아쉬웠나요? (선택)"
+            className="flex-1 py-1 px-2 border border-line rounded text-[11px] bg-white"
+          />
+          <button
+            type="button"
+            onClick={() => { toast('의견을 남겼습니다 — 개선요청으로 접수됩니다'); setSent(true); }}
+            className="py-1 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark"
+          >제출</button>
+        </div>
+      )}
     </div>
   );
 }

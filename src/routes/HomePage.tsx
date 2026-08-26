@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type FeaturedAgent } from '@/data/mockFeaturedAgents';
+import { MY_AGENTS, RECENT_SERVICES } from '@/data/mockMyAgents';
 import KpiCard from '@/components/ui/KpiCard';
 import StatusPill from '@/components/ui/StatusPill';
 import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
+import { useFavorites, usePersonalization, setPersonalization, toggleFavorite } from '@/lib/personalization';
+import { toast } from '@/lib/toast';
 import {
   getHomeKpis,
   getHomeFeaturedAgents,
@@ -35,6 +39,8 @@ export default function HomePage() {
   // 권한 밖 진입 타일은 그리지 않는다(RFP 2-1 권한 기반 화면 구성).
   const showStudio = canAccessArea(persona, 'studio');
   const showGovernance = canAccessGovernance(persona);
+  const favorites = useFavorites();
+  const [showPersonalize, setShowPersonalize] = useState(false);
 
   return (
     <div className="max-w-[1360px] mx-auto px-6 py-6">
@@ -74,6 +80,65 @@ export default function HomePage() {
           {featuredAgents.map((a) => (
             <FeaturedAgentCard key={a.id} agent={a} />
           ))}
+        </div>
+      </section>
+
+      {/* My Agent · 즐겨찾기 · 최근 이용서비스 (RFP 2-1 개인화 기능) */}
+      <section className="grid grid-cols-3 gap-3 mb-4">
+        <div className="card p-4">
+          <div className="flex items-baseline justify-between mb-2">
+            <h3 className="text-[13px] font-extrabold text-ink">My Agent</h3>
+            <button
+              type="button"
+              onClick={() => setShowPersonalize(true)}
+              className="text-[10.5px] font-bold text-info hover:underline"
+            >개인화 설정</button>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {MY_AGENTS.map((a) => (
+              <div key={a.id} className="text-[11px] font-semibold text-ink-dark leading-snug border-b border-line-soft last:border-0 pb-1.5 last:pb-0">
+                <b className="text-ink">{a.name}</b>
+                <div className="text-[10px] text-ink-mid mt-0.5">{a.desc} · {a.lastUsedAt}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-4">
+          <h3 className="text-[13px] font-extrabold text-ink mb-2">즐겨찾기</h3>
+          {favorites.length === 0 ? (
+            <p className="text-[11px] text-ink-mid font-semibold">
+              카탈로그에서 ★ 를 눌러 자주 쓰는 자산을 등록하세요
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {favorites.map((f) => (
+                <div key={f.id} className="flex items-center gap-2">
+                  <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{f.kind}</span>
+                  <span className="text-[11px] font-bold text-ink-dark truncate flex-1">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(f)}
+                    className="text-warn text-[13px]"
+                    title="즐겨찾기 해제"
+                  >★</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card p-4">
+          <h3 className="text-[13px] font-extrabold text-ink mb-2">최근 이용서비스</h3>
+          <div className="flex flex-col gap-1.5">
+            {RECENT_SERVICES.slice(0, 4).map((r) => (
+              <div key={r.id + r.usedAt} className="flex items-center gap-2 text-[11px]">
+                <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{r.kind}</span>
+                <span className="font-bold text-ink-dark truncate flex-1">{r.name}</span>
+                <span className="text-[10px] text-ink-mid font-semibold whitespace-nowrap">{r.usedAt}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -176,6 +241,70 @@ export default function HomePage() {
             </div>
           </Link>
           )}
+        </div>
+      </div>
+
+      {showPersonalize && <PersonalizationModal onClose={() => setShowPersonalize(false)} />}
+    </div>
+  );
+}
+
+function PersonalizationModal({ onClose }: { onClose: () => void }) {
+  const settings = usePersonalization();
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      <div className="absolute inset-0 bg-ink/25" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-[440px] bg-white border border-line rounded-lg shadow-xl">
+        <div className="px-5 pt-4 pb-3 border-b border-line-soft flex items-start gap-3">
+          <h2 className="text-[14.5px] font-extrabold text-ink flex-1">개인화 설정</h2>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">2-1 개인화</span>
+          <button type="button" onClick={onClose} className="text-[16px] font-black text-ink-light hover:text-ink-dark leading-none">✕</button>
+        </div>
+        <div className="px-5 py-4 space-y-3.5">
+          <div>
+            <label className="block text-[10px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1">기본 모델</label>
+            <select
+              value={settings.defaultModel}
+              onChange={(e) => setPersonalization({ defaultModel: e.target.value })}
+              className="w-full py-1.5 px-2 border border-line rounded text-[12px] bg-white font-semibold"
+            >
+              <option value="onprem/gpt-oss-120b">onprem/gpt-oss-120b</option>
+              <option value="onprem/qwen3-32b">onprem/qwen3-32b</option>
+              <option value="google/gemma-4-31B-it-assistant">google/gemma-4-31B-it-assistant</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1">기본 에이전트</label>
+            <select
+              value={settings.defaultAgent}
+              onChange={(e) => setPersonalization({ defaultAgent: e.target.value })}
+              className="w-full py-1.5 px-2 border border-line rounded text-[12px] bg-white font-semibold"
+            >
+              <option>규정·책무 어시스턴트</option>
+              <option>PB 자산진단 어시스턴트</option>
+              <option>사내 규정 안내 봇</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">알림</label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-dark">
+                <input type="checkbox" checked={settings.notifyEmail} onChange={(e) => setPersonalization({ notifyEmail: e.target.checked })} />
+                이메일
+              </label>
+              <label className="flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-dark">
+                <input type="checkbox" checked={settings.notifyPush} onChange={(e) => setPersonalization({ notifyPush: e.target.checked })} />
+                포탈 알림
+              </label>
+            </div>
+          </div>
+        </div>
+        <div className="px-5 py-3 border-t border-line-soft flex justify-end">
+          <button
+            type="button"
+            onClick={() => { toast('개인화 설정을 저장했습니다'); onClose(); }}
+            className="py-1.5 px-4 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark"
+          >저장</button>
         </div>
       </div>
     </div>

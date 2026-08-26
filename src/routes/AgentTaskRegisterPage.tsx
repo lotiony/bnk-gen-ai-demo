@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
+import { toast } from '@/lib/toast';
 import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import SectionCard from '@/components/projectForm/SectionCard';
@@ -330,6 +331,9 @@ export default function AgentTaskRegisterPage() {
             <Link to={`/projects/${pid}`}>
               <Button variant="ghost">취소</Button>
             </Link>
+            <Button onClick={() => toast(`"${name}" 을(를) 템플릿으로 저장했습니다 — 다른 팀도 복제해 시작할 수 있습니다`)}>
+              템플릿으로 저장
+            </Button>
             <Button>임시 저장</Button>
             <Button variant="primary" disabled={!requiredFilled || submitting} onClick={submit}>
               {submitting ? '기안 중…' : '기안 →'}

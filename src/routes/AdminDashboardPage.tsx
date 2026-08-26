@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import KpiCard from '@/components/ui/KpiCard';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 import {
   ADMIN_PROJECT_ROWS,
   getAdminKpis,
@@ -104,6 +105,11 @@ export default function AdminDashboardPage() {
             {rows.length}개 프로젝트의 트래픽·자원·품질·안전 메트릭을 한 화면에서 비교
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => toast('현재 탭 데이터를 XLSX 로 내보냈습니다')}
+          className="h-8 px-3 border border-line rounded text-[11.5px] font-extrabold text-ink-dark bg-white hover:border-brand-dark hover:text-brand flex-shrink-0"
+        >⇩ Export</button>
       </div>
 
       {/* Tab nav */}
@@ -1349,6 +1355,34 @@ function InfraTab() {
   const namespaces = NAMESPACES;
   return (
     <section className="space-y-3.5">
+      {/* 자원 정책 관리 — RFP 2-1 [36] "GPU/CPU 자원 현황·정책 관리" */}
+      <div className="card p-4">
+        <div className="flex items-baseline gap-2 mb-2.5">
+          <h2 className="text-[14px] font-extrabold text-ink">자원 정책</h2>
+          <span className="text-[10.5px] text-ink-mid font-semibold">계열사·프로젝트별 GPU/CPU 상한을 관리한다</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: '계열사 GPU 상한', v: '기본 8장 / 계열사', edit: true },
+            { label: '프로젝트 GPU 상한', v: '기본 4장 / 프로젝트', edit: true },
+            { label: '유휴 자원 회수', v: '72시간 미사용 시 자동 회수', edit: true },
+            { label: '긴급 증설 승인', v: '플랫폼 관리자 단독 승인', edit: false },
+          ].map((p) => (
+            <div key={p.label} className="border border-line-soft rounded px-3 py-2 bg-white">
+              <div className="text-[10px] text-ink-light font-extrabold uppercase tracking-[0.3px]">{p.label}</div>
+              <div className="text-[11.5px] font-bold text-ink-dark mt-0.5">{p.v}</div>
+              {p.edit && (
+                <button
+                  type="button"
+                  onClick={() => toast(`${p.label} 정책 수정 — 다음 배정부터 적용됩니다`)}
+                  className="text-[10px] font-extrabold text-ink-mid hover:text-brand mt-1"
+                >수정</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Deployment 테이블 — 네임스페이스 그룹핑 */}
       <div className="grid grid-cols-2 gap-3.5">
         <DeploymentTable

@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import StatusPill from '@/components/ui/StatusPill';
+import { APPROVAL_LINES, ACCESS_HISTORY } from '@/data/mockApprovalLines';
+import { SERVICE_CATEGORIES, DEPT_PERMISSIONS, USER_OVERRIDES } from '@/data/mockUsagePermission';
+import { TENANT_SHORT } from '@/data/tenants';
+import { toast } from '@/lib/toast';
 import {
   ADMIN_MEMBERS,
   ROLE_LABEL,
@@ -18,6 +23,15 @@ const ROLE_TONE: Record<MemberRole, string> = {
   reviewer: 'bg-info-bg text-info border-info-border',
   member: 'bg-surface text-ink-dark border-line',
   viewer: 'bg-surface-soft text-ink-mid border-line-soft',
+};
+
+/** 플랫폼 전역 역할(운영 편의상 5단계)과 RFP 2-1 이 명시한 역할 6종의 매핑. */
+const RFP_ROLE_HINT: Record<MemberRole, string> = {
+  platform_admin: '관리자',
+  pm: '에이전트 개발자 · 관리자 겸임',
+  reviewer: '운영자',
+  member: '일반 사용자 · 데이터 담당자',
+  viewer: '일반 사용자',
 };
 
 const STATUS_TONE: Record<MemberStatus, string> = {
@@ -64,8 +78,38 @@ export default function AdminMembersPage() {
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: nextRole } : m)));
   };
 
+  const [tab, setTab] = useState<'members' | 'approval' | 'history' | 'permission'>('members');
+
   return (
     <>
+      <div className="flex items-center gap-1 border-b border-line mb-3.5">
+        {([
+          { k: 'members' as const, label: '멤버' },
+          { k: 'approval' as const, label: '결재라인 관리', req: '37' },
+          { k: 'history' as const, label: '접속 · 활동 이력', req: '37' },
+          { k: 'permission' as const, label: '이용권한 설정', req: '39' },
+        ]).map((t) => (
+          <button
+            key={t.k}
+            type="button"
+            onClick={() => setTab(t.k)}
+            className={cn(
+              'px-3.5 py-2 text-[12.5px] font-extrabold border-b-2 -mb-px',
+              tab === t.k ? 'text-brand border-brand' : 'text-ink-mid border-transparent hover:text-ink-dark',
+            )}
+          >
+            {t.label}
+            {t.req && <span className="ml-1.5 text-[9px] font-mono font-bold text-ink-light">{t.req}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'approval' && <ApprovalLinesTab />}
+      {tab === 'history' && <AccessHistoryTab />}
+      {tab === 'permission' && <UsagePermissionTab />}
+
+      {tab === 'members' && (
+      <>
       {/* Header */}
       <div className="card px-6 py-5 mb-3.5 flex items-start justify-between gap-6">
         <div>
@@ -167,6 +211,7 @@ export default function AdminMembersPage() {
                   </td>
                   <td className="py-2.5 px-2 text-ink-dark font-semibold whitespace-nowrap">{m.dept}</td>
                   <td className="py-2.5 px-2">
+                    <div className="text-[9px] text-ink-light font-semibold mb-0.5">{RFP_ROLE_HINT[m.role]}</div>
                     <div className="flex items-center gap-1.5">
                       <span className={cn('pill border whitespace-nowrap', ROLE_TONE[m.role])}>
                         {ROLE_LABEL[m.role]}
@@ -212,7 +257,104 @@ export default function AdminMembersPage() {
       <div className="text-[10.5px] text-ink-mid bg-surface-soft border border-line-soft rounded px-3 py-2 mt-3.5">
         🔒 역할 변경·초대·정지는 감사 원장에 기록됩니다. 플랫폼 관리자 부여는 2인 결재가 필요합니다.
       </div>
+      </>
+      )}
     </>
+  );
+}
+
+function ApprovalLinesTab() {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {APPROVAL_LINES.map((l) => (
+        <div key={l.category} className="card p-3.5">
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-[12.5px] font-extrabold text-ink">{l.category}</span>
+            <span className="text-[10.5px] text-ink-mid font-semibold">{l.desc}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {l.steps.map((s, i) => (
+              <div key={s.seq} className="flex items-center gap-2">
+                <span className="pill bg-surface-soft text-ink-dark border border-line-soft whitespace-nowrap">
+                  {s.seq}. {s.role}
+                </span>
+                {i < l.steps.length - 1 && <span className="text-ink-light">→</span>}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => toast(`${l.category} 결재라인 수정 — 다음 신청 건부터 적용됩니다`)}
+              className="ml-auto text-[10.5px] font-extrabold text-ink-dark border border-line rounded px-2 py-1 hover:border-brand-dark hover:text-brand"
+            >수정</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AccessHistoryTab() {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {ACCESS_HISTORY.map((h, i) => (
+        <div key={i} className="grid grid-cols-[150px_100px_1fr_120px_60px] gap-3 items-center px-3.5 py-2 bg-white border border-line-soft rounded">
+          <span className="text-[10px] font-mono font-semibold text-ink-mid tabular-nums">{h.at}</span>
+          <span className="text-[11.5px] font-extrabold text-ink">{h.actor}</span>
+          <span className="text-[10.5px] text-ink-dark font-semibold">{h.action}</span>
+          <span className="text-[10px] font-mono text-ink-mid">{h.ip}</span>
+          <StatusPill tone={h.result === '성공' ? 'ok' : 'bad'}>{h.result}</StatusPill>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UsagePermissionTab() {
+  return (
+    <div className="space-y-3.5">
+      <section className="card p-4">
+        <h2 className="text-[13px] font-extrabold text-ink mb-2.5">부서별 서비스 카테고리 접근</h2>
+        <table className="w-full text-[11.5px]">
+          <thead>
+            <tr className="text-left text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] border-b border-line-soft">
+              <th className="py-1.5 pr-3">계열사</th>
+              <th className="py-1.5 pr-3">부서</th>
+              {SERVICE_CATEGORIES.map((c) => (
+                <th key={c} className="py-1.5 px-2 text-center whitespace-nowrap">{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {DEPT_PERMISSIONS.map((d) => (
+              <tr key={d.tenant + d.dept} className="border-b border-line-soft last:border-0">
+                <td className="py-2 pr-3 font-bold text-ink-dark whitespace-nowrap">{TENANT_SHORT[d.tenant]}</td>
+                <td className="py-2 pr-3 font-extrabold text-ink whitespace-nowrap">{d.dept}</td>
+                {SERVICE_CATEGORIES.map((c) => (
+                  <td key={c} className="py-2 px-2 text-center">
+                    {d.access[c] ? <span className="text-ok font-extrabold">✓</span> : <span className="text-ink-light">—</span>}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <section className="card p-4">
+        <h2 className="text-[13px] font-extrabold text-ink mb-1">사용자별 개별 부여 · 회수</h2>
+        <p className="text-[10.5px] text-ink-mid font-semibold mb-2.5">부서 기본값과 다르게 지정된 예외만 표시한다</p>
+        <div className="flex flex-col gap-1.5">
+          {USER_OVERRIDES.map((u, i) => (
+            <div key={i} className="grid grid-cols-[100px_1fr_auto] gap-3 items-center px-3 py-2 border border-line-soft rounded bg-white">
+              <span className="text-[11.5px] font-extrabold text-ink-dark">{u.name}</span>
+              <span className="text-[10.5px] text-ink-dark font-semibold">
+                {TENANT_SHORT[u.tenant]} · {u.dept} · <b>{u.category}</b> {u.granted ? '부여' : '회수'} — {u.reason}
+              </span>
+              <StatusPill tone={u.granted ? 'ok' : 'bad'}>{u.granted ? '부여됨' : '회수됨'}</StatusPill>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 

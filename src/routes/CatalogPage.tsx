@@ -16,6 +16,7 @@
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { useFavorites, toggleFavorite } from '@/lib/personalization';
 import { useTenant } from '@/lib/tenantStore';
 import {
   getCatalogItems,
@@ -36,6 +37,12 @@ import {
 import StatusPill from '@/components/ui/StatusPill';
 
 type SortKey = 'usage' | 'rating' | 'installs' | 'recent';
+
+const KIND_LABEL_MAP: Record<AssetKind, '에이전트' | '프롬프트' | 'MCP'> = {
+  agent: '에이전트',
+  prompt: '프롬프트',
+  mcp: 'MCP',
+};
 
 const SORT_LABEL: Record<SortKey, string> = {
   usage: '사용량 순',
@@ -208,6 +215,10 @@ function ItemCard({
   const verdict = useVerdict(item.tenant, item.meta.scope, myTenant as never);
   const vm = VERDICT_META[verdict];
   const sm = SCOPE_META[item.meta.scope];
+  const [rateOpen, setRateOpen] = useState(false);
+  const [rated, setRated] = useState<number | null>(null);
+  const favorites = useFavorites();
+  const favored = favorites.some((f) => f.id === item.id);
 
   return (
     <div className="card flex flex-col overflow-hidden hover:border-brand-dark hover:shadow-sm transition-all">
@@ -221,8 +232,16 @@ function ItemCard({
             {item.meta.scope}
           </span>
         </div>
-        <div className="text-[13px] font-extrabold text-ink leading-tight mb-1 truncate" title={item.name}>
-          {item.name}
+        <div className="flex items-center gap-1.5 mb-1">
+          <div className="text-[13px] font-extrabold text-ink leading-tight truncate flex-1" title={item.name}>
+            {item.name}
+          </div>
+          <button
+            type="button"
+            onClick={() => toggleFavorite({ id: item.id, kind: KIND_LABEL_MAP[item.kind], name: item.name, href: '/catalog' })}
+            title="즐겨찾기"
+            className={cn('text-[14px] leading-none flex-shrink-0', favored ? 'text-warn' : 'text-line hover:text-ink-light')}
+          >★</button>
         </div>
         <div className="text-[10.5px] text-ink-mid font-medium leading-snug line-clamp-2 min-h-[28px]">
           {item.description}
@@ -237,7 +256,32 @@ function ItemCard({
           v={item.meta.rating > 0 ? `★ ${item.meta.rating.toFixed(1)} (${item.meta.ratingCount})` : '—'}
         />
         <Metric k="도입" v={item.meta.installs > 0 ? `${item.meta.installs}곳` : '—'} />
+        <button
+          type="button"
+          onClick={() => setRateOpen((v) => !v)}
+          className="ml-auto text-[10px] font-extrabold text-ink-mid hover:text-brand"
+        >
+          {rated ? `내 평가 ★${rated}` : '평가하기'}
+        </button>
       </div>
+
+      {rateOpen && (
+        <div className="px-3.5 py-2 border-b border-line-soft flex items-center gap-1 bg-white">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => {
+                setRated(n);
+                setRateOpen(false);
+                toast(`${item.name} · ★${n} 평가를 남겼습니다`);
+              }}
+              className={cn('text-[15px] leading-none', n <= (rated ?? 0) ? 'text-warn' : 'text-line')}
+            >★</button>
+          ))}
+          <span className="ml-1 text-[10px] text-ink-mid font-semibold">별점 평가</span>
+        </div>
+      )}
 
       {/* 태그 */}
       <div className="px-3.5 py-2 flex items-center gap-1 flex-wrap">

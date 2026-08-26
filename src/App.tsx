@@ -3,6 +3,7 @@ import Layout from './components/layout/Layout';
 import LoginPage from './routes/LoginPage';
 import HomePage from './routes/HomePage';
 import ChatPage from './routes/ChatPage';
+import PersonalDocsPage from './routes/PersonalDocsPage';
 import TenantLandingPage from './routes/TenantLandingPage';
 import { useCurrentPersona } from './lib/persona';
 import ProjectsListPage from './routes/ProjectsListPage';
@@ -43,6 +44,11 @@ import MeteringPage from './routes/MeteringPage';
 import AdminMembersPage from './routes/AdminMembersPage';
 import AdminIntakePage from './routes/AdminIntakePage';
 import AdminDrmPage from './routes/AdminDrmPage';
+import AdminTasksPage from './routes/AdminTasksPage';
+import AdminServicesPage from './routes/AdminServicesPage';
+import AdminGuardrailPage from './routes/AdminGuardrailPage';
+import AdminSecurityPage from './routes/AdminSecurityPage';
+import AdminContentPage from './routes/AdminContentPage';
 import AdminFeaturedAgentsPage from './routes/AdminFeaturedAgentsPage';
 
 function PersonaGate({ children }: { children: React.ReactNode }) {
@@ -69,6 +75,7 @@ export default function App() {
       >
         <Route path="/" element={<HomePage />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/documents" element={<PersonalDocsPage />} />
         <Route path="/tenants" element={<TenantLandingPage />} />
         <Route path="/projects" element={<ProjectsListPage />} />
         <Route path="/projects/new" element={<ProjectRegisterPage />} />
@@ -152,7 +159,12 @@ export default function App() {
           {/* 거버넌스는 최상위 /governance 로 분리됐다 — 기존 링크 보존용 리다이렉트 */}
           <Route path="governance" element={<Navigate to="/governance" replace />} />
           <Route path="metering" element={<MeteringPage />} />
+          <Route path="tasks" element={<AdminTasksPage />} />
+          <Route path="services" element={<AdminServicesPage />} />
           <Route path="intake" element={<AdminIntakePage />} />
+          <Route path="guardrails" element={<AdminGuardrailPage />} />
+          <Route path="security" element={<AdminSecurityPage />} />
+          <Route path="content" element={<AdminContentPage />} />
           <Route path="drm" element={<AdminDrmPage />} />
           <Route path="members" element={<AdminMembersPage />} />
           <Route path="featured-agents" element={<AdminFeaturedAgentsPage />} />

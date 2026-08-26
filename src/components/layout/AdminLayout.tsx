@@ -6,7 +6,7 @@ import AreaGuard from './AreaGuard';
 interface AdminNavItem {
   label: string;
   to: string;
-  group: '모니터링' | '운영 관리';
+  group: '모니터링' | '운영 관리' | '보안 · 거버넌스' | '콘텐츠';
   /** 사이드바에 표시할 짧은 부제. */
   hint?: string;
 }
@@ -14,6 +14,8 @@ interface AdminNavItem {
 const NAV: AdminNavItem[] = [
   { label: '대시보드', to: '/admin/dashboard', group: '모니터링', hint: '사용·자원·안전 현황' },
   { label: '미터링·정산', to: '/admin/metering', group: '모니터링', hint: '계열사·부서 Chargeback' },
+  { label: '과제 관리', to: '/admin/tasks', group: '운영 관리', hint: '등록·검토·결재·이행' },
+  { label: '서비스·배포 관리', to: '/admin/services', group: '운영 관리', hint: '게시·중지·공개범위' },
   {
     label: '반입 승인',
     to: '/admin/intake',
@@ -21,8 +23,11 @@ const NAV: AdminNavItem[] = [
     hint: '모델·데이터 반입 검사',
   },
   { label: '계열사 DRM', to: '/admin/drm', group: '운영 관리', hint: '문서보안 자동 복호화' },
-  { label: '멤버 관리', to: '/admin/members', group: '운영 관리', hint: '역할·초대' },
+  { label: '멤버 관리', to: '/admin/members', group: '운영 관리', hint: '역할·결재라인·이용권한' },
   { label: '대표 에이전트', to: '/admin/featured-agents', group: '운영 관리', hint: '홈 노출 순서' },
+  { label: '가드레일 정책', to: '/admin/guardrails', group: '보안 · 거버넌스', hint: '정책·예외·위반 이력' },
+  { label: '보안·감사', to: '/admin/security', group: '보안 · 거버넌스', hint: 'PII 예외·스코프·감사로그' },
+  { label: '공지·게시판', to: '/admin/content', group: '콘텐츠', hint: '공지사항·게시판 모니터링' },
 ];
 
 /**
@@ -30,7 +35,7 @@ const NAV: AdminNavItem[] = [
  * 모니터링/운영 관리 두 그룹으로 항목을 묶어 추후 운영 항목 확장에 대비.
  */
 export default function AdminLayout() {
-  const groups: AdminNavItem['group'][] = ['모니터링', '운영 관리'];
+  const groups: AdminNavItem['group'][] = ['모니터링', '운영 관리', '보안 · 거버넌스', '콘텐츠'];
   const persona = useCurrentPersona();
   const displayName = persona?.name ?? '김플랫';
   const displayRole = persona?.role ?? '관리자';

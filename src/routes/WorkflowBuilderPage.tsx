@@ -271,6 +271,12 @@ export default function WorkflowBuilderPage() {
             ))}
           </div>
           <button
+            onClick={() => toast('워크플로우를 템플릿으로 저장했습니다 — 다른 팀도 복제해 시작할 수 있습니다')}
+            className="inline-flex items-center h-8 px-3 rounded border border-line bg-white text-[12px] font-bold text-ink-dark hover:bg-surface"
+          >
+            템플릿으로 저장
+          </button>
+          <button
             onClick={() => {
               setNodes(SEED_NODES);
               setEdges(SEED_EDGES);

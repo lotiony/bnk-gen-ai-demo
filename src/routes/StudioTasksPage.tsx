@@ -12,6 +12,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 import StatusPill from '@/components/ui/StatusPill';
 import { useTenant } from '@/lib/tenantStore';
 import { TENANT_SHORT } from '@/data/tenants';
@@ -22,6 +23,7 @@ import {
   KIND_TONE,
   type StudioTaskKind,
 } from '@/data/studioTasks';
+import { TEMPLATES } from '@/data/mockTemplates';
 
 const KIND_ORDER: StudioTaskKind[] = [
   'agent',
@@ -125,6 +127,31 @@ export default function StudioTasksPage() {
             <p className="text-[10.5px] text-ink-mid font-semibold leading-snug">{s.desc}</p>
           </Link>
         ))}
+      </div>
+
+      {/* ── 템플릿 (29 템플릿화 및 재사용 자산 관리) ── */}
+      <div className="card px-4 py-3 mb-3.5">
+        <div className="flex items-baseline gap-2 mb-2">
+          <h2 className="text-[12.5px] font-extrabold text-ink">템플릿에서 시작</h2>
+          <span className="text-[10px] font-mono font-bold text-ink-light">2-1 템플릿화</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {TEMPLATES.map((t) => (
+            <div key={t.id} className="border border-line-soft rounded px-3 py-2.5 bg-white">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{t.kind}</span>
+                <span className="ml-auto text-[10px] text-ink-mid font-semibold">{t.usedCount}회 사용</span>
+              </div>
+              <div className="text-[12px] font-extrabold text-ink leading-tight mb-1">{t.name}</div>
+              <p className="text-[10.5px] text-ink-mid font-semibold leading-snug mb-1.5">{t.desc}</p>
+              <button
+                type="button"
+                onClick={() => toast(`${t.name} 템플릿을 복제해 새 과제를 시작합니다`)}
+                className="text-[10.5px] font-extrabold text-info hover:underline"
+              >이 템플릿 사용하기 →</button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── 필터 ── */}
