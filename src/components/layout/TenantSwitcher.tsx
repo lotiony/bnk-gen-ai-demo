@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { TENANT_LIST, TENANT_SHORT, TENANTS, type Tenant } from '@/data/tenants';
 import { useTenant, setTenant } from '@/lib/tenantStore';
@@ -114,6 +115,13 @@ export default function TenantSwitcher() {
               );
             })}
           </ul>
+          <Link
+            to="/tenants"
+            onClick={() => setOpen(false)}
+            className="block px-3 py-2 border-t border-line-soft text-[11px] font-extrabold text-ink-dark hover:bg-surface-soft hover:text-brand"
+          >
+            전체 계열사 보기 →
+          </Link>
           <div className="px-3 py-2 border-t border-line-soft text-[10px] text-ink-mid">
             🔒 전환은 감사 원장에 기록됩니다
           </div>

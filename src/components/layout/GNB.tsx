@@ -10,6 +10,7 @@ interface GnbItem {
 
 const items: GnbItem[] = [
   { label: '홈', to: '/' },
+  { label: 'AI 어시스턴트', to: '/chat', matchPrefix: '/chat' },
   { label: '프로젝트', to: '/projects', matchPrefix: '/projects' },
   { label: '공통 카탈로그', to: '/catalog', matchPrefix: '/catalog' },
   { label: '관리', to: '/admin', matchPrefix: '/admin' },

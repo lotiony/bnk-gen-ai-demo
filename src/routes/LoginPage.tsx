@@ -18,7 +18,8 @@ export default function LoginPage() {
   const handleSelect = (id: PersonaId) => {
     setLoadingId(id);
     setStoredPersona(id);
-    setTimeout(() => navigate('/', { replace: true }), 250);
+    // 1막은 계열사 선택 랜딩(화면 1)에서 시작한다 — 11 Namespace 구조를 먼저 각인시킨다.
+    setTimeout(() => navigate('/tenants', { replace: true }), 250);
   };
 
   return (

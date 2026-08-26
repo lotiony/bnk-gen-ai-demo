@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import LoginPage from './routes/LoginPage';
 import HomePage from './routes/HomePage';
+import ChatPage from './routes/ChatPage';
+import TenantLandingPage from './routes/TenantLandingPage';
 import { useCurrentPersona } from './lib/persona';
 import ProjectsListPage from './routes/ProjectsListPage';
 import ProjectDetailPage from './routes/ProjectDetailPage';
@@ -20,6 +22,9 @@ import AgentTaskDetailPage from './routes/AgentTaskDetailPage';
 import DevenvTaskDetailPage from './routes/DevenvTaskDetailPage';
 import ModelTaskDetailPage from './routes/ModelTaskDetailPage';
 import OntologyTaskPage from './routes/OntologyTaskPage';
+import DataRoutingTaskPage from './routes/DataRoutingTaskPage';
+import WorkflowBuilderPage from './routes/WorkflowBuilderPage';
+import McpRegisterPage from './routes/McpRegisterPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './routes/AdminDashboardPage';
 import AdminMembersPage from './routes/AdminMembersPage';
@@ -48,6 +53,8 @@ export default function App() {
         }
       >
         <Route path="/" element={<HomePage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/tenants" element={<TenantLandingPage />} />
         <Route path="/projects" element={<ProjectsListPage />} />
         <Route path="/projects/new" element={<ProjectRegisterPage />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
@@ -92,6 +99,9 @@ export default function App() {
           element={<ModelTaskDetailPage />}
         />
         <Route path="/projects/:projectId/tasks/ontology" element={<OntologyTaskPage />} />
+        <Route path="/projects/:projectId/tasks/routing" element={<DataRoutingTaskPage />} />
+        <Route path="/projects/:projectId/tasks/workflow" element={<WorkflowBuilderPage />} />
+        <Route path="/projects/:projectId/tasks/mcp" element={<McpRegisterPage />} />
         <Route path="/catalog" element={<CatalogPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />

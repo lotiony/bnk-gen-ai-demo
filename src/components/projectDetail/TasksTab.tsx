@@ -34,7 +34,7 @@ type Category = {
 
 const CATEGORIES: Category[] = [
   { id: 'knowledge', icon: '📁', title: 'Knowledge', desc: '문서·지식 데이터' },
-  { id: 'database', icon: '🗄', title: 'Database', desc: 'DB 커넥터·테이블' },
+  { id: 'database', icon: '🗄', title: 'Database', desc: 'DB 커넥터·테이블 · 승인 기반 접근 라우팅' },
   { id: 'ontology', icon: '🕸', title: 'Ontology', desc: '온톨로지 설계 · 데이터 매핑 · Graph RAG 질의' },
   { id: 'component', icon: '🔗', title: 'Component', desc: '커스텀 파서 · 청커 · 파이프라인' },
   { id: 'tool', icon: '🧰', title: 'Tool', desc: '모델·API 커넥터' },
@@ -61,18 +61,22 @@ function countOf(id: CategoryId): number {
     case 'knowledge':
       return MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === '지식 데이터').length;
     case 'database':
-      return MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === 'DB 커넥터').length;
+      // +1 = 데이터 접근 라우팅(DRT-101). 커넥터 목록과 별개의 단일 과제다.
+      return MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === 'DB 커넥터').length + 1;
     case 'ontology':
       return 1;
     case 'component':
       return CUSTOM_COMPONENTS.length;
     case 'tool':
+      // +1 = MCP Tool 자동 등록(MCP-101).
       return (
         MOCK_MODEL_TASKS.length +
-        MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === 'API 커넥터').length
+        MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === 'API 커넥터').length +
+        1
       );
     case 'agent':
-      return MOCK_AGENT_TASKS.length;
+      // +1 = 노코드 워크플로우(WFL-101).
+      return MOCK_AGENT_TASKS.length + 1;
     case 'storage':
       return 0;
     case 'develop':
@@ -187,12 +191,17 @@ export default function TasksTab() {
               MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === '지식 데이터').map((t) => (
                 <KnowledgeTaskCard key={t.id} task={t} projectId={pid} />
               ))}
-            {active === 'database' &&
-              MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === 'DB 커넥터').map((t) => (
-                <DatabaseTaskCard key={t.id} task={t} projectId={pid} />
-              ))}
+            {active === 'database' && (
+              <>
+                {MOCK_KNOWLEDGE_TASKS.filter((t) => t.assetKind === 'DB 커넥터').map((t) => (
+                  <DatabaseTaskCard key={t.id} task={t} projectId={pid} />
+                ))}
+                <DataRoutingTaskCard projectId={pid} />
+              </>
+            )}
             {active === 'tool' && (
               <>
+                <McpTaskCard projectId={pid} />
                 {MOCK_MODEL_TASKS.map((t) => (
                   <ModelTaskCard key={t.id} task={t} projectId={pid} />
                 ))}
@@ -204,10 +213,14 @@ export default function TasksTab() {
             {active === 'ontology' && <OntologyTaskCard projectId={pid} />}
             {active === 'component' &&
               CUSTOM_COMPONENTS.map((c) => <ComponentCard key={c.id} comp={c} projectId={pid} />)}
-            {active === 'agent' &&
-              MOCK_AGENT_TASKS.map((t) => (
-                <AgentTaskCard key={t.id} task={t} projectId={pid} />
-              ))}
+            {active === 'agent' && (
+              <>
+                <WorkflowTaskCard projectId={pid} />
+                {MOCK_AGENT_TASKS.map((t) => (
+                  <AgentTaskCard key={t.id} task={t} projectId={pid} />
+                ))}
+              </>
+            )}
             {active === 'develop' &&
               MOCK_DEVENV_TASKS.map((t) => (
                 <DevenvTaskCard key={t.id} task={t} onOpen={() => setOpenDevenv(t)} />
@@ -264,6 +277,66 @@ function OntologyTaskCard({ projectId }: { projectId: string }) {
       <div className="text-[13.5px] font-extrabold text-ink mt-1">여신 온톨로지</div>
       <div className="text-[11px] text-ink-mid font-semibold mt-0.5">
         정형DB 가상 뷰(zero-copy) + 여신업무규정·전결규정 문서 실체화
+      </div>
+    </Link>
+  );
+}
+
+/** MCP Tool 자동 등록 카드 — 화면 8. */
+function McpTaskCard({ projectId }: { projectId: string }) {
+  return (
+    <Link
+      to={`/projects/${projectId}/tasks/mcp`}
+      className="block border border-line-soft rounded px-4 py-3 hover:border-brand-dark transition-colors"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[10.5px] font-mono text-ink-mid">MCP-101</span>
+        <span className="pill bg-ok-bg text-ok border border-ok-border">OpenAPI → MCP</span>
+        <span className="ml-auto pill bg-surface text-ink-mid border border-line-soft">● 등록 대기</span>
+      </div>
+      <div className="text-[13.5px] font-extrabold text-ink mt-1">MCP Tool 자동 등록</div>
+      <div className="text-[11px] text-ink-mid font-semibold mt-0.5">
+        OpenAPI Spec 을 붙여넣으면 입력 스키마·인증·감사까지 결합해 도구로 변환한다
+      </div>
+    </Link>
+  );
+}
+
+/** 노코드 워크플로우 카드 — 화면 7. */
+function WorkflowTaskCard({ projectId }: { projectId: string }) {
+  return (
+    <Link
+      to={`/projects/${projectId}/tasks/workflow`}
+      className="block border border-line-soft rounded px-4 py-3 hover:border-brand-dark transition-colors"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[10.5px] font-mono text-ink-mid">WFL-101</span>
+        <span className="pill bg-info-bg text-info border border-info-border">Studio (노코드)</span>
+        <span className="ml-auto pill bg-ok-bg text-ok border border-ok-border">● 초안</span>
+      </div>
+      <div className="text-[13.5px] font-extrabold text-ink mt-1">여신 상담 워크플로우</div>
+      <div className="text-[11px] text-ink-mid font-semibold mt-0.5">
+        입력 폼 · 지식 검색 · 조건 분기 · 에이전트 · MCP Tool — 드래그앤드롭 캔버스 + 실행 Trace
+      </div>
+    </Link>
+  );
+}
+
+/** 데이터 접근 라우팅 과제 카드 — 과제당 1개(화면 9). */
+function DataRoutingTaskCard({ projectId }: { projectId: string }) {
+  return (
+    <Link
+      to={`/projects/${projectId}/tasks/routing`}
+      className="block border border-line-soft rounded px-4 py-3 hover:border-brand-dark transition-colors"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[10.5px] font-mono text-ink-mid">DRT-101</span>
+        <span className="pill bg-brand-tint text-brand border border-brand-tint">2중 승인 통제</span>
+        <span className="ml-auto pill bg-warn-bg text-warn border border-warn-border">● 결재 진행 중</span>
+      </div>
+      <div className="text-[13.5px] font-extrabold text-ink mt-1">데이터 접근 라우팅</div>
+      <div className="text-[11px] text-ink-mid font-semibold mt-0.5">
+        Draft = 익명화 개발 DB / Approved + 동의 권원 확인 = 운영 DB 복호화
       </div>
     </Link>
   );
