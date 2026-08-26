@@ -1,6 +1,8 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Topbar from './Topbar';
 import GNB from './GNB';
+import { Toaster } from '@/lib/toast';
+import PresenterNav from '@/lib/presenter';
 
 /** 관리 콘솔 진입 시 상단바에 노출하는 환경 배지. */
 const ADMIN_ENV_BADGE = 'MFA 인증됨';
@@ -14,6 +16,8 @@ export default function Layout() {
       <Topbar envBadge={pathname.startsWith('/admin') ? ADMIN_ENV_BADGE : undefined} />
       <GNB />
       <Outlet />
+      <Toaster />
+      <PresenterNav />
     </>
   );
 }

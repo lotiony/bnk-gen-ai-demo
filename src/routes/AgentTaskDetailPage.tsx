@@ -46,6 +46,7 @@ import {
   type PiiChangeAction,
   type PiiChangeStatus,
 } from '@/data/mockAgentGovernance';
+import { toast } from '@/lib/toast';
 
 type TabId = 'develop' | 'deploy' | 'ops' | 'eval';
 
@@ -1043,7 +1044,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
                 `→ 복귀: ${rollbackTarget.tagName} (${rollbackTarget.promotedAt} · ${rollbackTarget.promotedBy})\n\n` +
                 `트래픽이 즉시 ${rollbackTarget.tagName}로 100% 전환되며 감사 원장에 기록됩니다. 계속하시겠습니까?`;
               if (window.confirm(msg)) {
-                window.alert(`${rollbackTarget.tagName}로 롤백 진행 (목업)`);
+                toast(`${rollbackTarget.tagName}로 롤백 진행 (목업)`);
               }
             }}
             title={`긴급 롤백 대상: ${rollbackTarget.tagName}`}
@@ -1757,7 +1758,7 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.alert('복사 실패 — 보안 컨텍스트가 필요합니다');
+      toast('복사 실패 — 보안 컨텍스트가 필요합니다');
     }
   };
 
@@ -2080,7 +2081,7 @@ function PiiItemsManagement({ agentId }: { agentId: string }) {
   const pendingChanges = requests.filter((r) => r.status === 'pending');
 
   const handleAdd = () => {
-    window.alert(
+    toast(
       '항목 추가 결재 신청 모달 (목업)\n\n이름·정규식·마스킹 템플릿 입력 후 결재 그룹 지정 → 기안',
     );
   };
@@ -2206,20 +2207,20 @@ function PiiItemsManagement({ agentId }: { agentId: string }) {
                     <div className="inline-flex gap-1">
                       <button
                         onClick={() =>
-                          window.alert(`${it.name} ${it.active ? '비활성화' : '활성화'} 결재 신청 (목업)`)
+                          toast(`${it.name} ${it.active ? '비활성화' : '활성화'} 결재 신청 (목업)`)
                         }
                         className="h-6 px-2 text-[10.5px] font-bold text-info hover:underline"
                       >
                         {it.active ? '비활성' : '활성'}
                       </button>
                       <button
-                        onClick={() => window.alert(`${it.name} 정규식 수정 결재 신청 (목업)`)}
+                        onClick={() => toast(`${it.name} 정규식 수정 결재 신청 (목업)`)}
                         className="h-6 px-2 text-[10.5px] font-bold text-info hover:underline"
                       >
                         ✎ 수정
                       </button>
                       <button
-                        onClick={() => window.alert(`${it.name} 삭제 결재 신청 (목업)`)}
+                        onClick={() => toast(`${it.name} 삭제 결재 신청 (목업)`)}
                         className="h-6 px-2 text-[10.5px] font-bold text-bad hover:underline"
                       >
                         ✕ 삭제
@@ -2320,7 +2321,7 @@ function LoadTestPanel({
       `시나리오: ${SCENARIO_LABEL[scenario]}\n\n` +
       `테스트는 서빙계 환경에서 실행되며, 서비스 트래픽에 영향이 갈 수 있습니다. 계속하시겠습니까?`;
     if (window.confirm(msg)) {
-      window.alert(`부하 테스트 실행 (목업)`);
+      toast(`부하 테스트 실행 (목업)`);
     }
   };
 

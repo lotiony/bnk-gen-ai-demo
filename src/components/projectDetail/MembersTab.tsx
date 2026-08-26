@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MemberGroup, RoleKey } from '@/types';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
+import { toast } from '@/lib/toast';
 
 interface Props {
   groups: MemberGroup[];
@@ -233,7 +234,7 @@ function MemberMenu({
           </MenuItem>
           <MenuItem
             onClick={() => {
-              window.alert('권한 변경 모달은 권한 관리 화면에서 (목업)');
+              toast('권한 변경 모달은 권한 관리 화면에서 (목업)');
               onOpenChange(false);
             }}
             icon="🔑"
@@ -242,7 +243,7 @@ function MemberMenu({
           </MenuItem>
           <MenuItem
             onClick={() => {
-              window.alert('그룹 이동 (목업)');
+              toast('그룹 이동 (목업)');
               onOpenChange(false);
             }}
             icon="⇄"
@@ -257,7 +258,7 @@ function MemberMenu({
                   `${memberName}님을 프로젝트에서 제거하시겠습니까? 이 작업은 되돌릴 수 없으며 감사 원장에 기록됩니다.`,
                 )
               ) {
-                window.alert('제거 (목업)');
+                toast('제거 (목업)');
               }
               onOpenChange(false);
             }}

@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import type { FileRunStatus, FileState, StageId, StageState } from './parseRunData';
 import { STAGE_LABELS } from './parseRunData';
 import { getParser } from './parsers';
+import { toast } from '@/lib/toast';
 
 interface Props {
   files: FileRunStatus[];
@@ -70,7 +71,7 @@ const ParseRunSection = forwardRef<HTMLElement, Props>(function ParseRunSection(
         <div className="flex items-center gap-2">
           {failedFiles.length > 0 && (
             <button
-              onClick={() => window.alert(`실패한 ${failedFiles.length}개 파일을 재시도합니다 (목업).`)}
+              onClick={() => toast(`실패한 ${failedFiles.length}개 파일을 재시도합니다 (목업).`)}
               className="h-7 px-2.5 bg-white border border-bad-border text-bad rounded text-[11.5px] font-bold hover:bg-bad-bg"
             >
               ↻ 실패만 재시도
@@ -78,7 +79,7 @@ const ParseRunSection = forwardRef<HTMLElement, Props>(function ParseRunSection(
           )}
           {totals.done > 0 && (
             <button
-              onClick={() => window.alert(`완료된 ${totals.done}개 파일을 인덱스로 보냅니다 (목업).`)}
+              onClick={() => toast(`완료된 ${totals.done}개 파일을 인덱스로 보냅니다 (목업).`)}
               className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
             >
               ▶ 완료분 인덱스로

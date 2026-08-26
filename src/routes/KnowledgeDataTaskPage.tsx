@@ -16,6 +16,7 @@ import ParseResultModal, { type ReparseOpts } from '@/components/knowledgeData/P
 import { FILE_ROWS, FOLDER_ROWS, FOLDER_FILES, type FileRow } from '@/components/knowledgeData/storageData';
 import { buildInitialRun, buildHistoryMock, generateBlocks, type FileRunStatus } from '@/components/knowledgeData/parseRunData';
 import { buildIndexListMock, type IndexVersion, type IndexWithVersions } from '@/components/knowledgeData/embedData';
+import { toast } from '@/lib/toast';
 
 type TabId = 'storage' | 'manifest' | 'index' | 'eval' | 'deploy';
 
@@ -594,7 +595,7 @@ export default function KnowledgeDataTaskPage() {
             <button
               onClick={() => {
                 const name = window.prompt('새 폴더 이름을 입력하세요');
-                if (name) window.alert(`"${name}" 폴더가 생성됩니다 (목업).`);
+                if (name) toast(`"${name}" 폴더가 생성됩니다 (목업).`);
               }}
               className="h-[30px] px-2.5 border border-line bg-white rounded text-[11.5px] font-semibold text-ink-dark hover:bg-surface"
             >
@@ -1088,7 +1089,7 @@ export default function KnowledgeDataTaskPage() {
                 선택 해제
               </button>
               <button
-                onClick={() => window.alert(`${checked.size}개 파일을 이동합니다 (목업).`)}
+                onClick={() => toast(`${checked.size}개 파일을 이동합니다 (목업).`)}
                 className="h-7 px-2.5 bg-white border border-line rounded text-[11.5px] font-semibold text-ink-dark hover:bg-surface"
               >
                 ⇄ 이동

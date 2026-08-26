@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { getParser, parsersFor, type ParserId } from './parsers';
 import type { FileRow } from './storageData';
 import type { ChunkingStrategy, ExtractedBlock, FileRunStatus, ImageHandling } from './parseRunData';
+import { toast } from '@/lib/toast';
 
 export interface ReparseOpts {
   parserId: ParserId;
@@ -166,7 +167,7 @@ export default function ParseResultModal({ file, onClose, onReparse }: Props) {
             <button
               disabled={!dirty}
               onClick={() => {
-                window.alert(`${editedBlocks.length}개 블록을 저장합니다 (목업).`);
+                toast(`${editedBlocks.length}개 블록을 저장합니다 (목업).`);
                 setDirty(false);
               }}
               className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"

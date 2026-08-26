@@ -17,6 +17,7 @@ import {
   type IndexBuildState,
   type IndexKind,
 } from '@/data/mockPipelineTasks';
+import { toast } from '@/lib/toast';
 
 type TabId = 'overview' | 'indexes' | 'dev' | 'eval' | 'serving';
 
@@ -742,7 +743,7 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.alert('복사 실패 — 보안 컨텍스트가 필요합니다');
+      toast('복사 실패 — 보안 컨텍스트가 필요합니다');
     }
   };
 

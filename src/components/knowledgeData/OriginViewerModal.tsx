@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ModalShell from './ModalShell';
 import type { FileRow } from './storageData';
+import { toast } from '@/lib/toast';
 
 interface Props {
   row: FileRow | null;
@@ -41,7 +42,7 @@ export default function OriginViewerModal({ row, onClose }: Props) {
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.alert('원본 파일을 다운로드합니다 (목업).')}
+              onClick={() => toast('원본 파일을 다운로드합니다 (목업).')}
               className="py-2 px-3.5 bg-white border border-line rounded text-[12.5px] font-bold text-ink-dark hover:bg-surface"
             >
               ↓ 다운로드
