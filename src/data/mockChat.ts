@@ -132,15 +132,109 @@ export interface ChatHistoryItem {
 
 export const CHAT_HISTORY: ChatHistoryItem[] = [
   { id: 'C-118', title: '대성정밀 신규 여신 전결 확인', at: '10:24', agent: '규정·책무', group: '오늘' },
-  { id: 'C-117', title: '담보인정비율 규정 상한 문의', at: '09:41', agent: '규정·책무', group: '오늘' },
+  { id: 'C-117', title: '여신 8억 전결 기준 확인', at: '09:41', agent: '규정·책무', group: '오늘' },
   { id: 'C-116', title: 'ISA 만기 후 운용 상담 정리', at: '어제 17:02', agent: 'PB 자산진단', group: '어제' },
   { id: 'C-115', title: '연차 이월 규정 확인', at: '어제 11:35', agent: '사내 규정', group: '어제' },
   { id: 'C-114', title: '여신협의회 부의 기준', at: '01-06', agent: '규정·책무', group: '지난 7일' },
   { id: 'C-113', title: '퇴직연금 IRP 이전 절차', at: '01-05', agent: 'PB 자산진단', group: '지난 7일' },
-  { id: 'C-112', title: '책무구조도 개정 반영 여부', at: '01-03', agent: '규정·책무', group: '지난 7일' },
+  { id: 'C-112', title: '여신 심사부실 책무 소재', at: '01-03', agent: '규정·책무', group: '지난 7일' },
 ];
 
 export const HISTORY_GROUPS: HistoryGroup[] = ['오늘', '어제', '지난 7일'];
+
+/* ═══════════════════════ 이력 이어하기 ═══════════════════════ */
+
+/**
+ * 이력 「이어하기」 시드 — RFP 2-1 "사용자별 대화 이력 관리(최근 대화 확인, 이어하기)".
+ *
+ * 이력 항목을 클릭하면 그 대화가 복원되고 이어서 질문할 수 있다.
+ * 규정·책무 대화는 **SCENARIOS 를 원천으로 복원**한다 — 화면 3(대화)·화면 4(근거 그래프)와
+ * 같은 데이터라 복원된 답변이 라이브 답변과 어긋나지 않는다.
+ * 문서 RAG 대화(PB·사내규정)는 근거 그래프가 없으므로 plain 답변으로 복원한다.
+ */
+interface HistorySeedMsg {
+  role: 'user' | 'assistant';
+  text: string;
+  /** 확정 답변이면 원천 시나리오 id — text 는 시나리오 verdict 로 대체된다. */
+  scId?: string;
+  /** 문서 RAG 계열 일반 답변(근거 그래프 없음). */
+  plain?: boolean;
+}
+
+const HISTORY_SEED: Record<string, { agentId: string; msgs: HistorySeedMsg[] }> = {
+  'C-118': {
+    agentId: 'GRP-001',
+    msgs: [{ role: 'user', text: '' }, { role: 'assistant', text: '', scId: 'Q1' }],
+  },
+  'C-117': {
+    agentId: 'GRP-001',
+    msgs: [{ role: 'user', text: '' }, { role: 'assistant', text: '', scId: 'Q2' }],
+  },
+  'C-116': {
+    agentId: 'AGT-204',
+    msgs: [
+      { role: 'user', text: '고객 ISA 계좌가 다음 달 만기인데, 만기 후 운용 방안 상담 초안을 정리해줘.' },
+      {
+        role: 'assistant', plain: true,
+        text: 'PB_상담_지식인덱스 v4 기준으로 ISA 만기 후 선택지는 ① 계약 연장(비과세 한도 유지) ② 연금계좌(IRP·연금저축) 전환 ③ 해지 후 일반 운용 세 갈래입니다. 고객 위험성향이 「중립」이면 전환 시 세액공제 한도(900만 원)를 함께 안내하는 초안을 권장합니다. 상세 수익률·세율은 상담 화면의 상품 고시 정보를 따르십시오.',
+      },
+    ],
+  },
+  'C-115': {
+    agentId: 'AGT-118',
+    msgs: [
+      { role: 'user', text: '연차 이월은 며칠까지 가능한가요?' },
+      {
+        role: 'assistant', plain: true,
+        text: '그룹 공통 인사규정 인덱스 기준, 미사용 연차는 최대 5일까지 다음 해로 이월할 수 있으며 이월분은 다음 해 6월 말까지 사용해야 합니다. 부서별 운영 기준이 다를 수 있으니 확정 판단은 인사 담당 부서 안내를 따르십시오.',
+      },
+    ],
+  },
+  // 재질의 — 같은 질문을 다른 날 다시 물은 이력. 답은 항상 같은 시나리오에서 나온다.
+  'C-114': {
+    agentId: 'GRP-001',
+    msgs: [{ role: 'user', text: '' }, { role: 'assistant', text: '', scId: 'Q1' }],
+  },
+  'C-113': {
+    agentId: 'AGT-204',
+    msgs: [
+      { role: 'user', text: 'IRP 계좌를 타행에서 우리 은행으로 이전하는 절차를 정리해줘.' },
+      {
+        role: 'assistant', plain: true,
+        text: '실물 이전 신청 → 기존 금융기관 해지·이전 동의 → 이전 완료(영업일 3~5일) 순서입니다. 이전 중에는 매매가 제한되며 디폴트옵션 재지정이 필요합니다. 고객 안내 시 수수료·상품 라인업 차이를 함께 안내하는 초안을 권장합니다.',
+      },
+    ],
+  },
+  'C-112': {
+    agentId: 'GRP-001',
+    msgs: [{ role: 'user', text: '' }, { role: 'assistant', text: '', scId: 'Q3' }],
+  },
+};
+
+export interface SeededMsg {
+  role: 'user' | 'assistant';
+  text: string;
+  sc?: QueryScenario;
+  plain?: boolean;
+}
+
+/** 이력 id → 복원된 대화. 시나리오 참조는 여기서 풀어 화면은 결과만 쓴다. */
+export function seedHistory(historyId: string): { agent: ChatAgentOption; msgs: SeededMsg[] } | null {
+  const seed = HISTORY_SEED[historyId];
+  if (!seed) return null;
+  const agent = CHAT_AGENTS.find((a) => a.id === seed.agentId) ?? CHAT_AGENTS[0];
+  return {
+    agent,
+    msgs: seed.msgs.map((m) => {
+      const sc = m.scId ? SCENARIOS.find((s) => s.id === m.scId) : undefined;
+      // 유저 질문이 비어 있으면 시나리오 질문으로 채운다(질문·답이 같은 원천).
+      const pairSc = seed.msgs.find((x) => x.scId)?.scId;
+      const pairScenario = pairSc ? SCENARIOS.find((s) => s.id === pairSc) : undefined;
+      const text = sc ? sc.verdict : m.text || (m.role === 'user' ? pairScenario?.question ?? '' : '');
+      return { role: m.role, text, sc, plain: m.plain };
+    }),
+  };
+}
 
 /* ═══════════════════════ 추천 질의 ═══════════════════════ */
 

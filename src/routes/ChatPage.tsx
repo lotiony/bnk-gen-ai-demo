@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
 import { useTenant } from '@/lib/tenantStore';
+import { usePersonalization } from '@/lib/personalization';
 import { PERSONAL_DOCS } from '@/data/mockPersonalDocs';
 import type { QueryScenario } from '@/data/ontologyQueries';
 import {
@@ -40,6 +41,7 @@ import {
   evidencePath,
   detectPii,
   maskPii,
+  seedHistory,
   type ChatAgentOption,
 } from '@/data/mockChat';
 
@@ -48,15 +50,27 @@ interface Msg {
   text: string;
   /** 확정 답변의 원천 시나리오. 없으면 근거 미연결 답변이다. */
   sc?: QueryScenario;
+  /** 문서 RAG 계열 일반 답변 — 이력 복원용. 근거 그래프 없이 본문만 보여 준다. */
+  plain?: boolean;
 }
 
 export default function ChatPage() {
   const persona = useCurrentPersona();
   const tenant = useTenant();
-  const [agent, setAgent] = useState<ChatAgentOption>(CHAT_AGENTS[0]);
+  /*
+   * RFP 2-1 개인화: "개인화 설정(기본 모델, 기본 에이전트 등)".
+   * 홈 개인화 모달에서 고른 기본값이 여기 초기 선택으로 반영된다 —
+   * 설정이 화면과 안 이어지면 개인화가 거짓말이 된다.
+   */
+  const prefs = usePersonalization();
+  const [agent, setAgent] = useState<ChatAgentOption>(
+    () => CHAT_AGENTS.find((a) => a.name === prefs.defaultAgent) ?? CHAT_AGENTS[0],
+  );
   /** 전체 프롬프트 보기 — 해당 에이전트 관리자에게만 열린다(2-1). */
   const [showPrompt, setShowPrompt] = useState(false);
-  const [model, setModel] = useState(CHAT_MODELS[0]);
+  const [model, setModel] = useState(
+    () => CHAT_MODELS.find((m) => m.name === prefs.defaultModel) ?? CHAT_MODELS[0],
+  );
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [pending, setPending] = useState<{ q: string; sc: QueryScenario | null } | null>(null);
@@ -109,6 +123,21 @@ export default function ChatPage() {
     setPending(null);
     setStepIdx(-1);
     setActiveRef(null);
+    setActiveHistory(null);
+  };
+
+  /** 이어하기(2-1) — 이력 항목을 클릭하면 그 대화를 복원하고 이어서 질문할 수 있다. */
+  const [activeHistory, setActiveHistory] = useState<string | null>(null);
+  const openHistory = (id: string) => {
+    const seed = seedHistory(id);
+    if (!seed || pending) return;
+    setAgent(seed.agent);
+    setMsgs(seed.msgs.map((m) => ({ role: m.role, text: m.text, sc: m.sc, plain: m.plain })));
+    setInput('');
+    setPending(null);
+    setStepIdx(-1);
+    setActiveRef(null);
+    setActiveHistory(id);
   };
 
   /** 우측 근거 패널은 **마지막 확정 답변**을 따라간다. */
@@ -136,12 +165,21 @@ export default function ChatPage() {
                 <ul className="space-y-0.5">
                   {CHAT_HISTORY.filter((h) => h.group === g).map((h) => (
                     <li key={h.id}>
-                      <div className="rounded px-2 py-1.5 hover:bg-surface-soft cursor-pointer">
+                      <button
+                        type="button"
+                        onClick={() => openHistory(h.id)}
+                        className={cn(
+                          'w-full text-left rounded px-2 py-1.5 transition-colors',
+                          activeHistory === h.id
+                            ? 'bg-brand-tint border border-brand-tint'
+                            : 'hover:bg-surface-soft border border-transparent',
+                        )}
+                      >
                         <div className="text-[11.5px] font-bold text-ink-dark truncate">{h.title}</div>
                         <div className="text-[10px] text-ink-light font-semibold mt-0.5">
                           {h.agent} · {h.at}
                         </div>
-                      </div>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -292,8 +330,12 @@ export default function ChatPage() {
                 {blocked ? '차단됨' : '전송'}
               </button>
             </div>
-            <div className="mt-1.5 text-[10px] text-ink-light font-semibold">
-              생성형 AI 산출물입니다 · 확정 근거가 표시되지 않은 내용은 업무 판단의 최종 근거로 쓰지 마십시오
+            {/* SEC-008 — 사후 학습·재활용 목적 저장 시 원본 식별 불가 처리 */}
+            <div className="mt-1.5 flex items-center gap-2 text-[10px] text-ink-light font-semibold">
+              <span>생성형 AI 산출물입니다 · 확정 근거가 표시되지 않은 내용은 업무 판단의 최종 근거로 쓰지 마십시오</span>
+              <span className="ml-auto flex-shrink-0" title="SEC-008 — 재활용 목적 저장 시 원본 식별이 불가능하도록 자동 비식별화">
+                🔒 대화·첨부는 저장 시 자동 비식별화
+              </span>
             </div>
           </div>
         </section>
@@ -453,6 +495,20 @@ function AnswerBlock({
   onPick: (q: string) => void;
 }) {
   const sc = msg.sc;
+
+  /* 문서 RAG 일반 답변 — 이력 복원용. 근거 그래프가 없는 에이전트의 답변이다. */
+  if (msg.plain) {
+    return (
+      <div className="og-answer mb-4 border border-line-soft rounded px-4 py-3.5 bg-white">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="pill bg-surface text-ink-mid border border-line-soft">문서 RAG</span>
+          <span className="text-[10px] text-ink-light font-semibold">지식 인덱스 근거 · 확정 판정 아님</span>
+        </div>
+        <p className="text-[12.5px] text-ink-dark font-semibold leading-relaxed">{msg.text}</p>
+        <AnswerActions answerId="문서 RAG 답변" />
+      </div>
+    );
+  }
 
   if (!sc) {
     return (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type FeaturedAgent } from '@/data/mockFeaturedAgents';
 import { MY_AGENTS, RECENT_SERVICES } from '@/data/mockMyAgents';
+import { CHAT_AGENTS, CHAT_MODELS } from '@/data/mockChat';
 import KpiCard from '@/components/ui/KpiCard';
 import StatusPill from '@/components/ui/StatusPill';
 import { cn } from '@/lib/utils';
@@ -96,10 +97,14 @@ export default function HomePage() {
           </div>
           <div className="flex flex-col gap-1.5">
             {MY_AGENTS.map((a) => (
-              <div key={a.id} className="text-[11px] font-semibold text-ink-dark leading-snug border-b border-line-soft last:border-0 pb-1.5 last:pb-0">
+              <Link
+                key={a.id}
+                to={a.href}
+                className="block text-[11px] font-semibold text-ink-dark leading-snug border-b border-line-soft last:border-0 pb-1.5 last:pb-0 rounded px-1 -mx-1 hover:bg-surface-soft"
+              >
                 <b className="text-ink">{a.name}</b>
                 <div className="text-[10px] text-ink-mid mt-0.5">{a.desc} · {a.lastUsedAt}</div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -115,7 +120,10 @@ export default function HomePage() {
               {favorites.map((f) => (
                 <div key={f.id} className="flex items-center gap-2">
                   <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{f.kind}</span>
-                  <span className="text-[11px] font-bold text-ink-dark truncate flex-1">{f.name}</span>
+                  <Link
+                    to={f.href}
+                    className="text-[11px] font-bold text-ink-dark truncate flex-1 hover:text-brand hover:underline"
+                  >{f.name}</Link>
                   <button
                     type="button"
                     onClick={() => toggleFavorite(f)}
@@ -134,7 +142,10 @@ export default function HomePage() {
             {RECENT_SERVICES.slice(0, 4).map((r) => (
               <div key={r.id + r.usedAt} className="flex items-center gap-2 text-[11px]">
                 <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{r.kind}</span>
-                <span className="font-bold text-ink-dark truncate flex-1">{r.name}</span>
+                <Link
+                  to={r.href}
+                  className="font-bold text-ink-dark truncate flex-1 hover:text-brand hover:underline"
+                >{r.name}</Link>
                 <span className="text-[10px] text-ink-mid font-semibold whitespace-nowrap">{r.usedAt}</span>
               </div>
             ))}
@@ -263,14 +274,15 @@ function PersonalizationModal({ onClose }: { onClose: () => void }) {
         <div className="px-5 py-4 space-y-3.5">
           <div>
             <label className="block text-[10px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1">기본 모델</label>
+            {/* 선택지는 Chat 모델 피커(CHAT_MODELS)에서 파생 — 손으로 나열하면 두 목록이 어긋난다. */}
             <select
               value={settings.defaultModel}
               onChange={(e) => setPersonalization({ defaultModel: e.target.value })}
               className="w-full py-1.5 px-2 border border-line rounded text-[12px] bg-white font-semibold"
             >
-              <option value="onprem/gpt-oss-120b">onprem/gpt-oss-120b</option>
-              <option value="onprem/qwen3-32b">onprem/qwen3-32b</option>
-              <option value="google/gemma-4-31B-it-assistant">google/gemma-4-31B-it-assistant</option>
+              {CHAT_MODELS.map((m) => (
+                <option key={m.id} value={m.name}>{m.name} — {m.hint}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -280,9 +292,9 @@ function PersonalizationModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setPersonalization({ defaultAgent: e.target.value })}
               className="w-full py-1.5 px-2 border border-line rounded text-[12px] bg-white font-semibold"
             >
-              <option>규정·책무 어시스턴트</option>
-              <option>PB 자산진단 어시스턴트</option>
-              <option>사내 규정 안내 봇</option>
+              {CHAT_AGENTS.map((a) => (
+                <option key={a.id} value={a.name}>{a.name}</option>
+              ))}
             </select>
           </div>
           <div>
