@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import TenantSwitcher from './TenantSwitcher';
 import PersonaSwitcher from './PersonaSwitcher';
 import HelpDrawer from './HelpDrawer';
+import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
 import { getApprovalBadgeCount } from '@/lib/personaView';
+import { useRfpChips, toggleRfpChips } from '@/lib/rfpChips';
 
 interface TopbarProps {
   /** 환경 배지. 비워두면 표시 안 함 */
@@ -31,6 +34,7 @@ export default function Topbar({ envBadge }: TopbarProps) {
           </span>
         )}
         <div className="ml-auto flex items-center gap-3.5 text-xs text-ink-mid">
+          <RfpToggle />
           <Link
             to="/approvals"
             title="결재함"
@@ -44,6 +48,42 @@ export default function Topbar({ envBadge }: TopbarProps) {
         </div>
       </div>
     </header>
+  );
+}
+
+/**
+ * RFP 요건 칩 토글 — 구버전 프로토타입 #rfpTgl 규약.
+ * 기본 OFF(칩 숨김) — 시연 중엔 꺼두고 "어느 요건입니까?" 질문이 나오면 켠다.
+ * body 클래스 한 줄로 44곳의 칩을 한 번에 제어한다.
+ */
+function RfpToggle() {
+  const on = useRfpChips();
+
+  useEffect(() => {
+    document.body.classList.toggle('rfp-hide', !on);
+    return () => document.body.classList.remove('rfp-hide');
+  }, [on]);
+
+  return (
+    <button
+      type="button"
+      onClick={toggleRfpChips}
+      title={on ? 'RFP 요건 번호 숨기기' : 'RFP 요건 번호 표시'}
+      className={cn(
+        'inline-flex items-center gap-1 h-6 px-2 rounded-full border text-[10px] font-extrabold tracking-[0.3px] transition-colors',
+        on
+          ? 'bg-brand-tint text-brand border-brand-dark'
+          : 'bg-white text-ink-light border-line hover:text-ink-mid hover:border-ink-light',
+      )}
+    >
+      RFP
+      <span
+        className={cn(
+          'w-1.5 h-1.5 rounded-full',
+          on ? 'bg-brand' : 'bg-line',
+        )}
+      />
+    </button>
   );
 }
 

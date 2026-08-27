@@ -61,7 +61,7 @@ function Section({
           <h2 className="text-[14px] font-extrabold text-ink">{title}</h2>
           <p className="text-[11px] text-ink-mid font-semibold mt-0.5 leading-snug">{desc}</p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-0.5">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-0.5">
           {req}
         </span>
       </div>
@@ -115,7 +115,7 @@ export default function GovernanceAdminPage() {
             담당자 · 알림 · 타시스템 트리거 · 제출 서류 · 보고서 산출을 설정한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           2-3 관리자 기능
         </span>
       </div>

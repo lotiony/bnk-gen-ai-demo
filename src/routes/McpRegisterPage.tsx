@@ -114,7 +114,7 @@ export default function McpRegisterPage() {
               OpenAPI · 레거시 전문 → MCP Tool 변환
             </span>
             <span className="pill bg-info-bg text-info border border-info-border">🏢 공동존 On-Prem</span>
-            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
               AGB-004 · EDA-004
             </span>
           </div>
@@ -433,7 +433,7 @@ function ToolCard({ tool, onExec }: { tool: McpTool; onExec: () => void }) {
       <div className="flex items-center gap-1.5 mb-1">
         <span
           className={cn(
-            'pill border font-mono tracking-normal',
+            'pill border font-mono tracking-normal rfp-chip',
             tool.method === 'GET'
               ? 'bg-info-bg text-info border-info-border'
               : 'bg-brand-tint text-brand border-brand-tint',

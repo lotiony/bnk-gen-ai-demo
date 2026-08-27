@@ -1087,7 +1087,7 @@ export default function KnowledgeDataTaskPage() {
           <div className="mt-4 pt-3.5 border-t border-line-soft">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[12.5px] font-extrabold text-ink">외부 연동 소스</span>
-              <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">EDA-003</span>
+              <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">EDA-003</span>
               <span className="text-[10.5px] text-ink-mid font-semibold">
                 계열사 파일서버 · NAS · 그룹웨어를 MCP 커넥터/표준 프로토콜로 연동 — 유입 전 민감정보 필터(SEC-004)를 거친다
               </span>

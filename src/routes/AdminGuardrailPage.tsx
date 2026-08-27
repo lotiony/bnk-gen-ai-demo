@@ -36,7 +36,7 @@ export default function AdminGuardrailPage() {
             그룹 베이스라인 위에 계열사가 강화만 얹을 수 있다 · 서비스별 완화는 예외 승인이 있어야 유효하다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           2-1 가드레일
         </span>
       </div>

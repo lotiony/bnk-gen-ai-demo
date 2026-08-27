@@ -344,7 +344,7 @@ export default function ChatPage() {
         <aside className="card flex flex-col min-h-0">
           <div className="px-4 py-2.5 border-b border-line-soft flex items-center gap-2">
             <h2 className="text-[13px] font-extrabold text-ink">근거</h2>
-            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
               RAG-007
             </span>
           </div>
@@ -371,7 +371,7 @@ export default function ChatPage() {
           <div className="border-t border-line-soft px-4 py-3 flex-shrink-0">
             <div className="flex items-center gap-1.5 mb-2">
               <h3 className="text-[11.5px] font-extrabold text-ink">개인 문서 저장소</h3>
-              <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal text-[9px]">
+              <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip text-[9px]">
                 2-1 개인문서 RAG
               </span>
             </div>
@@ -818,7 +818,7 @@ function PiiBanner({
         <span className="text-[12px] font-extrabold text-bad">
           개인정보가 감지되어 전송이 차단되었습니다
         </span>
-        <span className="ml-auto pill bg-white text-bad border border-bad-border font-mono tracking-normal">
+        <span className="ml-auto pill bg-white text-bad border border-bad-border font-mono tracking-normal rfp-chip">
           SEC-002 · SEC-003
         </span>
       </div>
@@ -948,7 +948,7 @@ function SystemPromptModal({
               {agent.id} · {agent.name}
             </p>
           </div>
-          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             2-1 사용자 포털
           </span>
           <button

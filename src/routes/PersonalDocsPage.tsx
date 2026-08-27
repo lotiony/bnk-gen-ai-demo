@@ -38,7 +38,7 @@ export default function PersonalDocsPage() {
             업로드한 문서는 자동 파싱·벡터 적재되어 대화와 에이전트 개발에 활용됩니다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           2-1 개인 문서 RAG
         </span>
       </div>

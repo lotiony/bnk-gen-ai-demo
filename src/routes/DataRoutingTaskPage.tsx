@@ -110,13 +110,13 @@ export default function DataRoutingTaskPage() {
             <span className="pill bg-brand-tint text-brand border border-brand-tint">DRT-101</span>
           </div>
           <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.4px] mr-0.5">
+            <span className="rfp-chip text-[10px] font-extrabold text-ink-light uppercase tracking-[0.4px] mr-0.5">
               대응 요건
             </span>
             {['LSM-009', 'EDA-005', 'SEC-006', 'SEC-007', 'ONM-003'].map((r) => (
               <span
                 key={r}
-                className="pill bg-white text-ink-mid border border-line font-mono tracking-normal"
+                className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip"
               >
                 {r}
               </span>
@@ -182,7 +182,7 @@ export default function DataRoutingTaskPage() {
                   >
                     {g.label}
                   </span>
-                  <span className="ml-auto pill bg-white/70 text-ink-mid border border-line-soft font-mono tracking-normal">
+                  <span className="ml-auto pill bg-white/70 text-ink-mid border border-line-soft font-mono tracking-normal rfp-chip">
                     {g.reqId}
                   </span>
                 </div>
@@ -264,7 +264,7 @@ export default function DataRoutingTaskPage() {
         <section className="card px-5 py-4">
           <div className="flex items-center gap-2 mb-2.5">
             <h2 className="text-[14px] font-extrabold text-ink">동의 권원</h2>
-            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
               SEC-007
             </span>
             <span
@@ -307,7 +307,7 @@ export default function DataRoutingTaskPage() {
         <section className="card px-5 py-4">
           <div className="flex items-center gap-2 mb-2.5">
             <h2 className="text-[14px] font-extrabold text-ink">접근 감사 로그</h2>
-            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
               ONM-003
             </span>
             <span className="text-[11px] text-ink-mid font-semibold">

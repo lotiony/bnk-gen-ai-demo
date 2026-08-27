@@ -65,7 +65,7 @@ export default function MetadataApprovalPage() {
             검증한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           EDA-008
         </span>
       </div>

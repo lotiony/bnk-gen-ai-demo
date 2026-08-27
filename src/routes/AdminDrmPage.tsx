@@ -42,7 +42,7 @@ export default function AdminDrmPage() {
             계열사마다 다른 문서보안 솔루션을 자동 인지해 실시간 복호화·재암호화한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           SEC-005
         </span>
       </div>

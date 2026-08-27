@@ -42,7 +42,7 @@ export default function PlaygroundPage() {
             설정을 실시간으로 바꿔 가며 응답 품질을 비교한다 · 개발 클러스터에서 실행
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           LSM-005 · RAG-009
         </span>
       </div>

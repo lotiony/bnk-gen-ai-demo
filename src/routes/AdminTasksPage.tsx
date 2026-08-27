@@ -49,7 +49,7 @@ export default function AdminTasksPage() {
             계열사별 과제 등록부터 결재·이행까지 한 화면에서 추적한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           2-1 과제 관리
         </span>
       </div>

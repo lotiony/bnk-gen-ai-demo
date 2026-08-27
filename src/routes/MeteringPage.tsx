@@ -74,11 +74,11 @@ export default function MeteringPage() {
           </p>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 pt-1">
-          <span className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.4px]">
+          <span className="rfp-chip text-[10px] font-extrabold text-ink-light uppercase tracking-[0.4px]">
             대응 요건
           </span>
           {['LSM-010', 'ONM-005'].map((r) => (
-            <span key={r} className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+            <span key={r} className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
               {r}
             </span>
           ))}
@@ -311,7 +311,7 @@ export default function MeteringPage() {
           <span className="pill bg-brand-tint text-brand border border-brand-tint">
             {picked} · {effectiveDept ?? '-'}
           </span>
-          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             LSM-010
           </span>
         </div>
@@ -358,7 +358,7 @@ export default function MeteringPage() {
       <section className="card px-5 py-4 mb-3.5">
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-[14px] font-extrabold text-ink">에이전트별 미터링</h2>
-          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             AGB-010
           </span>
         </div>
@@ -421,7 +421,7 @@ export default function MeteringPage() {
       <section className="card px-5 py-4 mb-3.5">
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-[14px] font-extrabold text-ink">월별 정산 리포트</h2>
-          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             ONM-005
           </span>
         </div>

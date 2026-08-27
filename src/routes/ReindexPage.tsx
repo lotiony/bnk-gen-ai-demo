@@ -36,7 +36,7 @@ export default function ReindexPage() {
             끊기지 않는다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           RAG-010
         </span>
       </div>

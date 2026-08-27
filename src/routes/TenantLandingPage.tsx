@@ -80,7 +80,7 @@ export default function TenantLandingPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-[16px] font-extrabold text-ink tracking-tight">그룹 공통 포털</span>
-              <span className="pill bg-brand-tint text-brand border border-brand-tint font-mono tracking-normal">
+              <span className="pill bg-brand-tint text-brand border border-brand-tint font-mono tracking-normal rfp-chip">
                 {GROUP_CARD.namespace}
               </span>
             </div>
@@ -117,7 +117,7 @@ export default function TenantLandingPage() {
       <section className="card px-5 py-4 mt-4">
         <div className="flex items-center gap-2 mb-2.5">
           <h2 className="text-[13px] font-extrabold text-ink">테넌트 격리 원칙</h2>
-          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             SEC-001
           </span>
         </div>

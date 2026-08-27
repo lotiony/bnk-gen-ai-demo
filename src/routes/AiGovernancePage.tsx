@@ -56,7 +56,7 @@ export default function AiGovernancePage() {
           <span className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.4px]">
             대응 요건
           </span>
-          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             2-3 AI거버넌스 포탈
           </span>
         </div>

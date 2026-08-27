@@ -72,7 +72,7 @@ export default function KnowledgeListPage() {
             원천 수집 · 파싱 · 청킹 · 임베딩 · 인덱스를 과제 단위로 관리한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           RAG-002 · 004 · 005
         </span>
       </div>
@@ -100,7 +100,7 @@ export default function KnowledgeListPage() {
               <span className="text-[12px] font-extrabold text-ink leading-tight">{t.label}</span>
             </div>
             <p className="text-[10.5px] text-ink-mid font-semibold leading-snug mb-1.5">{t.desc}</p>
-            <span className="text-[9px] font-mono font-bold text-ink-light">{t.req}</span>
+            <span className="rfp-chip text-[9px] font-mono font-bold text-ink-light">{t.req}</span>
           </Link>
         ))}
       </div>

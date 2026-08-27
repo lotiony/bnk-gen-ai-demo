@@ -64,7 +64,7 @@ export default function AdminIntakePage() {
             <b className="text-ink-dark">{pending}</b>건
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           2-1 반입 승인 · SEC-004
         </span>
       </div>

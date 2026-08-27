@@ -34,7 +34,7 @@ export default function PromptLibraryPage() {
             RAG 시스템 프롬프트를 템플릿으로 관리한다 — 버전 이력 · 롤백 · 중앙 제어
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           RAG-001
         </span>
       </div>

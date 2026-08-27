@@ -80,3 +80,8 @@
 @media (prefers-reduced-motion: reduce) {
   .og-flowdash { animation: none; opacity: 0 }
 }
+
+/* ── RFP 요건 칩 토글 (상단바 RFP 버튼 · lib/rfpChips.ts) ──
+   기본 OFF — 시연 화면을 깨끗하게 두고, 요건 질문이 나오면 켠다.
+   칩 44곳을 조건부 렌더로 바꾸는 대신 body 클래스 하나로 제어한다. */
+body.rfp-hide .rfp-chip { display: none !important; }

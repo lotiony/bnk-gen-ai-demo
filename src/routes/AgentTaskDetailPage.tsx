@@ -2525,7 +2525,7 @@ function TraceTab() {
       <div className="card px-5 py-4">
         <div className="flex items-center gap-2 mb-2.5">
           <h2 className="text-[15px] font-extrabold text-ink">실행 이력</h2>
-          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">AGB-009</span>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">AGB-009</span>
           <span className="text-[11px] text-ink-mid font-semibold">
             단계별 로그 · 입출력 · 중간 추론(CoT) — 차단된 실행도 기록된다
           </span>

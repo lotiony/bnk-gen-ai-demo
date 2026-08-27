@@ -40,7 +40,7 @@ export default function Nl2SqlPage() {
             <b className="text-ink-dark">가상화 뷰</b>다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           EDA-006 · 007
         </span>
       </div>
@@ -210,7 +210,7 @@ export default function Nl2SqlPage() {
           <section className="card p-4 self-start">
             <div className="flex items-baseline gap-2 mb-2">
               <h2 className="text-[13px] font-extrabold text-ink">가드레일 판정</h2>
-              <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+              <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
                 EDA-007
               </span>
             </div>

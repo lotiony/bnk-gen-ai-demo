@@ -141,7 +141,7 @@ export default function HelpDrawer() {
                       <summary className="text-[12px] font-extrabold text-ink cursor-pointer list-none flex items-center gap-2">
                         <span className="flex-1">{t.q}</span>
                         {t.req && (
-                          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal text-[9px]">
+                          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip text-[9px]">
                             {t.req}
                           </span>
                         )}

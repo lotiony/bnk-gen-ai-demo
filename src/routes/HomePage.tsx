@@ -268,7 +268,7 @@ function PersonalizationModal({ onClose }: { onClose: () => void }) {
       <div className="relative w-full max-w-[440px] bg-white border border-line rounded-lg shadow-xl">
         <div className="px-5 pt-4 pb-3 border-b border-line-soft flex items-start gap-3">
           <h2 className="text-[14.5px] font-extrabold text-ink flex-1">개인화 설정</h2>
-          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">2-1 개인화</span>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">2-1 개인화</span>
           <button type="button" onClick={onClose} className="text-[16px] font-black text-ink-light hover:text-ink-dark leading-none">✕</button>
         </div>
         <div className="px-5 py-4 space-y-3.5">

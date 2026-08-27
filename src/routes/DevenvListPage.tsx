@@ -44,7 +44,7 @@ export default function DevenvListPage() {
             운영 클러스터와 분리된 별도 개발 클러스터에서 동작한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           ONM-008
         </span>
       </div>

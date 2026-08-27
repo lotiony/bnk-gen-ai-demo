@@ -53,7 +53,7 @@ export default function AdminServicesPage() {
             AI서비스 · Agent · MCP 의 게시 상태, 배포 현황, 공개범위·운영영역을 관리한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           2-1 서비스운영·배포
         </span>
       </div>

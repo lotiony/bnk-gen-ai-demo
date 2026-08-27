@@ -107,7 +107,7 @@ export default function StudioTasksPage() {
             함께 보인다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           AGB-001 · 011
         </span>
       </div>
@@ -122,7 +122,7 @@ export default function StudioTasksPage() {
           >
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-[12.5px] font-extrabold text-ink">+ {s.label}</span>
-              <span className="ml-auto text-[9px] font-mono font-bold text-ink-light">{s.req}</span>
+              <span className="rfp-chip ml-auto text-[9px] font-mono font-bold text-ink-light">{s.req}</span>
             </div>
             <p className="text-[10.5px] text-ink-mid font-semibold leading-snug">{s.desc}</p>
           </Link>

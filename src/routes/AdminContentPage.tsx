@@ -30,7 +30,7 @@ export default function AdminContentPage() {
             마켓플레이스 공지사항 · 커뮤니티 · 지식공유 게시판을 관리한다
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           2-1 공지·콘텐츠
         </span>
       </div>

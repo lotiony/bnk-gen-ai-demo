@@ -55,7 +55,7 @@ export default function AdminSecurityPage() {
             개인정보 예외승인 · 데이터 스코프 정책 · 통합 감사 원장
           </p>
         </div>
-        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip flex-shrink-0 mt-1">
           SEC-008 · 009 · ONM-004
         </span>
       </div>
@@ -120,7 +120,7 @@ export default function AdminSecurityPage() {
         <div className="border border-line bg-surface-soft rounded px-3.5 py-2.5 mb-3">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-[11.5px] font-extrabold text-ink">저장 시 비식별화 원칙</span>
-            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">SEC-008</span>
+            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">SEC-008</span>
           </div>
           <p className="text-[11px] text-ink-dark font-semibold leading-snug">
             프롬프트 입력·첨부파일이 사후 학습이나 재활용 목적으로 저장될 때는{' '}

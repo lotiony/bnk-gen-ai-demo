@@ -240,7 +240,7 @@ export default function WorkflowBuilderPage() {
             </span>
             <span className="pill bg-brand-tint text-brand border border-brand-tint">WFL-101</span>
             {['AGB-002', 'AGB-005', 'AGB-008'].map((r) => (
-              <span key={r} className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+              <span key={r} className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
                 {r}
               </span>
             ))}
@@ -339,7 +339,7 @@ export default function WorkflowBuilderPage() {
           <div className="mt-3 pt-2.5 border-t border-line-soft">
             <div className="flex items-baseline gap-1.5 mb-1.5">
               <span className="text-[11px] font-extrabold text-ink">자연어로 만들기</span>
-              <span className="ml-auto text-[9px] font-mono font-bold text-ink-light">AGB-003</span>
+              <span className="rfp-chip ml-auto text-[9px] font-mono font-bold text-ink-light">AGB-003</span>
             </div>
             <textarea
               value={nlText}

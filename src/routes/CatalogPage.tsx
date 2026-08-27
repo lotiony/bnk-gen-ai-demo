@@ -516,7 +516,7 @@ function GroupAgentSection() {
         <span className="text-[11.5px] text-ink-mid font-semibold">
           운영 중 {live} · 검증/개발 중 {GROUP_AGENTS.length - live}
         </span>
-        <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal">
+        <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
           AGB-006
         </span>
       </div>
