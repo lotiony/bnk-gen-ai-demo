@@ -2,8 +2,12 @@
  * 관리 콘솔 — 보안 · 거버넌스 관리.
  *
  * RFP 2-1 관리자 포털 46 「보안·거버넌스 관리 화면」:
- * 개인정보 예외승인 정책 · 데이터 스코프 정책 · 감사 로그 검색·조회.
+ * 개인정보 예외승인 정책 · 데이터 스코프 정책 · 통합 감사 원장.
  * (가드레일·필터링 정책 자체는 별도 「가드레일 정책」 화면이 담당한다)
+ *
+ * 감사 탭은 SEC-009(전 행위 상세 보안 실행 로그) + ONM-004(누가·어떤 에이전트·
+ * 어떤 동의 권원으로 복호화 조회했는지)를 **한 원장**으로 담는다.
+ * SEC-008(비식별 저장 원칙)은 스코프 탭의 저장 정책 카드가 근거다.
  */
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -13,27 +17,34 @@ import { TENANT_SHORT } from '@/data/tenants';
 import {
   PII_EXCEPTION_REQUESTS,
   DATA_SCOPE_RULES,
-  AUDIT_LOGS,
+  UNIFIED_AUDIT,
+  UNIFIED_AUDIT_CATEGORIES,
   type PiiExceptionState,
+  type UnifiedAuditCategory,
+  type UnifiedAuditVerdict,
 } from '@/data/mockSecurityGovernance';
 
 type Tab = 'pii' | 'scope' | 'audit';
 
 const PII_TONE: Record<PiiExceptionState, 'warn' | 'ok' | 'bad'> = { 대기: 'warn', 승인: 'ok', 반려: 'bad' };
-const RESULT_TONE: Record<string, 'ok' | 'bad'> = { 성공: 'ok', 차단: 'bad', 실패: 'bad' };
+const VERDICT_TONE: Record<UnifiedAuditVerdict, 'ok' | 'bad' | 'info'> = { 허용: 'ok', 차단: 'bad', 익명화: 'info' };
 
 export default function AdminSecurityPage() {
   const [tab, setTab] = useState<Tab>('pii');
   const [decided, setDecided] = useState<Record<string, PiiExceptionState>>({});
   const [q, setQ] = useState('');
+  const [cat, setCat] = useState<UnifiedAuditCategory | 'all'>('all');
 
   const filteredLogs = useMemo(() => {
     const lower = q.trim().toLowerCase();
-    if (!lower) return AUDIT_LOGS;
-    return AUDIT_LOGS.filter((l) =>
-      [l.actor, l.tenant, l.actionType, l.target].some((v) => v.toLowerCase().includes(lower)),
-    );
-  }, [q]);
+    return UNIFIED_AUDIT.filter((l) => {
+      if (cat !== 'all' && l.category !== cat) return false;
+      if (!lower) return true;
+      return [l.actor, l.via ?? '', l.tenant, l.action, l.target, l.consentBasis ?? ''].some((v) =>
+        v.toLowerCase().includes(lower),
+      );
+    });
+  }, [q, cat]);
 
   return (
     <div>
@@ -41,11 +52,11 @@ export default function AdminSecurityPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-[19px] font-extrabold text-ink tracking-[-0.4px]">보안 · 거버넌스 관리</h1>
           <p className="text-[11.5px] text-ink-mid font-semibold mt-1">
-            개인정보 예외승인 · 데이터 스코프 정책 · 감사 로그 검색
+            개인정보 예외승인 · 데이터 스코프 정책 · 통합 감사 원장
           </p>
         </div>
         <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal flex-shrink-0 mt-1">
-          2-1 보안·거버넌스
+          SEC-008 · 009 · ONM-004
         </span>
       </div>
 
@@ -53,7 +64,7 @@ export default function AdminSecurityPage() {
         {([
           { k: 'pii' as const, label: '개인정보 예외승인' },
           { k: 'scope' as const, label: '데이터 스코프 정책' },
-          { k: 'audit' as const, label: '감사 로그 검색' },
+          { k: 'audit' as const, label: '통합 감사 원장' },
         ]).map((t) => (
           <button
             key={t.k}
@@ -104,6 +115,20 @@ export default function AdminSecurityPage() {
       )}
 
       {tab === 'scope' && (
+        <div>
+        {/* SEC-008 — 사후 학습·재활용 목적 저장 시 비식별화 원칙 */}
+        <div className="border border-line bg-surface-soft rounded px-3.5 py-2.5 mb-3">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[11.5px] font-extrabold text-ink">저장 시 비식별화 원칙</span>
+            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">SEC-008</span>
+          </div>
+          <p className="text-[11px] text-ink-dark font-semibold leading-snug">
+            프롬프트 입력·첨부파일이 사후 학습이나 재활용 목적으로 저장될 때는{' '}
+            <b>원본 식별이 불가능하도록 자동 비식별화(마스킹 · 토큰화)</b> 후 적재된다.
+            원본 복원 키는 저장 계층에 남지 않으며, 이 원칙의 예외는 상단 「개인정보 예외승인」
+            결재를 거쳐야 한다.
+          </p>
+        </div>
         <div className="card p-4">
           <table className="w-full text-[11.5px]">
             <thead>
@@ -126,31 +151,111 @@ export default function AdminSecurityPage() {
             </tbody>
           </table>
         </div>
+        </div>
       )}
 
       {tab === 'audit' && (
         <div>
-          <div className="relative mb-3 max-w-[360px]">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-mid text-[12px]">🔍</span>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="사용자 · 계열사 · 행위 · 대상 검색"
-              className="w-full py-1.5 pl-8 pr-3 border border-line rounded text-[12px] bg-white"
-            />
+          {/* 원장 안내 — 데이터 라우팅 화면의 감사 표와 같은 원장이다(ONM-004) */}
+          <div className="border border-line bg-surface-soft rounded px-3.5 py-2.5 mb-3">
+            <div className="text-[11.5px] font-extrabold text-ink mb-0.5">
+              전 행위 통합 원장 — 자원변경 · 권한양도 · 모델배포 · 프롬프트실행 · 복호화요청
+            </div>
+            <p className="text-[11px] text-ink-dark font-semibold leading-snug">
+              복호화요청 행에는 <b>누가 · 어떤 에이전트를 통해 · 어떤 동의 권원으로</b> 조회했는지가
+              함께 적산된다(ONM-004). 데이터 라우팅 화면의 접근 감사 표와 같은 원장이다 —
+              위·변조 방지를 위해 암호화 보관되며 삭제할 수 없다.
+            </p>
           </div>
-          <div className="flex flex-col gap-1.5">
-            {filteredLogs.map((l, i) => (
-              <div key={i} className="grid grid-cols-[150px_90px_90px_1fr_60px] gap-3 items-center px-3.5 py-2 bg-white border border-line-soft rounded">
-                <span className="text-[10px] font-mono font-semibold text-ink-mid tabular-nums">{l.at}</span>
-                <span className="text-[11px] font-extrabold text-ink truncate">{l.actor}</span>
-                <span className="text-[10.5px] text-ink-mid font-semibold">{TENANT_SHORT[l.tenant]}</span>
-                <span className="text-[10.5px] text-ink-dark font-semibold truncate">
-                  <b className="text-ink">{l.actionType}</b> · {l.target}
-                </span>
-                <StatusPill tone={RESULT_TONE[l.result]}>{l.result}</StatusPill>
-              </div>
-            ))}
+
+          {/* 카테고리 필터 + 검색 */}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCat('all')}
+                className={cn(
+                  'px-2.5 py-1 rounded text-[11px] font-extrabold border',
+                  cat === 'all'
+                    ? 'bg-brand text-white border-brand-dark'
+                    : 'bg-white text-ink-mid border-line hover:border-brand-dark',
+                )}
+              >전체 {UNIFIED_AUDIT.length}</button>
+              {UNIFIED_AUDIT_CATEGORIES.map((c) => {
+                const n = UNIFIED_AUDIT.filter((l) => l.category === c).length;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setCat(c)}
+                    className={cn(
+                      'px-2.5 py-1 rounded text-[11px] font-extrabold border',
+                      cat === c
+                        ? 'bg-brand text-white border-brand-dark'
+                        : 'bg-white text-ink-mid border-line hover:border-brand-dark',
+                    )}
+                  >{c} {n}</button>
+                );
+              })}
+            </div>
+            <div className="relative ml-auto w-[280px]">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-mid text-[12px]">🔍</span>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="행위자 · 에이전트 · 대상 · 동의권원 검색"
+                className="w-full py-1.5 pl-8 pr-3 border border-line rounded text-[12px] bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="border border-line-soft rounded overflow-hidden bg-white">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-surface-soft">
+                  {['시각', '행위자', '경유 에이전트', '분류', '행위 · 대상', '동의 권원', '판정'].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left text-[10px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-2 border-b border-line-soft whitespace-nowrap"
+                    >{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLogs.map((l, i) => (
+                  <tr key={`${l.at}-${i}`} className="border-b border-line-soft last:border-0 hover:bg-surface-soft/40 align-top">
+                    <td className="px-2.5 py-2 text-[10px] font-mono font-semibold text-ink-mid tabular-nums whitespace-nowrap">{l.at}</td>
+                    <td className="px-2.5 py-2 text-[11px] font-extrabold text-ink whitespace-nowrap">
+                      {l.actor}
+                      <div className="text-[9.5px] text-ink-light font-semibold">{TENANT_SHORT[l.tenant]}</div>
+                    </td>
+                    <td className="px-2.5 py-2 text-[10.5px] text-ink-dark font-semibold whitespace-nowrap">
+                      {l.via ?? <span className="text-ink-light">—</span>}
+                    </td>
+                    <td className="px-2.5 py-2 whitespace-nowrap">
+                      <span className="pill bg-surface text-ink-mid border border-line-soft">{l.category}</span>
+                    </td>
+                    <td className="px-2.5 py-2 text-[11px] min-w-[220px]">
+                      <b className="text-ink font-extrabold">{l.action}</b>
+                      <span className="text-ink-mid font-semibold"> · {l.target}</span>
+                      {l.note && <div className="text-[10px] text-ink-light font-semibold mt-0.5">{l.note}</div>}
+                    </td>
+                    <td className="px-2.5 py-2 text-[10.5px] font-semibold min-w-[140px]">
+                      {l.consentBasis ? (
+                        <span className="text-ok">{l.consentBasis}</span>
+                      ) : l.category === '복호화요청' ? (
+                        <span className="text-bad font-extrabold">권원 없음</span>
+                      ) : (
+                        <span className="text-ink-light">해당 없음</span>
+                      )}
+                    </td>
+                    <td className="px-2.5 py-2 whitespace-nowrap">
+                      <StatusPill tone={VERDICT_TONE[l.verdict]}>{l.verdict}</StatusPill>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             {filteredLogs.length === 0 && (
               <div className="text-center py-8 text-[11.5px] text-ink-mid font-semibold">검색 결과가 없습니다</div>
             )}

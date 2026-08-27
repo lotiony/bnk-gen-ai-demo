@@ -1,11 +1,17 @@
 /**
  * MCP Tool 자동 등록 — 핸드오프 §2 화면 8.
  *
- * RFP: AGB-004
+ * RFP: AGB-004 · EDA-004(레거시 금융 전문 자동 변환) · 2-1 포탈 공통(실행 통제)
  *
  * "스펙을 붙여넣으면 도구가 된다"를 보여주는 화면이다. 다만 **전부 자동은
  * 아니다**를 같은 화면에 적는다 — 쓰기 도구를 스펙만 보고 열어 주면 사고이고,
  * 화면에 그린 자동화 범위는 그대로 확약이 된다(RFP Ⅳ.4.1).
+ *
+ * 입력 소스는 둘이다 — OpenAPI(AGB-004)와 레거시 금융 전문 FEP(EDA-004).
+ * 어느 쪽이든 같은 파이프라인(파싱→매핑→부작용 판정→결재 분류)을 탄다.
+ *
+ * 실행 시뮬레이션(2-1 "MCP·Tool 호출 시 사용자 권한 및 허용범위에 따른 실행 통제")
+ * — 변환이 끝났다고 실행이 열리는 게 아니다. 호출 시점에 PDP 가 다시 판정한다.
  *
  * 여기서 등록되는 `authority.lookup` 이 화면 7 워크플로우의 MCP 노드가 쓰는
  * 바로 그 도구다. 두 화면이 같은 것을 가리켜야 흐름이 성립한다.
@@ -15,6 +21,8 @@ import { Link, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
 import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
+import { useCurrentPersona } from '@/lib/persona';
 import {
   OPENAPI_SAMPLE,
   PARSED_TOOLS,
@@ -22,8 +30,36 @@ import {
   MCP_SERVER,
   REGISTERED_SERVERS,
   NOT_AUTOMATED,
+  LEGACY_SAMPLE,
+  LEGACY_TOOLS,
+  LEGACY_CONVERT_STEPS,
+  LEGACY_MCP_SERVER,
   type McpTool,
 } from '@/data/mockMcp';
+
+type SpecKind = 'openapi' | 'fep';
+
+/** 소스 종류별 파이프라인 구성 — 어느 쪽이든 같은 흐름을 탄다. */
+const SPEC_CFG = {
+  openapi: {
+    label: 'OpenAPI Spec',
+    hint: '붙여넣기 · 3.0 / 3.1 지원',
+    placeholder: 'openapi: 3.0.3\ninfo:\n  title: ...\npaths:\n  /...:',
+    sample: OPENAPI_SAMPLE,
+    tools: PARSED_TOOLS,
+    steps: CONVERT_STEPS,
+    server: MCP_SERVER,
+  },
+  fep: {
+    label: '금융 전문 (FEP)',
+    hint: '고정길이 전문 정의서 · ISO8583 · EAI · TCP/Socket',
+    placeholder: '# FEP 전문 정의서\n[공통부] ...\n[개별부] TR_CODE=...',
+    sample: LEGACY_SAMPLE,
+    tools: LEGACY_TOOLS,
+    steps: LEGACY_CONVERT_STEPS,
+    server: LEGACY_MCP_SERVER,
+  },
+} as const;
 
 /** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
 const WORK_STANDALONE_CLS = 'max-w-[1600px] mx-auto px-8 pt-3.5 pb-10';
@@ -36,24 +72,35 @@ export default function McpRegisterPage() {
   const crumbItems = useWorkCrumb('Tool · MCP', pid);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
+  const [specKind, setSpecKind] = useState<SpecKind>('openapi');
+  const cfg = SPEC_CFG[specKind];
+
   const [spec, setSpec] = useState('');
   const [stepIdx, setStepIdx] = useState(-1);
-  const done = stepIdx >= CONVERT_STEPS.length;
+  const done = stepIdx >= cfg.steps.length;
+
+  /** 실행 시뮬레이션 대상 도구 — 열려 있으면 실행 통제 모달 표시. */
+  const [execTool, setExecTool] = useState<McpTool | null>(null);
 
   useEffect(() => {
-    if (stepIdx < 0 || stepIdx >= CONVERT_STEPS.length) return;
-    const t = setTimeout(() => setStepIdx((i) => i + 1), CONVERT_STEPS[stepIdx].ms);
+    if (stepIdx < 0 || stepIdx >= cfg.steps.length) return;
+    const t = setTimeout(() => setStepIdx((i) => i + 1), cfg.steps[stepIdx].ms);
     return () => clearTimeout(t);
-  }, [stepIdx]);
+  }, [stepIdx, cfg]);
 
   const convert = () => setStepIdx(0);
   const reset = () => {
     setSpec('');
     setStepIdx(-1);
   };
+  const pickKind = (k: SpecKind) => {
+    setSpecKind(k);
+    setSpec('');
+    setStepIdx(-1);
+  };
 
-  const readyCount = PARSED_TOOLS.filter((t) => t.status === 'ready').length;
-  const approvalCount = PARSED_TOOLS.length - readyCount;
+  const readyCount = cfg.tools.filter((t) => t.status === 'ready').length;
+  const approvalCount = cfg.tools.length - readyCount;
 
   return (
     <div className={containerCls}>
@@ -64,11 +111,11 @@ export default function McpRegisterPage() {
           <h1 className="text-[20px] font-extrabold tracking-[-0.4px]">MCP Tool 자동 등록</h1>
           <div className="mt-1.5 flex items-center gap-2 flex-wrap">
             <span className="pill bg-surface text-ink-mid border border-line-soft">
-              OpenAPI Spec → MCP Tool 변환
+              OpenAPI · 레거시 전문 → MCP Tool 변환
             </span>
             <span className="pill bg-info-bg text-info border border-info-border">🏢 공동존 On-Prem</span>
             <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">
-              AGB-004
+              AGB-004 · EDA-004
             </span>
           </div>
         </div>
@@ -86,20 +133,33 @@ export default function McpRegisterPage() {
         {/* ── 좌: 스펙 입력 ── */}
         <section className="card flex flex-col">
           <div className="px-4 py-2.5 border-b border-line-soft flex items-center gap-2">
-            <h2 className="text-[13px] font-extrabold text-ink">OpenAPI Spec</h2>
-            <span className="text-[11px] text-ink-mid font-semibold">붙여넣기 · 3.0 / 3.1 지원</span>
+            {/* 입력 소스 토글 — OpenAPI(AGB-004) / 레거시 전문(EDA-004) */}
+            {(Object.keys(SPEC_CFG) as SpecKind[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => pickKind(k)}
+                className={cn(
+                  'px-2.5 py-1 rounded text-[11.5px] font-extrabold border',
+                  specKind === k
+                    ? 'bg-brand text-white border-brand-dark'
+                    : 'bg-white text-ink-mid border-line hover:border-brand-dark',
+                )}
+              >{SPEC_CFG[k].label}</button>
+            ))}
+            <span className="text-[10.5px] text-ink-mid font-semibold">{cfg.hint}</span>
             <button
-              onClick={() => setSpec(OPENAPI_SAMPLE)}
+              onClick={() => setSpec(cfg.sample)}
               className="ml-auto pill bg-white text-ink-dark border border-line hover:border-brand hover:text-brand"
             >
-              샘플 스펙 붙여넣기
+              샘플 붙여넣기
             </button>
           </div>
           <textarea
             value={spec}
             onChange={(e) => setSpec(e.target.value)}
             spellCheck={false}
-            placeholder={'openapi: 3.0.3\ninfo:\n  title: ...\npaths:\n  /...:'}
+            placeholder={cfg.placeholder}
             className="flex-1 min-h-[420px] resize-none px-4 py-3 font-mono text-[11.5px] leading-[1.6] text-ink-dark bg-white outline-none placeholder:text-ink-light"
           />
           <div className="px-4 py-3 border-t border-line-soft flex items-center gap-2">
@@ -142,7 +202,7 @@ export default function McpRegisterPage() {
               <>
                 {/* 변환 단계 */}
                 <ol className="space-y-1.5 mb-3">
-                  {CONVERT_STEPS.slice(0, stepIdx + 1).map((s, i) => (
+                  {cfg.steps.slice(0, stepIdx + 1).map((s, i) => (
                     <li key={s.label} className="og-step flex items-start gap-2">
                       <span
                         className={cn(
@@ -167,24 +227,24 @@ export default function McpRegisterPage() {
                     {/* MCP 서버 */}
                     <div className="border border-line-soft rounded px-3.5 py-2.5 bg-surface-soft mb-3">
                       <div className="flex items-center gap-1.5 mb-1.5">
-                        <span className="text-[12.5px] font-extrabold text-ink">{MCP_SERVER.name}</span>
+                        <span className="text-[12.5px] font-extrabold text-ink">{cfg.server.name}</span>
                         <span className="pill bg-ok-bg text-ok border border-ok-border">등록 완료</span>
                       </div>
                       <dl className="grid grid-cols-[70px_1fr] gap-x-2.5 gap-y-1">
-                        <Kv k="Namespace" v={MCP_SERVER.namespace} mono />
-                        <Kv k="엔드포인트" v={MCP_SERVER.endpoint} mono />
-                        <Kv k="전송" v={MCP_SERVER.transport} />
-                        <Kv k="인증" v={MCP_SERVER.auth} />
+                        <Kv k="Namespace" v={cfg.server.namespace} mono />
+                        <Kv k="엔드포인트" v={cfg.server.endpoint} mono />
+                        <Kv k="전송" v={cfg.server.transport} />
+                        <Kv k="인증" v={cfg.server.auth} />
                       </dl>
                     </div>
 
                     {/* 도구 목록 */}
                     <div className="text-[10.5px] font-extrabold text-ink-dark uppercase tracking-[0.4px] mb-1.5">
-                      변환된 도구 {PARSED_TOOLS.length}건
+                      변환된 도구 {cfg.tools.length}건
                     </div>
                     <div className="space-y-2">
-                      {PARSED_TOOLS.map((t) => (
-                        <ToolCard key={t.name} tool={t} />
+                      {cfg.tools.map((t) => (
+                        <ToolCard key={t.name} tool={t} onExec={() => setExecTool(t)} />
                       ))}
                     </div>
 
@@ -243,14 +303,14 @@ export default function McpRegisterPage() {
             )}
           >
             <div className={cn('text-[12px] font-extrabold truncate', done ? 'text-brand' : 'text-ink-light')}>
-              {done ? MCP_SERVER.name : '변환 시 여기에 추가됩니다'}
+              {done ? cfg.server.name : '변환 시 여기에 추가됩니다'}
             </div>
             {done && (
               <>
-                <div className="text-[10px] font-mono text-ink-light mt-0.5">{MCP_SERVER.namespace}</div>
+                <div className="text-[10px] font-mono text-ink-light mt-0.5">{cfg.server.namespace}</div>
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <span className="pill bg-brand-tint text-brand border border-brand-tint">신규</span>
-                  <span className="text-[10.5px] text-ink-mid font-bold">도구 {PARSED_TOOLS.length}</span>
+                  <span className="text-[10.5px] text-ink-mid font-bold">도구 {cfg.tools.length}</span>
                 </div>
               </>
             )}
@@ -266,11 +326,107 @@ export default function McpRegisterPage() {
           ← 과제 목록으로
         </Link>
       </div>
+
+      {execTool && <ExecControlModal tool={execTool} onClose={() => setExecTool(null)} />}
     </div>
   );
 }
 
-function ToolCard({ tool }: { tool: McpTool }) {
+/**
+ * 실행 통제 모달 — RFP 2-1 포탈 공통:
+ * "Agent의 시스템·MCP·각종 Tool 호출 시 사용자 권한 및 허용범위에 따른 실행 통제".
+ *
+ * 등록과 실행은 다른 관문이다 — 조회 도구는 권한 통과를, 쓰기 도구는 호출 시점
+ * PDP 차단을 그대로 보여준다. 차단된 시도도 통합 감사 원장에 남는다(SEC-009).
+ */
+function ExecControlModal({ tool, onClose }: { tool: McpTool; onClose: () => void }) {
+  const persona = useCurrentPersona();
+  const roleLabel = persona ? `${persona.name} (${persona.role})` : '현재 사용자';
+  const blocked = tool.mutating;
+
+  const CHECKS: { k: string; ok: boolean; v: string }[] = blocked
+    ? [
+        { k: '도구 활성화 상태', ok: false, v: '쓰기 도구 — 승인권자 결재 미완료 (비활성)' },
+        { k: '사용자 허용범위', ok: false, v: '쓰기 호출은 결재 완료 후 허용 대상자에게만 열린다' },
+        { k: '감사 기록', ok: true, v: '차단된 시도로 통합 감사 원장에 적산 (SEC-009)' },
+      ]
+    : [
+        { k: '도구 활성화 상태', ok: true, v: '조회 도구 — 즉시 사용 가능' },
+        { k: '사용자 허용범위', ok: true, v: 'Namespace 내 조회 권한 보유' },
+        { k: '감사 기록', ok: true, v: '호출 단위 감사 로그 적산' },
+      ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6" onClick={onClose}>
+      <div className="absolute inset-0 bg-ink/25" aria-hidden />
+      <div
+        className="relative w-full max-w-[460px] bg-white border border-line rounded-lg shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 pt-4 pb-3 border-b border-line-soft flex items-start gap-2">
+          <span className="text-[16px]">{blocked ? '🔒' : '▶'}</span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[14px] font-extrabold text-ink">
+              실행 시뮬레이션 · <span className="font-mono">{tool.name}</span>
+            </h2>
+            <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
+              호출 주체 {roleLabel} · 실행 시점에 PDP 가 다시 판정한다
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[15px] font-black text-ink-light hover:text-ink-dark leading-none"
+          >✕</button>
+        </div>
+        <div className="px-5 py-4">
+          <div
+            className={cn(
+              'rounded px-3.5 py-2.5 border mb-3',
+              blocked ? 'bg-bad-bg border-bad-border' : 'bg-ok-bg border-ok-border',
+            )}
+          >
+            <div className={cn('text-[12.5px] font-extrabold', blocked ? 'text-bad' : 'text-ok')}>
+              {blocked ? '실행 차단 — 쓰기 도구는 결재 없이 호출할 수 없습니다' : '실행 허용 — 조회 3행 반환 (모의)'}
+            </div>
+          </div>
+          <ul className="space-y-2">
+            {CHECKS.map((c) => (
+              <li key={c.k} className="flex items-start gap-2">
+                <span
+                  className={cn(
+                    'w-[16px] h-[16px] rounded-full inline-flex items-center justify-center text-[9px] font-extrabold flex-shrink-0 mt-[1px]',
+                    c.ok ? 'bg-ok text-white' : 'bg-bad text-white',
+                  )}
+                >{c.ok ? '✓' : '✕'}</span>
+                <span className="min-w-0">
+                  <span className="block text-[11.5px] font-extrabold text-ink-dark">{c.k}</span>
+                  <span className="block text-[11px] text-ink-mid font-semibold leading-snug">{c.v}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="px-5 py-3 border-t border-line-soft flex items-center gap-2">
+          {blocked && (
+            <button
+              type="button"
+              onClick={() => { toast('승인권자 결재를 상신했습니다 — 승인 후 도구가 활성화됩니다'); onClose(); }}
+              className="h-8 px-3 border border-line rounded text-[11.5px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
+            >결재 상신</button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto h-8 px-3.5 bg-brand border border-brand-dark rounded text-[12px] font-extrabold text-white hover:bg-brand-dark"
+          >확인</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToolCard({ tool, onExec }: { tool: McpTool; onExec: () => void }) {
   const ready = tool.status === 'ready';
   return (
     <div className={cn('border rounded px-3.5 py-2.5', ready ? 'border-line-soft bg-white' : 'border-warn-border bg-warn-bg')}>
@@ -333,6 +489,14 @@ function ToolCard({ tool }: { tool: McpTool }) {
           쓰기 동작이라 자동 활성화하지 않는다 — 스펙만 보고 열어 주면 통제가 무너진다.
         </div>
       )}
+      {/* 실행 통제 — 등록됐다고 실행이 열리는 게 아니다. 호출 시점 PDP 판정을 시뮬레이션한다. */}
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          onClick={onExec}
+          className="h-[26px] px-2.5 border border-line bg-white rounded text-[11px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
+        >▶ 실행 시뮬레이션</button>
+      </div>
     </div>
   );
 }

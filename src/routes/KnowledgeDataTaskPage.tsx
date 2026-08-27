@@ -14,7 +14,7 @@ import IndexSection from '@/components/knowledgeData/IndexSection';
 import EvalSection from '@/components/knowledgeData/EvalSection';
 import DeploySection from '@/components/knowledgeData/DeploySection';
 import ParseResultModal, { type ReparseOpts } from '@/components/knowledgeData/ParseResultModal';
-import { FILE_ROWS, FOLDER_ROWS, FOLDER_FILES, type FileRow } from '@/components/knowledgeData/storageData';
+import { FILE_ROWS, FOLDER_ROWS, FOLDER_FILES, EXTERNAL_SOURCES, type FileRow } from '@/components/knowledgeData/storageData';
 import { buildInitialRun, buildHistoryMock, generateBlocks, type FileRunStatus } from '@/components/knowledgeData/parseRunData';
 import { buildIndexListMock, type IndexVersion, type IndexWithVersions } from '@/components/knowledgeData/embedData';
 import { toast } from '@/lib/toast';
@@ -1082,6 +1082,52 @@ export default function KnowledgeDataTaskPage() {
               </aside>
             </>
           )}
+
+          {/* ── 외부 연동 소스 (EDA-003) — 업로드 외에 파일서버·NAS·그룹웨어가 커넥터로 붙는다 ── */}
+          <div className="mt-4 pt-3.5 border-t border-line-soft">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[12.5px] font-extrabold text-ink">외부 연동 소스</span>
+              <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">EDA-003</span>
+              <span className="text-[10.5px] text-ink-mid font-semibold">
+                계열사 파일서버 · NAS · 그룹웨어를 MCP 커넥터/표준 프로토콜로 연동 — 유입 전 민감정보 필터(SEC-004)를 거친다
+              </span>
+              <button
+                onClick={() => toast('연동 소스 추가는 데이터 담당자 결재 후 활성화됩니다 (목업).')}
+                className="ml-auto h-[26px] px-2.5 border border-line bg-white rounded text-[11px] font-bold text-ink-dark hover:bg-surface flex-shrink-0"
+              >
+                ＋ 소스 추가
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {EXTERNAL_SOURCES.map((s) => (
+                <div key={s.id} className="border border-line-soft rounded px-3 py-2.5 bg-white">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-[11.5px] font-extrabold text-ink truncate flex-1">{s.name}</span>
+                  </div>
+                  <div className="text-[9.5px] font-mono text-ink-light truncate" title={s.origin}>{s.origin}</div>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{s.kind}</span>
+                    <span
+                      className={cn(
+                        'pill border',
+                        s.state === '동기화 정상'
+                          ? 'bg-ok-bg text-ok border-ok-border'
+                          : s.state === '동기화 중'
+                          ? 'bg-info-bg text-info border-info-border'
+                          : 'bg-surface text-ink-light border-line-soft',
+                      )}
+                    >
+                      {s.state}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-ink-mid font-semibold mt-1.5">
+                    {s.cycle} · 문서 <b className="text-ink-dark">{s.docCount.toLocaleString()}</b>
+                    <span className="text-ink-light"> · {s.lastSyncAt}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* 선택 액션 바 — 파싱에 담기 · 이동 · 삭제 */}
           {checked.size > 0 && (

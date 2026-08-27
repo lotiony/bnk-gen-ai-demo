@@ -27,6 +27,12 @@ const NAV: WorkspaceNavItem[] = [
   },
   { label: 'Tool · MCP', to: '/studio/tools', hint: 'OpenAPI·전문 자동 변환', group: '제작' },
   {
+    label: '프롬프트 라이브러리',
+    to: '/studio/prompts',
+    hint: '템플릿 · 버전 · 중앙 제어',
+    group: '제작',
+  },
+  {
     label: '플레이그라운드',
     to: '/studio/playground',
     hint: '모델 · RAG 시험',

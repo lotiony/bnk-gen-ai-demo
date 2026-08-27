@@ -31,6 +31,7 @@ import AdminDashboardPage from './routes/AdminDashboardPage';
 import StudioLayout from './components/layout/StudioLayout';
 import KnowledgeLayout from './components/layout/KnowledgeLayout';
 import StudioTasksPage from './routes/StudioTasksPage';
+import PromptLibraryPage from './routes/PromptLibraryPage';
 import KnowledgeListPage from './routes/KnowledgeListPage';
 import PlaygroundPage from './routes/PlaygroundPage';
 import DevenvListPage from './routes/DevenvListPage';
@@ -133,6 +134,7 @@ export default function App() {
           <Route path="agents" element={<AgentTaskRegisterPage />} />
           <Route path="workflow" element={<WorkflowBuilderPage />} />
           <Route path="tools" element={<McpRegisterPage />} />
+          <Route path="prompts" element={<PromptLibraryPage />} />
           <Route path="playground" element={<PlaygroundPage />} />
           <Route path="devenv" element={<DevenvListPage />} />
           <Route path="devenv/:taskId" element={<DevenvTaskDetailPage />} />

@@ -32,6 +32,54 @@ export const FOLDER_ROWS: FolderRow[] = [
   { name: 'archive', updatedBy: '박서연', updatedAt: '2025-12-01', childCount: 14 },
 ];
 
+/* ═══════════════════════ 외부 연동 소스 (EDA-003) ═══════════════════════ */
+
+/**
+ * RFP EDA-003 (필수): "외부 자회사 시스템에 분산된 비정형 데이터(파일 서버, NAS 등)를
+ * 본 플랫폼과 안전하게 연동할 수 있는 표준 연동 방안 제시 (MCP 기반의 연동 인터페이스
+ * 및 대안 방식 포함)"
+ *
+ * 업로드만이 아니다 — 계열사 파일서버·NAS·그룹웨어가 커넥터로 붙어
+ * 동기화 주기에 따라 저장소로 들어온다. 유입 전 SEC-004 필터를 거친다.
+ */
+export type ExternalSourceState = '동기화 정상' | '동기화 중' | '연결 대기';
+
+export interface ExternalSource {
+  id: string;
+  name: string;
+  /** 연동 방식 — MCP 커넥터가 기본, 대안은 표준 프로토콜. */
+  kind: 'MCP 커넥터' | 'SMB/NFS' | 'REST 수집기';
+  /** 원천 위치. */
+  origin: string;
+  cycle: '실시간' | '일 1회' | '주 1회';
+  docCount: number;
+  lastSyncAt: string;
+  state: ExternalSourceState;
+}
+
+export const EXTERNAL_SOURCES: ExternalSource[] = [
+  {
+    id: 'SRC-NAS-01', name: '부산은행 상품문서 NAS', kind: 'SMB/NFS',
+    origin: 'nas-bs-01.bs.bnk.local/products', cycle: '일 1회',
+    docCount: 1240, lastSyncAt: '오늘 04:00', state: '동기화 정상',
+  },
+  {
+    id: 'SRC-GW-01', name: '그룹웨어 문서함 (부서 공유)', kind: 'MCP 커넥터',
+    origin: 'mcp://groupware.bnk.local · docs.list', cycle: '실시간',
+    docCount: 386, lastSyncAt: '5분 전', state: '동기화 정상',
+  },
+  {
+    id: 'SRC-FS-02', name: '여신심사부 파일서버', kind: 'SMB/NFS',
+    origin: 'fs-loan.bs.bnk.local/manual', cycle: '주 1회',
+    docCount: 88, lastSyncAt: '2026-01-05 04:00', state: '동기화 중',
+  },
+  {
+    id: 'SRC-EX-01', name: '보험 청구서식 수집기 (BNK캐피탈)', kind: 'REST 수집기',
+    origin: 'https://api.capital.bnk.local/forms', cycle: '일 1회',
+    docCount: 0, lastSyncAt: '—', state: '연결 대기',
+  },
+];
+
 /** 폴더 안 파일 (폴더명 → 파일 목록). 공용 데이터 폴더는 읽기 전용. */
 export const FOLDER_FILES: Record<string, FileRow[]> = {
   '규정 매뉴얼': [

@@ -47,8 +47,14 @@ import {
   type PiiChangeStatus,
 } from '@/data/mockAgentGovernance';
 import { toast } from '@/lib/toast';
+import {
+  TRACE_RUNS,
+  SPAN_KIND_META,
+  type TraceRun,
+  type TraceSpan,
+} from '@/data/mockAgentTrace';
 
-type TabId = 'develop' | 'deploy' | 'ops' | 'eval';
+type TabId = 'develop' | 'deploy' | 'ops' | 'eval' | 'trace';
 
 const STATE_TONE: Record<string, string> = {
   '운영 중': 'bg-ok-bg text-ok border-ok-border',
@@ -136,10 +142,16 @@ export default function AgentTaskDetailPage() {
         <TabBtn active={tab === 'eval'} onClick={() => setTab('eval')}>
           평가
         </TabBtn>
+        <TabBtn active={tab === 'trace'} onClick={() => setTab('trace')}>
+          실행 Trace
+        </TabBtn>
       </nav>
 
       {/* 개발 — GitLab · CI/CD */}
       {tab === 'develop' && <DevelopTab task={task} />}
+
+      {/* 실행 Trace — AGB-009 단계별 실행 로그·입출력·CoT (포탈 내장 뷰) */}
+      {tab === 'trace' && <TraceTab />}
 
       {/* 배포 — 학습계/서빙계 + 결재 */}
       {tab === 'deploy' && (
@@ -2491,5 +2503,157 @@ function ChipButton({
 // 사용하지 않는 import 호환 (mock 데이터 필드 유지용)
 type _UnusedLoadTestRun = LoadTestRun;
 type _UnusedLoadTestStatus = LoadTestStatus;
+
+/* ═══════════════════════ 실행 Trace 탭 (AGB-009) ═══════════════════════ */
+
+/**
+ * RFP AGB-009 (필수): "단계별 실행 로그, 입력값, 출력값, 중간 추론 과정(CoT 등)을
+ * 표시, 기록하고 관리자가 추적할 수 있는 기능".
+ *
+ * Langfuse 딥링크는 유지하되 **포탈 내장 뷰가 우선**이다 — 외부 링크만으로는
+ * "기능 제공"이 화면에서 증명되지 않는다. 입력값은 SEC-008 원칙대로 이미
+ * 마스킹된 상태로 기록된 것을 보여 준다.
+ */
+function TraceTab() {
+  const [runId, setRunId] = useState<string>(TRACE_RUNS[0].id);
+  const run = TRACE_RUNS.find((r) => r.id === runId) ?? TRACE_RUNS[0];
+  const maxMs = Math.max(...run.spans.map((s) => s.ms));
+
+  return (
+    <section className="space-y-3.5">
+      {/* 실행 선택 */}
+      <div className="card px-5 py-4">
+        <div className="flex items-center gap-2 mb-2.5">
+          <h2 className="text-[15px] font-extrabold text-ink">실행 이력</h2>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal">AGB-009</span>
+          <span className="text-[11px] text-ink-mid font-semibold">
+            단계별 로그 · 입출력 · 중간 추론(CoT) — 차단된 실행도 기록된다
+          </span>
+          <button
+            type="button"
+            onClick={() => toast('Langfuse 콘솔은 데모 범위 밖입니다 — 내장 Trace 뷰로 동일 데이터를 확인합니다')}
+            className="ml-auto text-[10.5px] font-extrabold text-info hover:underline"
+          >Langfuse 원본 ↗</button>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {TRACE_RUNS.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => setRunId(r.id)}
+              className={cn(
+                'flex items-center gap-3 px-3.5 py-2.5 border rounded text-left transition-colors',
+                r.id === runId ? 'border-brand-dark bg-brand-bg' : 'border-line-soft bg-white hover:border-brand-dark',
+              )}
+            >
+              <span className="text-[11px] font-mono font-bold text-ink-dark flex-shrink-0">{r.id}</span>
+              <span className="text-[10.5px] text-ink-mid font-semibold whitespace-nowrap">{r.at}</span>
+              <span className="text-[10.5px] text-ink-mid font-semibold">
+                사용자 <span className="font-mono">{r.maskedUser}</span> · <span className="font-mono">{r.model}</span>
+              </span>
+              <span className="ml-auto text-[10.5px] text-ink-mid font-semibold tabular-nums whitespace-nowrap">
+                {r.totalMs.toLocaleString()}ms · in {r.tokensIn.toLocaleString()} / out {r.tokensOut.toLocaleString()} tok
+              </span>
+              <span
+                className={cn(
+                  'pill border flex-shrink-0',
+                  r.verdict === '정상 완료'
+                    ? 'bg-ok-bg text-ok border-ok-border'
+                    : r.verdict === '차단'
+                    ? 'bg-bad-bg text-bad border-bad-border'
+                    : 'bg-warn-bg text-warn border-warn-border',
+                )}
+              >{r.verdict}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Span 트리 */}
+      <div className="card px-5 py-4">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-[15px] font-extrabold text-ink">단계별 Trace</h2>
+          <span className="text-[11px] text-ink-mid font-semibold">
+            {run.id} · span {run.spans.length}개 — 입력값은 마스킹 후 기록(SEC-008)
+          </span>
+        </div>
+        <ul className="space-y-1.5">
+          {run.spans.map((s) => (
+            <TraceSpanRow key={s.id} span={s} maxMs={maxMs} />
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function TraceSpanRow({ span, maxMs }: { span: TraceSpan; maxMs: number }) {
+  const [open, setOpen] = useState(false);
+  const meta = SPAN_KIND_META[span.kind];
+  const widthPct = Math.max(3, Math.round((span.ms / maxMs) * 100));
+  const hasDetail = !!(span.input || span.output || span.thought || span.note);
+
+  return (
+    <li style={{ paddingLeft: span.depth * 22 }}>
+      <button
+        type="button"
+        onClick={() => hasDetail && setOpen((v) => !v)}
+        className={cn(
+          'w-full grid grid-cols-[70px_1fr_170px_60px] gap-2.5 items-center px-3 py-2 border rounded text-left',
+          span.status === 'error'
+            ? 'border-bad-border bg-bad-bg/40'
+            : span.status === 'warn'
+            ? 'border-warn-border bg-warn-bg/40'
+            : 'border-line-soft bg-white',
+          hasDetail && 'hover:border-brand-dark cursor-pointer',
+        )}
+      >
+        <span className={cn('pill border justify-self-start', meta.cls)}>{meta.label}</span>
+        <span className="min-w-0">
+          <span className="text-[12px] font-extrabold text-ink truncate block">{span.name}</span>
+        </span>
+        {/* duration bar */}
+        <span className="h-[7px] rounded-full bg-surface overflow-hidden">
+          <span
+            className={cn(
+              'block h-full rounded-full',
+              span.status === 'error' ? 'bg-bad' : span.status === 'warn' ? 'bg-warn' : 'bg-brand',
+            )}
+            style={{ width: `${widthPct}%` }}
+          />
+        </span>
+        <span className="text-[10.5px] font-bold text-ink-mid tabular-nums text-right">{span.ms}ms</span>
+      </button>
+      {open && hasDetail && (
+        <div className="mt-1 mb-1.5 ml-3 border-l-2 border-line pl-3 py-1 space-y-1">
+          {span.input && (
+            <div className="text-[10.5px]">
+              <span className="font-extrabold text-ink-light uppercase tracking-[0.3px] mr-1.5">입력</span>
+              <span className="font-mono text-ink-dark">{span.input}</span>
+            </div>
+          )}
+          {span.thought && (
+            <div className="text-[10.5px]">
+              <span className="font-extrabold text-ink-light uppercase tracking-[0.3px] mr-1.5">추론(CoT)</span>
+              <span className="text-ink-dark font-semibold">{span.thought}</span>
+            </div>
+          )}
+          {span.output && (
+            <div className="text-[10.5px]">
+              <span className="font-extrabold text-ink-light uppercase tracking-[0.3px] mr-1.5">출력</span>
+              <span className="font-mono text-ink-dark">{span.output}</span>
+            </div>
+          )}
+          {span.note && (
+            <div className="text-[10px] text-ink-mid font-semibold italic">{span.note}</div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+// TraceRun 타입은 목록 렌더에서 추론되지만 명시 참조로 남겨 둔다.
+type _UnusedTraceRun = TraceRun;
 
 
