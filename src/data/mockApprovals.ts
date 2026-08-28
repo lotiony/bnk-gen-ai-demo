@@ -26,9 +26,39 @@ import { promoteAssetScope } from '@/data/mockCatalog';
  *
  * `ApprovalCategory`(src/types)는 이 데모의 다른 화면들이 함께 쓰는 공용 타입이라
  * 여기서 유니온을 넓히지 않는다. 대신 값만 추가하고 결재함·결재 상세가 이 상수로
- * 분기한다 — 칩 매핑(`APPR_CHIP`)은 `Record<string, …>` 이라 그대로 받는다.
+ * 분기한다.
+ *
+ * ⚠️ 캐스팅으로 유니온을 우회하므로 **칩 매핑 누락을 타입 검사가 잡아 주지 못한다.**
+ *    실제로 홈·프로젝트 결재 탭이 각자 복사해 둔 매핑에 `promote` 가 없어서
+ *    이 값이 섞이는 순간 화면 전체가 빈 채로 죽었다(`chip.cls` of undefined).
+ *    그래서 매핑을 아래 `APPROVAL_CHIP` 한 곳으로 모으고, 조회는 반드시
+ *    `approvalChip()` 을 거치게 한다 — 모르는 값이 와도 화면은 살아 있어야 한다.
  */
 export const PROMOTE_CATEGORY = 'promote' as unknown as ApprovalItem['category'];
+
+/**
+ * 결재 종류 칩 — **단일 출처**.
+ *
+ * 홈 · 전역 결재함 · 프로젝트 결재 탭이 같은 라벨과 색을 쓴다. 예전에는 세 화면이
+ * 각자 같은 객체를 복사해 갖고 있었고, 새 종류가 생겼을 때 한 곳만 갱신되었다.
+ */
+export const APPROVAL_CHIP: Record<string, { cls: string; label: string }> = {
+  register: { cls: 'bg-brand-tint text-brand border-brand-tint', label: '프로젝트 생성' },
+  train: { cls: 'bg-info-bg text-info border-info-border', label: '학습계' },
+  serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '서빙계 배포' },
+  discard: { cls: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border', label: '폐기' },
+  policy: { cls: 'bg-warn-bg text-warn border-warn-border', label: '정책' },
+  table: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '테이블 생성' },
+  account: { cls: 'bg-bad-bg text-bad border-bad-border', label: '계정 생성' },
+  redteam: { cls: 'bg-warn-bg text-bad border-bad-border', label: '레드팀 신청' },
+  // RFP 1.3.2 "관리자 승인 절차 기반 배포·공유 범위 통제" — 마켓플레이스에서 올라온 승격 결재.
+  promote: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '공유범위 승격' },
+};
+
+/** 매핑에 없는 종류가 와도 화면이 죽지 않도록 항상 이 함수로 조회한다. */
+export function approvalChip(category: string): { cls: string; label: string } {
+  return APPROVAL_CHIP[category] ?? { cls: 'bg-surface text-ink-mid border-line', label: category };
+}
 
 export const approvals: ApprovalItem[] = [
   {

@@ -6,19 +6,7 @@ import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
 import { getVisibleApprovals } from '@/lib/personaView';
 import { useDeployApprovals } from '@/lib/deployApprovalStore';
-
-const APPR_CHIP: Record<string, { cls: string; label: string }> = {
-  register: { cls: 'bg-brand-tint text-brand border-brand-tint', label: '프로젝트 생성' },
-  train: { cls: 'bg-info-bg text-info border-info-border', label: '학습계' },
-  serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '서빙계 배포' },
-  discard: { cls: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border', label: '폐기' },
-  policy: { cls: 'bg-warn-bg text-warn border-warn-border', label: '정책' },
-  table: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '테이블 생성' },
-  account: { cls: 'bg-bad-bg text-bad border-bad-border', label: '계정 생성' },
-  redteam: { cls: 'bg-warn-bg text-bad border-bad-border', label: '레드팀 신청' },
-  // RFP 1.3.2 "관리자 승인 절차 기반 배포·공유 범위 통제" — 마켓플레이스에서 올라온 승격 결재.
-  promote: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '공유범위 승격' },
-};
+import { approvalChip } from '@/data/mockApprovals';
 
 export default function ApprovalInboxPage() {
   useDeployApprovals(); // 배포 결재 스토어 변경 구독 (목록 갱신)
@@ -66,10 +54,7 @@ function Section({
       </h3>
       <div className="flex flex-col gap-1.5">
         {items.map((a) => {
-          const chip = APPR_CHIP[a.category] ?? {
-            cls: 'bg-surface text-ink-mid border-line-soft',
-            label: '결재',
-          };
+          const chip = approvalChip(a.category);
           return (
             <Link
               key={a.id}

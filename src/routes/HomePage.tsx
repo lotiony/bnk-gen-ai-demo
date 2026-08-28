@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
 import { useFavorites, usePersonalization, setPersonalization, toggleFavorite } from '@/lib/personalization';
 import { toast } from '@/lib/toast';
+import { approvalChip } from '@/data/mockApprovals';
 import {
   getHomeKpis,
   getHomeFeaturedAgents,
@@ -17,17 +18,6 @@ import {
   canAccessArea,
   canAccessGovernance,
 } from '@/lib/personaView';
-
-const APPR_CHIP: Record<string, { cls: string; label: string }> = {
-  register: { cls: 'bg-brand-tint text-brand border-brand-tint', label: '프로젝트 생성' },
-  train: { cls: 'bg-info-bg text-info border-info-border', label: '학습계' },
-  serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '서빙계 배포' },
-  discard: { cls: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border', label: '폐기' },
-  policy: { cls: 'bg-warn-bg text-warn border-warn-border', label: '정책' },
-  table: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '테이블 생성' },
-  account: { cls: 'bg-bad-bg text-bad border-bad-border', label: '계정 생성' },
-  redteam: { cls: 'bg-warn-bg text-bad border-bad-border', label: '레드팀 신청' },
-};
 
 /** 홈 대시보드 — 개인 워크스페이스. KPI / 결재 / AI Studio · 거버넌스 포탈 진입 */
 export default function HomePage() {
@@ -164,7 +154,7 @@ export default function HomePage() {
           </div>
           <div className="flex flex-col gap-1.5">
             {homeApprovals.map((a) => {
-              const chip = APPR_CHIP[a.category];
+              const chip = approvalChip(a.category);
               return (
                 <Link
                   key={a.id}
