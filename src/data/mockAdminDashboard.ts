@@ -658,8 +658,19 @@ export function getAdminKpis(rows: TaskUsageRow[]) {
   const operating = rows.filter((r) => r.status === '운영 중').length;
   const planning = rows.filter((r) => r.status === '개발 중').length;
 
+  /*
+   * 에이전트 수는 **자산 단위로 중복 제거**해서 센다. 과제별 합으로 세면 한 자산이
+   * 두 과제에 걸릴 때 두 번 잡혀, 헤더의 "에이전트 23종"과 KPI 의 "총 25"가
+   * 한 화면에서 어긋난다. 같은 화면이 같은 대상을 다른 수로 말하면 안 된다.
+   */
+  const allIds = new Set<string>();
+  for (const r of rows) r.agentIds.forEach((id) => allIds.add(id));
+  const totalAgents = allIds.size;
   const totalServing = rows.reduce((a, r) => a + r.servingAgents, 0);
-  const totalAgents = rows.reduce((a, r) => a + r.totalAgents, 0);
+  // 카탈로그 등재분과 아직 등재 전(개발 중)을 나눠 둔다 — 화면이 23 과 25 를
+  // 나란히 보여 주므로 각각이 무엇을 센 수인지 밝힐 수 있어야 한다.
+  const pendingAgents = new Set(ADMIN_TASKS.flatMap((t) => t.pendingAgentIds)).size;
+  const catalogAgents = totalAgents - pendingAgents;
 
   const totalCalls = rows.reduce((a, r) => a + r.monthCalls, 0);
 
@@ -679,8 +690,12 @@ export function getAdminKpis(rows: TaskUsageRow[]) {
     operatingTasks: operating,
     planningTasks: planning,
     totalServingAgents: totalServing,
-    /** 플랫폼 전체 에이전트 수 = 카탈로그 13 + 그룹 공통 10 + 게시 대기·중지 산출물. */
+    /** 플랫폼 전체 에이전트 수 — 과제가 참조하는 자산을 중복 없이 센다. */
     totalAgents,
+    /** 그중 카탈로그 등재분(= 상단 부제의 "에이전트 N종"). */
+    catalogAgents,
+    /** 아직 등재 전인 개발 중 산출물. */
+    pendingAgents,
     totalCalls,
     sloAvg: sloWeighted,
     totalCost,

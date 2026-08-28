@@ -387,7 +387,10 @@ function OverviewTab({ rows }: { rows: TaskUsageRow[] }) {
           label="에이전트"
           value={`${kpis.totalServingAgents}`}
           unit="개"
-          sub={`서빙계 ${kpis.totalServingAgents} / 총 ${kpis.totalAgents}`}
+          /* 상단 부제의 "에이전트 23종"은 카탈로그 등재분이고, 여기 총계는 아직 등재
+             전인 개발 중 자산까지 센다. 같은 화면에 23 과 25 가 나란히 뜨므로
+             무엇을 세는 수인지 라벨에 밝혀 둔다. */
+          sub={`서빙계 ${kpis.totalServingAgents} · 카탈로그 ${kpis.catalogAgents} + 개발 중 ${kpis.pendingAgents}`}
           tone="ok"
         />
         <KpiCard
