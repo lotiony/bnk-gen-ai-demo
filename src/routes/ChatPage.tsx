@@ -16,13 +16,24 @@
  * 메시지다 — "추측으로 답하면 근거를 제시할 수 없다".
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
 import { useTenant } from '@/lib/tenantStore';
 import { usePersonalization } from '@/lib/personalization';
+import { DEMO_TODAY } from '@/data/demoClock';
 import { PERSONAL_DOCS } from '@/data/mockPersonalDocs';
+import {
+  ATTACH_SAMPLES,
+  ATTACH_STEPS,
+  ATTACH_VERDICT_TONE,
+  ATTACH_VERDICT_LABEL,
+  ATTACH_RETENTION_NOTE,
+  type AttachFile,
+  type AttachAction,
+} from '@/data/mockChatAttach';
 import type { QueryScenario } from '@/data/ontologyQueries';
 import {
   CHAT_AGENTS,
@@ -56,6 +67,8 @@ interface Msg {
   sc?: QueryScenario;
   /** 문서 RAG 계열 일반 답변 — 이력 복원용. 근거 그래프 없이 본문만 보여 준다. */
   plain?: boolean;
+  /** 이 턴에 함께 올린 첨부(2-1 대화중 파일 업로드). */
+  att?: AttachFile;
 }
 
 export default function ChatPage() {
@@ -96,7 +109,17 @@ export default function ChatPage() {
     q: string;
     sc: QueryScenario | null;
     doc: DocAnswer | null;
+    /** 첨부 턴이면 실행 단계가 반입 검사부터 시작한다. */
+    att: AttachFile | null;
+    /** 첨부에서 나온 답변 — 있으면 인덱스를 타지 않고 이 문장을 커밋한다. */
+    ans: string | null;
   } | null>(null);
+  /*
+   * RFP 2-1 — "대화중 파일 업로드 기능(문서/이미지), 업로드 파일 기반 응답·요약·번역".
+   * 첨부는 개인 문서 저장소와 달리 **이 세션에서만** 쓰인다(인덱스 미적재).
+   */
+  const [attached, setAttached] = useState<AttachFile | null>(null);
+  const [attachOpen, setAttachOpen] = useState(false);
   const [stepIdx, setStepIdx] = useState(-1);
   const [activeRef, setActiveRef] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -105,7 +128,11 @@ export default function ChatPage() {
   const blocked = piiHits.length > 0;
 
   /** 근거를 잇지 못하면 앵커링에서 멈춘다 — 단계를 끝까지 돌리지 않는다. */
-  const steps = pending?.sc || pending?.doc ? RUN_STEPS : RUN_STEPS.slice(0, 2);
+  const steps = pending?.att
+    ? ATTACH_STEPS
+    : pending?.sc || pending?.doc
+      ? RUN_STEPS
+      : RUN_STEPS.slice(0, 2);
 
   /* 재생 — 단계 하나씩 진행 후 답변을 커밋한다. */
   useEffect(() => {
@@ -113,15 +140,17 @@ export default function ChatPage() {
     if (stepIdx >= steps.length) {
       const sc = pending.sc;
       const doc = pending.doc;
+      const ans = pending.ans;
       setMsgs((m) => [
         ...m,
         {
           role: 'assistant',
-          // 온톨로지 에이전트는 확정 판정을, 문서 RAG 에이전트는 인용 요약을 낸다.
-          // 둘 다 못 잡으면 그때만 "근거를 잇지 못했다"로 떨어진다.
-          text: sc ? sc.verdict : (doc?.a ?? UNGROUNDED_ANSWER.head),
-          sc: sc ?? undefined,
-          plain: !sc && !!doc,
+          // 첨부 답변이 있으면 그것이 우선한다 — 첨부 턴은 인덱스를 타지 않는다.
+          // 없으면 온톨로지 에이전트는 확정 판정을, 문서 RAG 에이전트는 인용 요약을 낸다.
+          // 셋 다 못 잡으면 그때만 "근거를 잇지 못했다"로 떨어진다.
+          text: ans ?? (sc ? sc.verdict : (doc?.a ?? UNGROUNDED_ANSWER.head)),
+          sc: ans ? undefined : (sc ?? undefined),
+          plain: !!ans || (!sc && !!doc),
         },
       ]);
       setActiveRef(null);
@@ -138,16 +167,31 @@ export default function ChatPage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs, stepIdx, pending]);
 
-  const send = (raw?: string) => {
-    const q = (raw ?? input).trim();
+  /**
+   * 첨부에 붙은 작업(요약·번역·추출)을 자유 입력에서도 잡는다.
+   *
+   * 작업 버튼으로만 첨부를 쓰게 하면, 파일을 올린 사람이 "요약해줘" 라고 타이핑했을 때
+   * 첨부를 무시한 답이 나온다 — 시연에서 가장 나기 쉬운 사고라 키워드로 이어 준다.
+   */
+  const matchAttachAction = (q: string): AttachAction | null => {
+    if (!attached || attached.verdict === 'blocked') return null;
+    return attached.actions.find((a) => q.includes(a.kind)) ?? null;
+  };
+
+  const send = (raw?: string, act?: AttachAction) => {
+    const q = (act?.q ?? raw ?? input).trim();
     if (!q || pending) return;
     if (detectPii(q).length > 0) return; // 차단 상태에서는 전송 자체가 일어나지 않는다
-    setMsgs((m) => [...m, { role: 'user', text: q }]);
+    const action = act ?? matchAttachAction(q);
+    const att = action ? attached : null;
+    setMsgs((m) => [...m, { role: 'user', text: q, att: att ?? undefined }]);
     setInput('');
     setPending({
       q,
-      sc: agent.ontology ? matchScenario(q) : null,
-      doc: agent.ontology ? null : matchDocAnswer(agent.id, q),
+      sc: action ? null : agent.ontology ? matchScenario(q) : null,
+      doc: action ? null : agent.ontology ? null : matchDocAnswer(agent.id, q),
+      att,
+      ans: action?.a ?? null,
     });
     setStepIdx(0);
   };
@@ -159,6 +203,8 @@ export default function ChatPage() {
     setStepIdx(-1);
     setActiveRef(null);
     setActiveHistory(null);
+    setAttached(null);
+    setAttachOpen(false);
   };
 
   /** 이어하기(2-1) — 이력 항목을 클릭하면 그 대화를 복원하고 이어서 질문할 수 있다. */
@@ -286,7 +332,7 @@ export default function ChatPage() {
 
             {msgs.map((m, i) =>
               m.role === 'user' ? (
-                <UserBubble key={i} text={m.text} />
+                <UserBubble key={i} text={m.text} att={m.att} />
               ) : (
                 <AnswerBlock
                   key={i}
@@ -304,6 +350,16 @@ export default function ChatPage() {
           {/* 입력 */}
           <div className="px-4 py-3 border-t border-line-soft">
             {blocked && <PiiBanner hits={piiHits} preview={maskPii(input, piiHits)} />}
+
+            {/* 첨부 상태 — 반입 검사 결과와 가능한 작업을 입력창 바로 위에 붙인다. */}
+            {attached && (
+              <AttachBar
+                att={attached}
+                disabled={!!pending}
+                onRemove={() => setAttached(null)}
+                onAct={(a) => send(undefined, a)}
+              />
+            )}
 
             <div className="flex items-center gap-1.5 mb-2 flex-wrap">
               <span className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.4px]">
@@ -332,16 +388,31 @@ export default function ChatPage() {
 
             <div
               className={cn(
-                'flex items-end gap-2 border rounded px-3 py-2 bg-white transition-colors',
+                'relative flex items-end gap-2 border rounded px-3 py-2 bg-white transition-colors',
                 blocked ? 'border-bad ring-1 ring-bad/30' : 'border-line focus-within:border-brand-dark',
               )}
             >
+              {/* RFP 2-1 — 대화중 파일 업로드(문서/이미지). */}
               <button
-                className="text-[15px] leading-none pb-1 text-ink-light hover:text-ink-mid"
-                title="파일 첨부 — 데모 범위 밖"
+                type="button"
+                onClick={() => setAttachOpen((v) => !v)}
+                className={cn(
+                  'text-[15px] leading-none pb-1 transition-colors',
+                  attachOpen || attached ? 'text-brand' : 'text-ink-light hover:text-ink-mid',
+                )}
+                title="파일 첨부"
               >
                 📎
               </button>
+              {attachOpen && (
+                <AttachPicker
+                  onPick={(f) => {
+                    setAttached(f);
+                    setAttachOpen(false);
+                  }}
+                  onClose={() => setAttachOpen(false)}
+                />
+              )}
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -486,11 +557,23 @@ function EmptyState({ onPick, persona }: { onPick: (q: string) => void; persona?
   );
 }
 
-function UserBubble({ text }: { text: string }) {
+function UserBubble({ text, att }: { text: string; att?: AttachFile }) {
   return (
     <div className="flex justify-end mb-3.5">
-      <div className="max-w-[76%] bg-brand-tint border border-brand-tint rounded px-3.5 py-2.5">
-        <span className="text-[12.5px] font-bold text-ink leading-relaxed">{text}</span>
+      <div className="max-w-[76%] flex flex-col items-end gap-1">
+        {/* 2-1 — 어떤 파일을 붙여 물었는지가 답변 이력에 남아야 한다. */}
+        {att && (
+          <div className="inline-flex items-center gap-1.5 bg-white border border-line rounded px-2 py-1">
+            <span className="text-[11px]">📄</span>
+            <span className="text-[10.5px] font-extrabold text-ink-dark">{att.name}</span>
+            <span className={cn('pill text-[9px]', ATTACH_VERDICT_TONE[att.verdict])}>
+              {ATTACH_VERDICT_LABEL[att.verdict]}
+            </span>
+          </div>
+        )}
+        <div className="bg-brand-tint border border-brand-tint rounded px-3.5 py-2.5">
+          <span className="text-[12.5px] font-bold text-ink leading-relaxed">{text}</span>
+        </div>
       </div>
     </div>
   );
@@ -543,7 +626,7 @@ function AnswerBlock({
           <span className="text-[10px] text-ink-light font-semibold">지식 인덱스 근거 · 확정 판정 아님</span>
         </div>
         <p className="text-[12.5px] text-ink-dark font-semibold leading-relaxed">{msg.text}</p>
-        <AnswerActions answerId="문서 RAG 답변" />
+        <AnswerActions answerId="ANS-DOCRAG" title="문서 RAG 답변" body={msg.text} />
       </div>
     );
   }
@@ -676,7 +759,13 @@ function AnswerBlock({
         <p className="text-[11.5px] text-ink-dark font-semibold leading-relaxed">{sc.caveat}</p>
       </div>
 
-      <AnswerActions answerId={sc.id} />
+      <AnswerActions
+        answerId={sc.id}
+        title={sc.question}
+        body={sc.verdict}
+        basis={sc.ruleBasis}
+        caveat={sc.caveat}
+      />
     </div>
   );
 }
@@ -688,9 +777,26 @@ function AnswerBlock({
  *          "문서 출력 기능 제공"
  *
  * 조회(관리자) 쪽은 ConversationsTab 에 이미 있었다 — 여기는 그 짝인 "제공(사용자)" 다.
- * 실제 PDF 렌더링·서버 저장은 데모 범위 밖이라 클릭 결과만 토스트로 알린다.
+ *
+ * 문서 출력은 토스트만 띄우던 자리였다. 그러면 요건 문장("문서 출력 기능 제공")에
+ * 대응하는 화면이 없는 것과 같아서, **무엇이 어떤 형태로 나가는지**를 미리보기로
+ * 보여 주도록 바꿨다. 출력물에도 비식별 상태와 면책 문구가 따라간다는 것이
+ * 이 모달의 요지다(SEC-008).
  */
-function AnswerActions({ answerId }: { answerId: string }) {
+function AnswerActions({
+  answerId,
+  title,
+  body,
+  basis,
+  caveat,
+}: {
+  answerId: string;
+  title: string;
+  body: string;
+  basis?: { clause: string; body: string }[];
+  caveat?: string;
+}) {
+  const [exporting, setExporting] = useState(false);
   const [picked, setPicked] = useState<'up' | 'down' | null>(null);
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState('');
@@ -728,10 +834,21 @@ function AnswerActions({ answerId }: { answerId: string }) {
         >👎</button>
         <button
           type="button"
-          onClick={() => toast(`답변 ${answerId} 을(를) 문서로 출력합니다`)}
+          onClick={() => setExporting(true)}
           className="ml-auto text-[10.5px] font-extrabold text-ink-mid hover:text-brand"
         >⇩ 문서로 출력</button>
       </div>
+
+      {exporting && (
+        <DocExportModal
+          answerId={answerId}
+          title={title}
+          body={body}
+          basis={basis}
+          caveat={caveat}
+          onClose={() => setExporting(false)}
+        />
+      )}
 
       {showComment && !sent && (
         <div className="mt-1.5 flex items-center gap-1.5">
@@ -749,6 +866,350 @@ function AnswerActions({ answerId }: { answerId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+/* ═══════════════════════ 첨부 ═══════════════════════ */
+
+/**
+ * 첨부 파일 선택 — 로컬 파일 선택과 개인 문서 저장소 두 경로를 둔다.
+ *
+ * 시연에서는 파일 탐색기를 열 수 없으므로 표본 파일을 목록으로 제공한다.
+ * 표본은 판정별로 하나씩이라 어느 것을 골라도 다른 장면이 나온다 —
+ * 정상 / 자동 비식별 / 번역 / DRM 차단.
+ */
+function AttachPicker({
+  onPick,
+  onClose,
+}: {
+  onPick: (f: AttachFile) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      {/* 바깥 클릭으로 닫기 */}
+      <div className="fixed inset-0 z-20" onClick={onClose} />
+      <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[420px] card shadow-lg p-0 overflow-hidden">
+        <div className="px-3.5 py-2.5 border-b border-line-soft flex items-center gap-2">
+          <h3 className="text-[12px] font-extrabold text-ink">파일 첨부</h3>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip text-[9px]">
+            2-1 파일 업로드
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto text-[11px] text-ink-light hover:text-ink-dark font-extrabold"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="px-3.5 py-2.5 border-b border-line-soft">
+          <div className="text-[9.5px] font-extrabold text-ink-light uppercase tracking-[0.4px] mb-1.5">
+            내 PC에서 선택
+          </div>
+          <div className="flex flex-col gap-1">
+            {ATTACH_SAMPLES.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => onPick(f)}
+                className="flex items-center gap-2 text-left border border-line-soft rounded px-2.5 py-1.5 hover:border-brand-dark hover:bg-brand-bg transition-colors"
+              >
+                <span className="text-[12px] flex-shrink-0">📄</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11.5px] font-bold text-ink-dark truncate">{f.name}</span>
+                  <span className="block text-[9.5px] text-ink-light font-semibold">
+                    {f.ext} · {f.sizeMB}MB · {f.kind}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-3.5 py-2.5">
+          <div className="text-[9.5px] font-extrabold text-ink-light uppercase tracking-[0.4px] mb-1.5">
+            개인 문서 저장소에서 선택
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {PERSONAL_DOCS.filter((d) => d.state === '적재 완료').map((d) => (
+              <div key={d.id} className="flex items-center gap-1.5 text-[10.5px] px-1">
+                <span className="text-ink-light">📄</span>
+                <span className="font-bold text-ink-dark truncate flex-1">{d.name}</span>
+                <span className="text-[9.5px] text-ok font-extrabold flex-shrink-0">
+                  인덱스 적재됨
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[9.5px] text-ink-light font-semibold leading-snug">
+            저장소 문서는 이미 개인 격리 인덱스에 있어 첨부 없이도 대화에서 검색됩니다.
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/**
+ * 첨부 상태 표시줄 — 반입 검사 결과와 그 결과로 할 수 있는 일을 함께 보여 준다.
+ *
+ * 검사 결과를 감추고 작업 버튼만 두면 SEC-004·SEC-008 을 화면으로 증명할 수 없다.
+ * 차단(DRM)일 때는 작업 버튼 대신 사유와 다음 절차를 그 자리에 놓는다.
+ */
+function AttachBar({
+  att,
+  disabled,
+  onRemove,
+  onAct,
+}: {
+  att: AttachFile;
+  disabled: boolean;
+  onRemove: () => void;
+  onAct: (a: AttachAction) => void;
+}) {
+  const blocked = att.verdict === 'blocked';
+  return (
+    <div
+      className={cn(
+        'mb-2 border rounded px-3 py-2.5',
+        blocked ? 'border-bad-border bg-bad-bg' : 'border-line bg-surface-soft',
+      )}
+    >
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[12px]">📄</span>
+        <span className="text-[11.5px] font-extrabold text-ink-dark">{att.name}</span>
+        <span className="text-[10px] text-ink-light font-semibold">
+          {att.ext} · {att.sizeMB}MB
+          {att.pages ? ` · ${att.pages}쪽` : ''}
+          {att.chunks ? ` · 청크 ${att.chunks}` : ''}
+        </span>
+        <span className={cn('pill text-[9.5px]', ATTACH_VERDICT_TONE[att.verdict])}>
+          {ATTACH_VERDICT_LABEL[att.verdict]}
+        </span>
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip text-[9px]">
+          {blocked ? 'SEC-005' : att.verdict === 'masked' ? 'SEC-008' : '2-1'}
+        </span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="ml-auto text-[10.5px] font-extrabold text-ink-light hover:text-bad"
+        >
+          첨부 제거
+        </button>
+      </div>
+
+      <div className="mt-1.5 text-[10.5px] font-semibold text-ink-mid">
+        {att.scan}
+        {att.maskedItems && (
+          <span className="text-warn"> — {att.maskedItems.join(' · ')}</span>
+        )}
+      </div>
+
+      {blocked ? (
+        <div className="mt-2 pt-2 border-t border-bad-border">
+          <p className="text-[11px] font-bold text-bad leading-relaxed">{att.blockReason}</p>
+          <p className="mt-1 text-[10.5px] text-ink-mid font-semibold leading-relaxed">
+            {att.blockNext}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[9.5px] font-extrabold text-ink-light uppercase tracking-[0.4px]">
+            이 파일로
+          </span>
+          {att.actions.map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              disabled={disabled}
+              onClick={() => onAct(a)}
+              className="pill bg-white text-ink-dark border border-line hover:border-brand hover:text-brand disabled:opacity-50"
+            >
+              {a.label}
+            </button>
+          ))}
+          <span className="ml-auto text-[9.5px] text-ink-light font-semibold">
+            {ATTACH_RETENTION_NOTE}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 문서 출력 — RFP 2-1 사용자 포털 "문서 출력 기능 제공".
+ *
+ * 실제 파일 생성은 데모 범위 밖이라 **출력물의 형태**를 미리보기로 확정해 보여 준다.
+ * 형식·포함 항목을 고르면 미리보기가 즉시 바뀌므로, 무엇이 문서로 나가는지가
+ * 클릭 한 번에 드러난다. 근거 조항을 뺄 수 있게 둔 것은 대외 공유용과 내부 검토용의
+ * 출력물이 달라야 하기 때문이다.
+ */
+function DocExportModal({
+  answerId,
+  title,
+  body,
+  basis,
+  caveat,
+  onClose,
+}: {
+  answerId: string;
+  title: string;
+  body: string;
+  basis?: { clause: string; body: string }[];
+  caveat?: string;
+  onClose: () => void;
+}) {
+  const persona = useCurrentPersona();
+  const [fmt, setFmt] = useState<'DOCX' | 'PDF' | 'HWP'>('DOCX');
+  const [withBasis, setWithBasis] = useState(true);
+  const [withCaveat, setWithCaveat] = useState(true);
+
+  const FORMATS: ('DOCX' | 'PDF' | 'HWP')[] = ['DOCX', 'PDF', 'HWP'];
+
+  /*
+   * ⚠️ `document.body` 로 포털한다.
+   *   답변 말풍선(`.og-answer`)에 등장 애니메이션용 `transform` 이 걸려 있어서,
+   *   그 안에 두면 `position: fixed` 의 기준이 뷰포트가 아니라 말풍선이 된다 —
+   *   모달이 말풍선 안에 갇혀 헤더와 버튼이 잘린다.
+   */
+  return createPortal(
+    <div className="fixed inset-0 z-40 bg-black/35 flex items-center justify-center p-8" onClick={onClose}>
+      <div
+        className="card w-[720px] max-h-[86vh] flex flex-col p-0 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-line-soft flex items-center gap-2">
+          <h3 className="text-[13px] font-extrabold text-ink">문서 출력</h3>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip text-[9px]">
+            2-1 문서 출력
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto text-[12px] text-ink-light hover:text-ink-dark font-extrabold"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* 옵션 */}
+        <div className="px-4 py-2.5 border-b border-line-soft flex items-center gap-2 flex-wrap">
+          <span className="text-[9.5px] font-extrabold text-ink-light uppercase tracking-[0.4px]">형식</span>
+          {FORMATS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFmt(f)}
+              className={cn(
+                'pill border font-mono tracking-normal',
+                fmt === f
+                  ? 'bg-brand text-white border-brand-dark'
+                  : 'bg-white text-ink-mid border-line hover:border-brand',
+              )}
+            >
+              {f}
+            </button>
+          ))}
+          <span className="ml-3 text-[9.5px] font-extrabold text-ink-light uppercase tracking-[0.4px]">
+            포함
+          </span>
+          <button
+            type="button"
+            onClick={() => setWithBasis((v) => !v)}
+            className={cn(
+              'pill border',
+              withBasis ? 'bg-ok-bg text-ok border-ok-border' : 'bg-white text-ink-light border-line',
+            )}
+          >
+            {withBasis ? '☑' : '☐'} 근거 조항
+          </button>
+          <button
+            type="button"
+            onClick={() => setWithCaveat((v) => !v)}
+            className={cn(
+              'pill border',
+              withCaveat ? 'bg-ok-bg text-ok border-ok-border' : 'bg-white text-ink-light border-line',
+            )}
+          >
+            {withCaveat ? '☑' : '☐'} 미확정 사항
+          </button>
+        </div>
+
+        {/* 미리보기 — 종이 한 장 */}
+        <div className="flex-1 overflow-y-auto bg-surface-soft px-6 py-5 min-h-0">
+          <div className="bg-white border border-line rounded shadow-sm px-8 py-7 mx-auto max-w-[560px]">
+            <div className="text-[9px] font-extrabold text-ink-light uppercase tracking-[0.5px] pb-2 border-b border-line-soft">
+              BNK 그룹 공동 생성형 AI 플랫폼 · 대외 배포 금지
+            </div>
+            <h4 className="mt-3.5 text-[15px] font-extrabold text-ink leading-snug">{title}</h4>
+            <div className="mt-1 text-[10px] text-ink-light font-semibold">
+              생성일 {DEMO_TODAY} · 요청자 {persona?.name ?? '—'} · 출력 ID {answerId}
+            </div>
+
+            <p className="mt-4 text-[11.5px] text-ink-dark font-semibold leading-relaxed whitespace-pre-line">
+              {body}
+            </p>
+
+            {withBasis && basis && basis.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-line-soft">
+                <div className="text-[9.5px] font-extrabold text-ink-light uppercase tracking-[0.4px] mb-1.5">
+                  근거 조항
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {basis.map((b) => (
+                    <li key={b.clause} className="text-[10.5px] leading-relaxed">
+                      <b className="text-ink-dark">{b.clause}</b>
+                      <span className="text-ink-mid"> — {b.body}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {withCaveat && caveat && (
+              <div className="mt-3.5 border border-warn-border bg-warn-bg rounded px-3 py-2">
+                <div className="text-[9.5px] font-extrabold text-warn uppercase tracking-[0.4px]">
+                  확정하지 못한 부분
+                </div>
+                <p className="mt-0.5 text-[10.5px] text-ink-dark font-semibold leading-relaxed">{caveat}</p>
+              </div>
+            )}
+
+            <div className="mt-4 pt-2.5 border-t border-line-soft text-[9px] text-ink-light font-semibold leading-relaxed">
+              본 문서는 생성형 AI 산출물이며 업무 판단의 최종 근거로 사용할 수 없습니다. 출력 시점에
+              민감정보는 비식별 처리된 상태로 유지됩니다(SEC-008). 출력 행위는 감사 원장에 기록됩니다.
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 py-3 border-t border-line-soft flex items-center gap-2">
+          <span className="text-[10.5px] text-ink-light font-semibold">
+            {fmt} · 근거 조항 {withBasis ? '포함' : '제외'} · 미확정 사항 {withCaveat ? '포함' : '제외'}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto h-8 px-3 rounded border border-line bg-white text-[11.5px] font-extrabold text-ink-mid hover:border-ink-light"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              toast(`${fmt} 문서를 생성했습니다`, `출력 ID ${answerId} · 감사 원장 기록됨`, 'ok');
+              onClose();
+            }}
+            className="h-8 px-4 rounded bg-brand border border-brand-dark text-white text-[11.5px] font-extrabold hover:bg-brand-dark"
+          >
+            ⇩ {fmt}로 출력
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

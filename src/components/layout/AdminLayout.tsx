@@ -14,6 +14,7 @@ interface AdminNavItem {
 const NAV: AdminNavItem[] = [
   { label: '대시보드', to: '/admin/dashboard', group: '모니터링', hint: '사용·자원·안전 현황' },
   { label: '미터링·정산', to: '/admin/metering', group: '모니터링', hint: '계열사·부서 Chargeback' },
+  { label: '모델 관리', to: '/admin/models', group: '플랫폼 기반', hint: '등록·버전·외부 서빙 API' },
   { label: 'LLM Gateway', to: '/admin/gateway', group: '플랫폼 기반', hint: '단일 통로·라우팅·쿼터' },
   { label: 'Vector 저장소', to: '/admin/vector-store', group: '플랫폼 기반', hint: '제품 연동·계열사 격리' },
   { label: '플랫폼 모듈', to: '/admin/platform', group: '플랫폼 기반', hint: '모듈 구성·변경 영향도' },

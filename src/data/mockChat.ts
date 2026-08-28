@@ -555,4 +555,8 @@ export const RUN_STEP_TONE: Record<string, string> = {
   traverse: 'bg-info-bg text-info border-info-border',
   doc: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
   compute: 'bg-warn-bg text-warn border-warn-border',
+  /* 첨부 턴 전용 단계(ATTACH_STEPS) — 톤 매핑을 한곳에 모아 둔다. */
+  scan: 'bg-bad-bg text-bad border-bad-border',
+  mask: 'bg-warn-bg text-warn border-warn-border',
+  parse: 'bg-info-bg text-info border-info-border',
 };

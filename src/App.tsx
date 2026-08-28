@@ -55,6 +55,7 @@ import AdminContentPage from './routes/AdminContentPage';
 import AdminFeaturedAgentsPage from './routes/AdminFeaturedAgentsPage';
 import AdminGatewayPage from './routes/AdminGatewayPage';
 import AdminVectorStorePage from './routes/AdminVectorStorePage';
+import AdminModelsPage from './routes/AdminModelsPage';
 import AdminPlatformPage from './routes/AdminPlatformPage';
 
 function PersonaGate({ children }: { children: React.ReactNode }) {
@@ -258,6 +259,8 @@ export default function App() {
           {/* ONM-002 단일 통로 · LSM-008 테넌트 토큰 쿼터 */}
           <Route path="gateway" element={<AdminGatewayPage />} />
           {/* RAG-005 Vector DB 연동·독립성 */}
+          {/* LSM-001 모델 등록·버전·폐기 · LSM-004 외부 서빙 API */}
+          <Route path="models" element={<AdminModelsPage />} />
           <Route path="vector-store" element={<AdminVectorStorePage />} />
           <Route path="platform" element={<AdminPlatformPage />} />
         </Route>
