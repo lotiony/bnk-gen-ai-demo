@@ -74,23 +74,23 @@ export const CUSTOM_COMPONENTS: CustomComponent[] = [
     lang: 'Python',
     desc: '표·서식 영역을 인식해 구조화 텍스트로 추출',
     version: 'v1.3',
-    updatedAt: '2026-08-04',
+    updatedAt: '2026-06-01',
     by: '김지우',
     inputFormats: ['PDF', 'HWP'],
     outputs: ['본문 텍스트', '표(마크다운)', '메타(페이지·제목)'],
     repo: 'git.aip.group.local/pb-agent/components',
     path: 'parsers/fss_pdf_table',
     branch: 'main',
-    commit: { sha: 'a3f9c21', msg: 'fix: 병합 셀 표 추출 보정', by: '김지우', at: '2026-08-04 18:22' },
+    commit: { sha: 'a3f9c21', msg: 'fix: 병합 셀 표 추출 보정', by: '김지우', at: '2026-06-01 18:22' },
     ci: [
       { stage: 'build', status: 'passed' },
       { stage: 'test', status: 'passed' },
       { stage: 'deploy', status: 'passed' },
     ],
     deploys: [
-      { version: 'v1.3', env: '서빙계', commit: 'a3f9c21', status: '운영 중', at: '2026-08-04 18:40', by: '이도현' },
-      { version: 'v1.3', env: '학습계', commit: 'a3f9c21', status: '운영 중', at: '2026-08-04 18:30', by: '김지우' },
-      { version: 'v1.2', env: '서빙계', commit: '7c1b0e4', status: '이전', at: '2026-07-28 11:10', by: '이도현' },
+      { version: 'v1.3', env: '서빙계', commit: 'a3f9c21', status: '운영 중', at: '2026-06-01 18:40', by: '이도현' },
+      { version: 'v1.3', env: '학습계', commit: 'a3f9c21', status: '운영 중', at: '2026-06-01 18:30', by: '김지우' },
+      { version: 'v1.2', env: '서빙계', commit: '7c1b0e4', status: '이전', at: '2026-05-25 11:10', by: '이도현' },
     ],
     code: `import pdfplumber
 
@@ -114,7 +114,7 @@ def parse(path: str) -> list[dict]:
     lang: 'Python',
     desc: '법령 조/항 경계를 기준으로 분할 (조항 단위 검색 최적화)',
     version: 'v2.0',
-    updatedAt: '2026-08-05',
+    updatedAt: '2026-06-02',
     by: '박서연',
     strategy: '조·항 단위 (정규식 경계)',
     chunkSize: 800,
@@ -127,16 +127,16 @@ def parse(path: str) -> list[dict]:
     repo: 'git.aip.group.local/pb-agent/components',
     path: 'chunkers/law_clause',
     branch: 'main',
-    commit: { sha: 'e82d5f0', msg: 'feat: overlap 파라미터화', by: '박서연', at: '2026-08-05 14:05' },
+    commit: { sha: 'e82d5f0', msg: 'feat: overlap 파라미터화', by: '박서연', at: '2026-06-02 14:05' },
     ci: [
       { stage: 'build', status: 'passed' },
       { stage: 'test', status: 'passed' },
       { stage: 'deploy', status: 'running' },
     ],
     deploys: [
-      { version: 'v2.0', env: '학습계', commit: 'e82d5f0', status: '운영 중', at: '2026-08-05 14:20', by: '박서연' },
+      { version: 'v2.0', env: '학습계', commit: 'e82d5f0', status: '운영 중', at: '2026-06-02 14:20', by: '박서연' },
       { version: 'v2.0', env: '서빙계', commit: 'e82d5f0', status: '배포 중', at: '방금', by: '이도현' },
-      { version: 'v1.4', env: '서빙계', commit: 'b1290aa', status: '이전', at: '2026-07-30 09:41', by: '이도현' },
+      { version: 'v1.4', env: '서빙계', commit: 'b1290aa', status: '이전', at: '2026-05-27 09:41', by: '이도현' },
     ],
     code: `import re
 
@@ -161,7 +161,7 @@ def chunk(text: str, size=800, overlap=80) -> list[str]:
     lang: 'YAML',
     desc: '파서 → 청커 → 임베딩 → 인덱스 구성',
     version: 'v1.1',
-    updatedAt: '2026-08-06',
+    updatedAt: '2026-06-03',
     by: '정오너',
     steps: [
       { stage: '파서', ref: 'CMP-101 · 금감원 PDF 표 파서', detail: 'PDF/HWP → 구조화 텍스트' },
@@ -172,15 +172,15 @@ def chunk(text: str, size=800, overlap=80) -> list[str]:
     repo: 'git.aip.group.local/pb-agent/components',
     path: 'pipelines/reg_compliance',
     branch: 'main',
-    commit: { sha: 'f40ab99', msg: 'chore: 임베딩 모델 3-large 승격', by: '정오너', at: '2026-08-06 09:58' },
+    commit: { sha: 'f40ab99', msg: 'chore: 임베딩 모델 3-large 승격', by: '정오너', at: '2026-06-03 09:58' },
     ci: [
       { stage: 'build', status: 'passed' },
       { stage: 'test', status: 'passed' },
       { stage: 'deploy', status: 'passed' },
     ],
     deploys: [
-      { version: 'v1.1', env: '학습계', commit: 'f40ab99', status: '운영 중', at: '2026-08-06 10:05', by: '정오너' },
-      { version: 'v1.0', env: '학습계', commit: 'cc7712d', status: '이전', at: '2026-08-01 16:20', by: '정오너' },
+      { version: 'v1.1', env: '학습계', commit: 'f40ab99', status: '운영 중', at: '2026-06-03 10:05', by: '정오너' },
+      { version: 'v1.0', env: '학습계', commit: 'cc7712d', status: '이전', at: '2026-05-29 16:20', by: '정오너' },
     ],
     code: `name: 규정검색 컴플라이언스
 parser:

@@ -136,6 +136,27 @@ export const MOCK_MODELS: CatalogModel[] = [
     trustGrade: 3,
     recommendedFor: '비용 민감 시나리오의 rerank',
   },
+  {
+    /*
+     * 반입 승인(`mockIntake` IN-2041, 2026-05-27 조건부 승인)을 거쳐 등재된 모델.
+     * 게시판 공지(NTC-039 「kanana-flag-32.5B 반입 완료 안내」, 2026-05-28)가
+     * 가리키는 대상이 이 항목이다 — 반입 승인 화면·공지·화이트리스트 셋이
+     * 같은 모델을 같은 상태로 말해야 한다.
+     * 편향 셋 기준 미달로 **학습계 한정** 조건이 붙어 있어 신뢰등급을 낮게 둔다.
+     */
+    id: 'mdl-009',
+    name: 'kakao/kanana-flag-32.5b-it',
+    kind: 'llm',
+    host: 'on-prem',
+    provider: 'on-prem · A100×4',
+    modality: 'text',
+    contextK: 32,
+    gpuHourKrw: 1900,
+    usedByCount: 0,
+    whitelistedAt: '2026-05-28',
+    trustGrade: 3,
+    recommendedFor: '한국어 요약·문서 정리 (학습계 한정 · 대고객 서빙 별도 결재)',
+  },
 ];
 
 export const MODEL_KIND_LABEL: Record<ModelKind, string> = {

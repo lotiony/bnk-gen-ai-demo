@@ -125,7 +125,10 @@ export default function MeteringPage() {
           <span className="text-[11px] text-ink-mid font-semibold">
             행을 누르면 아래에 <b className="text-ink-dark">부서별 분해</b>가 열린다
           </span>
-          <span className="ml-auto text-[11px] text-ink-mid font-bold">{rows.length}개 계열사</span>
+          <span className="ml-auto text-[11px] text-ink-mid font-bold">
+            {rows.length}개 계열사 · 자체 에이전트 합계{' '}
+            {rows.reduce((a, r) => a + r.agents, 0)}종 + 그룹 공통 {rows[0]?.sharedAgents ?? 0}종 공용
+          </span>
         </div>
         <div className="border border-line-soft rounded overflow-hidden">
           <table className="w-full border-collapse">
@@ -134,7 +137,7 @@ export default function MeteringPage() {
                 <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
                   계열사
                 </th>
-                {['입력 토큰', '출력 토큰', '합계', '입력분', '출력분', '정산액', '비중', '전월비', '에이전트'].map(
+                {['입력 토큰', '출력 토큰', '합계', '입력분', '출력분', '정산액', '비중', '전월비', '자체 에이전트'].map(
                   (h) => (
                     <th
                       key={h}
@@ -358,13 +361,17 @@ export default function MeteringPage() {
       <section className="card px-5 py-4 mb-3.5">
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-[14px] font-extrabold text-ink">에이전트별 미터링</h2>
+          <span className="text-[11px] text-ink-mid font-bold">
+            호출이 발생한 <b className="text-ink-dark">{agentRows.length}종 전수</b> · 상위 N 절단 없음
+          </span>
           <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             AGB-010
           </span>
         </div>
         <p className="text-[11px] text-ink-mid font-semibold mb-3">
           조직 축(계열사·부서·사용자)과 별개로 <b className="text-ink-dark">무엇이 비용을 쓰는지</b>를
-          본다 · 호출 1건당 비용이 높은 에이전트가 최적화 대상이다
+          본다 · 호출 1건당 비용이 높은 에이전트가 최적화 대상이다 · 정산액 합계는 위 계열사 표와
+          같은 총액을 나눈 값이다
         </p>
         <div className="border border-line-soft rounded overflow-hidden">
           <table className="w-full border-collapse">
@@ -373,7 +380,7 @@ export default function MeteringPage() {
                 <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
                   에이전트
                 </th>
-                {['호출', '입력', '출력', '정산액', '건당', '전월비'].map((h) => (
+                {['월 호출', '입력', '출력', '정산액', '건당', '전월비'].map((h) => (
                   <th
                     key={h}
                     className="text-right text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft whitespace-nowrap"
@@ -396,6 +403,12 @@ export default function MeteringPage() {
                     <span className="ml-2 pill bg-surface-soft text-ink-mid border border-line-soft">
                       {a.tenant}
                     </span>
+                    {a.groupShared && (
+                      <span className="ml-1 pill bg-brand-tint text-brand border border-brand-tint">
+                        그룹 공용
+                      </span>
+                    )}
+                    <span className="ml-2 text-[9.5px] font-mono text-ink-light">{a.taskId}</span>
                   </td>
                   <Num v={a.calls.toLocaleString('ko-KR')} />
                   <Num v={fmtTok(a.inputTokens)} />

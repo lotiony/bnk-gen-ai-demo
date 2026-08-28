@@ -82,6 +82,24 @@ export default function McpRegisterPage() {
   /** 실행 시뮬레이션 대상 도구 — 열려 있으면 실행 통제 모달 표시. */
   const [execTool, setExecTool] = useState<McpTool | null>(null);
 
+  /**
+   * 쓰기 도구별 결재 상신 상태 — 도구명 → 결재번호.
+   *
+   * 상신 토스트만 띄우고 배지가 '결재 대기' 로 남아 있으면 화면이 스스로와
+   * 모순된다. 상신하면 도구 카드·실행 통제 모달이 함께 바뀌게 한다.
+   */
+  const [approvalOf, setApprovalOf] = useState<Record<string, string>>({});
+  const submitApproval = (tool: McpTool) => {
+    const no = `APV-MCP-${String(Object.keys(approvalOf).length + 1).padStart(3, '0')}`;
+    setApprovalOf((m) => ({ ...m, [tool.name]: no }));
+    toast(
+      `승인권자 결재를 상신했습니다 · ${no}`,
+      `${tool.name} · 승인 후 쓰기 호출이 활성화됩니다`,
+      'ok',
+    );
+    return no;
+  };
+
   useEffect(() => {
     if (stepIdx < 0 || stepIdx >= cfg.steps.length) return;
     const t = setTimeout(() => setStepIdx((i) => i + 1), cfg.steps[stepIdx].ms);
@@ -244,7 +262,12 @@ export default function McpRegisterPage() {
                     </div>
                     <div className="space-y-2">
                       {cfg.tools.map((t) => (
-                        <ToolCard key={t.name} tool={t} onExec={() => setExecTool(t)} />
+                        <ToolCard
+                          key={t.name}
+                          tool={t}
+                          approvalNo={approvalOf[t.name]}
+                          onExec={() => setExecTool(t)}
+                        />
                       ))}
                     </div>
 
@@ -327,7 +350,14 @@ export default function McpRegisterPage() {
         </Link>
       </div>
 
-      {execTool && <ExecControlModal tool={execTool} onClose={() => setExecTool(null)} />}
+      {execTool && (
+        <ExecControlModal
+          tool={execTool}
+          approvalNo={approvalOf[execTool.name]}
+          onSubmitApproval={() => submitApproval(execTool)}
+          onClose={() => setExecTool(null)}
+        />
+      )}
     </div>
   );
 }
@@ -339,14 +369,31 @@ export default function McpRegisterPage() {
  * 등록과 실행은 다른 관문이다 — 조회 도구는 권한 통과를, 쓰기 도구는 호출 시점
  * PDP 차단을 그대로 보여준다. 차단된 시도도 통합 감사 원장에 남는다(SEC-009).
  */
-function ExecControlModal({ tool, onClose }: { tool: McpTool; onClose: () => void }) {
+function ExecControlModal({
+  tool,
+  approvalNo,
+  onSubmitApproval,
+  onClose,
+}: {
+  tool: McpTool;
+  /** 상신된 결재번호 — 있으면 '결재 미완료' 가 아니라 '승인 대기' 다. */
+  approvalNo?: string;
+  onSubmitApproval: () => void;
+  onClose: () => void;
+}) {
   const persona = useCurrentPersona();
   const roleLabel = persona ? `${persona.name} (${persona.role})` : '현재 사용자';
   const blocked = tool.mutating;
 
   const CHECKS: { k: string; ok: boolean; v: string }[] = blocked
     ? [
-        { k: '도구 활성화 상태', ok: false, v: '쓰기 도구 — 승인권자 결재 미완료 (비활성)' },
+        {
+          k: '도구 활성화 상태',
+          ok: false,
+          v: approvalNo
+            ? `쓰기 도구 — 결재 상신 완료 · 승인 대기 (${approvalNo})`
+            : '쓰기 도구 — 승인권자 결재 미완료 (비활성)',
+        },
         { k: '사용자 허용범위', ok: false, v: '쓰기 호출은 결재 완료 후 허용 대상자에게만 열린다' },
         { k: '감사 기록', ok: true, v: '차단된 시도로 통합 감사 원장에 적산 (SEC-009)' },
       ]
@@ -387,7 +434,11 @@ function ExecControlModal({ tool, onClose }: { tool: McpTool; onClose: () => voi
             )}
           >
             <div className={cn('text-[12.5px] font-extrabold', blocked ? 'text-bad' : 'text-ok')}>
-              {blocked ? '실행 차단 — 쓰기 도구는 결재 없이 호출할 수 없습니다' : '실행 허용 — 조회 3행 반환 (모의)'}
+              {blocked
+                ? approvalNo
+                  ? `실행 차단 — 결재 승인 전까지 호출할 수 없습니다 (${approvalNo} 승인 대기)`
+                  : '실행 차단 — 쓰기 도구는 결재 없이 호출할 수 없습니다'
+                : '실행 허용 — 조회 3행 반환'}
             </div>
           </div>
           <ul className="space-y-2">
@@ -409,11 +460,17 @@ function ExecControlModal({ tool, onClose }: { tool: McpTool; onClose: () => voi
         </div>
         <div className="px-5 py-3 border-t border-line-soft flex items-center gap-2">
           {blocked && (
-            <button
-              type="button"
-              onClick={() => { toast('승인권자 결재를 상신했습니다 — 승인 후 도구가 활성화됩니다'); onClose(); }}
-              className="h-8 px-3 border border-line rounded text-[11.5px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
-            >결재 상신</button>
+            approvalNo ? (
+              <span className="pill bg-info-bg text-info border border-info-border">
+                결재 상신 완료 · {approvalNo} 승인 대기
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { onSubmitApproval(); onClose(); }}
+                className="h-8 px-3 border border-line rounded text-[11.5px] font-extrabold text-ink-dark hover:border-brand hover:text-brand"
+              >결재 상신</button>
+            )
           )}
           <button
             type="button"
@@ -426,7 +483,15 @@ function ExecControlModal({ tool, onClose }: { tool: McpTool; onClose: () => voi
   );
 }
 
-function ToolCard({ tool, onExec }: { tool: McpTool; onExec: () => void }) {
+function ToolCard({
+  tool,
+  approvalNo,
+  onExec,
+}: {
+  tool: McpTool;
+  approvalNo?: string;
+  onExec: () => void;
+}) {
   const ready = tool.status === 'ready';
   return (
     <div className={cn('border rounded px-3.5 py-2.5', ready ? 'border-line-soft bg-white' : 'border-warn-border bg-warn-bg')}>
@@ -445,6 +510,8 @@ function ToolCard({ tool, onExec }: { tool: McpTool; onExec: () => void }) {
         <span className="ml-auto pill border" >
           {ready ? (
             <span className="text-ok font-extrabold">즉시 사용 가능</span>
+          ) : approvalNo ? (
+            <span className="text-info font-extrabold">결재 상신 완료 · {approvalNo}</span>
           ) : (
             <span className="text-warn font-extrabold">승인권자 결재 대기</span>
           )}

@@ -6,6 +6,7 @@
  * 패턴은 tenantStore · personalization 과 동일하다.
  */
 import { useSyncExternalStore } from 'react';
+import { DEMO_TODAY } from '@/data/demoClock';
 import {
   PROMPT_TEMPLATES_SEED,
   type PromptTemplate,
@@ -26,10 +27,8 @@ export function usePromptTemplates(): PromptTemplate[] {
   return useSyncExternalStore(subscribe, getTemplates, getTemplates);
 }
 
-const nowLabel = () =>
-  new Date().toLocaleString('ko-KR', {
-    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-  });
+/** 시연 세계관 시각으로 고정한다 — `new Date()` 는 시연 당일만 다른 날짜를 찍는다. */
+const nowLabel = () => `${DEMO_TODAY} 09:40`;
 
 /** 다음 버전 번호 — versions[0] 이 최신이라는 규약을 따른다. */
 const nextVer = (t: PromptTemplate) => `v${t.versions.length + 1}`;

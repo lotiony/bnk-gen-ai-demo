@@ -13,12 +13,22 @@
  *
  * 스펙이 요구한 축을 모두 세운다 — 에이전트·프롬프트·MCP 통합, 키워드/태그 검색,
  * 사용량·평가 랭킹, 공유 범위 5단계.
+ *
+ * ③ **'그룹 공개 요청' 이 실제 결재를 만든다.** RFP 1.3.2 는 공유 범위 5단계를
+ *    "**관리자 승인 절차 기반**" 으로 통제하라고 쓴다. 요청이 토스트로 끝나면
+ *    요건 문장의 절반(승인 절차)이 화면에 없다. 그래서 요청 → 결재함 등재 →
+ *    승인 시 11개 Namespace 개방까지 한 흐름으로 잇는다(mockApprovals.ts).
+ * ④ **게시판 글쓰기가 실제로 등록된다**(RFP 2-1 [31] 공지·커뮤니티·지식공유).
  */
 import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useFavorites, toggleFavorite } from '@/lib/personalization';
 import { useTenant } from '@/lib/tenantStore';
+import { useCurrentPersona } from '@/lib/persona';
+import { canAccessArea } from '@/lib/personaView';
+import { createScopePromotion, findPromotionByAsset, useApprovalRevision } from '@/data/mockApprovals';
 import {
   getCatalogItems,
   useVerdict,
@@ -36,8 +46,9 @@ import {
   type GroupAgent,
 } from '@/data/mockGroupAgents';
 import StatusPill from '@/components/ui/StatusPill';
-import { useNotices, usePosts } from '@/lib/contentStore';
-import { TENANT_SHORT } from '@/data/tenants';
+import { useNotices, usePosts, addPost, nextPostId, todayLabel } from '@/lib/contentStore';
+import { TENANT_SHORT, type Tenant } from '@/data/tenants';
+import type { BoardPost } from '@/data/mockContent';
 
 type SortKey = 'usage' | 'rating' | 'installs' | 'recent';
 
@@ -58,14 +69,20 @@ type PageTab = 'assets' | 'notice' | 'community' | 'knowledge';
 
 export default function CatalogPage() {
   const myTenant = useTenant();
+  const persona = useCurrentPersona();
+  const navigate = useNavigate();
+  const studioOpen = canAccessArea(persona, 'studio');
   const [pageTab, setPageTab] = useState<PageTab>('assets');
-  const all = useMemo(() => getCatalogItems(), []);
+  // 승격 결재가 승인되면 공유 범위 배지·필터가 즉시 바뀐다(RFP 1.3.2).
+  const approvalRev = useApprovalRevision();
+  const all = useMemo(() => getCatalogItems(), [approvalRev]);
 
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<AssetKind | 'all'>('all');
   const [scope, setScope] = useState<ShareScope | 'all'>('all');
   const [sort, setSort] = useState<SortKey>('usage');
-  const [requested, setRequested] = useState<Set<string>>(new Set());
+  /** 자산 ID → 상신된 승격 결재번호. 카드에서 결재 상세로 바로 넘어갈 수 있게 번호를 들고 있는다. */
+  const [requested, setRequested] = useState<Record<string, string>>({});
 
   /** 비노출 자산은 카탈로그에 아예 실리지 않는다 — 격리가 먼저다. */
   const visible = useMemo(
@@ -96,12 +113,68 @@ export default function CatalogPage() {
   const kindCount = (k: AssetKind) => visible.filter((i) => i.kind === k).length;
   const hiddenCount = all.length - visible.length;
 
+  /**
+   * 그룹 공개 요청 → **공유범위 승격 결재 상신** (RFP 1.3.2).
+   * 결재번호가 발번되고 결재함에서 실제로 조회된다.
+   */
   const request = (it: CatalogItem) => {
-    setRequested((s) => new Set(s).add(it.id));
+    const dup = findPromotionByAsset(it.id);
+    if (dup) {
+      setRequested((m) => ({ ...m, [it.id]: dup.approvalId }));
+      toast('이미 상신된 승격 결재가 있습니다', `${dup.approvalId} · ${it.id} ${it.name}`, 'warn');
+      return;
+    }
+    const created = createScopePromotion({
+      assetKind: it.kind,
+      assetId: it.id,
+      assetName: it.name,
+      ownerTenant: it.tenant,
+      ownerName: it.owner,
+      updatedAt: it.updatedAt,
+      fromScope: it.meta.scope,
+      usage: it.usage,
+      usageLabel: it.usageLabel,
+      rating: it.meta.rating,
+      ratingCount: it.meta.ratingCount,
+      installs: it.meta.installs,
+      requestedBy: persona?.name ?? '현재 사용자',
+      requesterRole: persona?.role ?? '사용자',
+      requesterTenant: myTenant,
+    });
+    setRequested((m) => ({ ...m, [it.id]: created.id }));
     toast(
-      '그룹 공개 요청이 접수되었습니다',
-      `${it.id} ${it.name}\n소유: ${it.tenant} · ${it.owner}\n거버넌스 결재선에 자동 등록되며, 승인 시 11개 Namespace 전체에 공개됩니다.`,
+      `그룹 공개 요청 상신 · ${created.id}`,
+      `${it.id} ${it.name}\n소유: ${it.tenant} · ${it.owner}\n${it.meta.scope} → 그룹 승격 결재가 결재함에 등재되었습니다. 승인 시 11개 Namespace 전체에 공개됩니다.`,
       'ok',
+    );
+  };
+
+  /**
+   * 주 액션 — 권한이 있는 자산은 실제 사용 동선으로 보낸다.
+   * 판정은 이미 `useVerdict()` 가 하고 있으므로 그 결과를 그대로 쓴다.
+   */
+  const useAsset = (it: CatalogItem) => {
+    if (it.kind === 'agent') {
+      toast(`${it.name} 사용`, `${it.id} · ${it.tenant} · 대화 화면에서 이어집니다`, 'ok');
+      navigate('/chat');
+      return;
+    }
+    if (studioOpen) {
+      toast(
+        `${it.name} 사용`,
+        it.kind === 'prompt'
+          ? `${it.id} · 프롬프트 라이브러리에서 복제해 사용합니다`
+          : `${it.id} · Tool · MCP 화면에서 에이전트·워크플로우에 연결합니다`,
+        'ok',
+      );
+      navigate(it.kind === 'prompt' ? '/studio/prompts' : '/studio/tools');
+      return;
+    }
+    // 제작 워크스페이스 접근 권한이 없는 역할 — 메뉴를 그리지 않는 규칙과 같은 판정.
+    toast(
+      `${it.name}`,
+      `${it.id} · 프롬프트 · MCP Tool 은 제작 워크스페이스(AI Studio)에서 에이전트·워크플로우에 연결해 사용합니다. 현재 권한으로는 대화 화면의 에이전트를 이용해 주세요.`,
+      'warn',
     );
   };
 
@@ -220,8 +293,9 @@ export default function CatalogPage() {
               key={`${it.kind}-${it.id}`}
               item={it}
               myTenant={myTenant}
-              requested={requested.has(it.id)}
+              requestedId={requested[it.id]}
               onRequest={() => request(it)}
+              onUse={() => useAsset(it)}
             />
           ))}
         </div>
@@ -234,7 +308,7 @@ export default function CatalogPage() {
 
 /* ═══════════════════════ 공지사항 · 커뮤니티 · 지식공유 (RFP 2-1 [31]) ═══════════════════════ */
 
-function NoticeTab({ myTenant }: { myTenant: string }) {
+function NoticeTab({ myTenant }: { myTenant: Tenant }) {
   const notices = useNotices();
   const visible = notices.filter(
     (n) => n.state === '게시 중' && (n.scope === '그룹 전체' || n.scope === myTenant),
@@ -263,58 +337,155 @@ function NoticeTab({ myTenant }: { myTenant: string }) {
   );
 }
 
-function CommunityTab({ myTenant }: { myTenant: string }) {
-  const posts = usePosts().filter((p) => p.board === '커뮤니티' && p.state !== '숨김');
+function CommunityTab({ myTenant }: { myTenant: Tenant }) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2.5">
-        <p className="text-[11.5px] text-ink-mid font-semibold">
-          계열사·부서 과제의 산출물을 등록하고 공유합니다 · 현재 계열사 <b className="text-ink-dark">{myTenant}</b>
-        </p>
-        <button
-          type="button"
-          onClick={() => toast('과제 산출물 등록 — 데모 범위 밖')}
-          className="py-1.5 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
-        >+ 산출물 등록</button>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        {posts.length === 0 && (
-          <div className="card px-5 py-8 text-center text-[12px] text-ink-light font-semibold">
-            등록된 산출물이 없습니다
-          </div>
-        )}
-        {posts.map((p) => (
-          <div key={p.id} className="px-4 py-3 bg-white border border-line-soft rounded">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[12.5px] font-extrabold text-ink">{p.title}</span>
-              <span className="ml-auto pill bg-surface-soft text-ink-mid border border-line-soft">{TENANT_SHORT[p.tenant]}</span>
-            </div>
-            <div className="text-[10.5px] text-ink-mid font-semibold">{p.author} · {p.createdAt}</div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <BoardTab
+      board="커뮤니티"
+      myTenant={myTenant}
+      hint={
+        <>
+          계열사·부서 과제의 산출물을 등록하고 공유합니다 · 현재 계열사{' '}
+          <b className="text-ink-dark">{myTenant}</b>
+        </>
+      }
+      cta="+ 산출물 등록"
+      composeTitle="과제 산출물 등록"
+      titlePlaceholder="산출물 제목 (예: 여신 디지털심사 과제 산출물)"
+      bodyPlaceholder="과제 개요 · 재사용 가능한 산출물 · 참고 사항"
+      emptyLabel="등록된 산출물이 없습니다"
+    />
   );
 }
 
-function KnowledgeBoardTab({ myTenant }: { myTenant: string }) {
-  const posts = usePosts().filter((p) => p.board === '지식공유' && p.state !== '숨김');
+function KnowledgeBoardTab({ myTenant }: { myTenant: Tenant }) {
+  return (
+    <BoardTab
+      board="지식공유"
+      myTenant={myTenant}
+      hint="그룹 전체가 함께 보는 지식·노하우 공유 게시판입니다"
+      cta="+ 글쓰기"
+      composeTitle="지식공유 글쓰기"
+      titlePlaceholder="글 제목 (예: Graph RAG 리트리버 튜닝 노하우)"
+      bodyPlaceholder="공유할 내용을 입력하세요"
+      emptyLabel="게시글이 없습니다"
+    />
+  );
+}
+
+/**
+ * 커뮤니티 · 지식공유 공통 게시판.
+ *
+ * 이전에는 작성 버튼이 "데모 범위 밖" 토스트를 띄웠다 — 스캐폴딩 문구가 발주처
+ * 화면에 그대로 노출되는 셈이고, 이 화면은 제안서 캡처 대상이다. `contentStore`
+ * 가 이미 관리 콘솔과 같은 스토어를 들고 있으므로 실제로 등록되게 한다.
+ * 등록한 글은 관리 콘솔의 「게시판 관리」에서도 즉시 보인다(RFP 2-1 [31]·[48]).
+ */
+function BoardTab({
+  board,
+  myTenant,
+  hint,
+  cta,
+  composeTitle,
+  titlePlaceholder,
+  bodyPlaceholder,
+  emptyLabel,
+}: {
+  board: BoardPost['board'];
+  myTenant: Tenant;
+  hint: React.ReactNode;
+  cta: string;
+  composeTitle: string;
+  titlePlaceholder: string;
+  bodyPlaceholder: string;
+  emptyLabel: string;
+}) {
+  const persona = useCurrentPersona();
+  const posts = usePosts().filter((p) => p.board === board && p.state !== '숨김');
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+
+  const submit = () => {
+    const t = title.trim();
+    if (!t) {
+      toast('제목을 입력해 주세요', undefined, 'warn');
+      return;
+    }
+    const id = nextPostId();
+    addPost({
+      id,
+      board,
+      title: t,
+      tenant: myTenant,
+      author: persona?.name ?? '현재 사용자',
+      createdAt: todayLabel(),
+      reportCount: 0,
+      state: '정상',
+      body: body.trim() || undefined,
+    });
+    setTitle('');
+    setBody('');
+    setOpen(false);
+    toast(`${board} 게시글이 등록되었습니다`, `${id} · ${t}`, 'ok');
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2.5">
-        <p className="text-[11.5px] text-ink-mid font-semibold">
-          그룹 전체가 함께 보는 지식·노하우 공유 게시판입니다
-        </p>
+        <p className="text-[11.5px] text-ink-mid font-semibold">{hint}</p>
         <button
           type="button"
-          onClick={() => toast('게시글 작성 — 데모 범위 밖')}
+          onClick={() => setOpen(true)}
           className="py-1.5 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
-        >+ 글쓰기</button>
+        >{cta}</button>
       </div>
+
+      {open && (
+        <div className="card px-4 py-3.5 mb-2.5 border-brand-dark">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[12.5px] font-extrabold text-ink">{composeTitle}</span>
+            <span className="pill bg-surface-soft text-ink-mid border border-line-soft">
+              {board} · {TENANT_SHORT[myTenant]}
+            </span>
+            <span className="ml-auto text-[10.5px] text-ink-mid font-semibold">
+              작성자 {persona?.name ?? '현재 사용자'}
+            </span>
+          </div>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={titlePlaceholder}
+            className="w-full mb-1.5 py-2 px-3 border border-line rounded text-[12.5px] bg-white focus:outline-none focus:border-brand-dark"
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={3}
+            placeholder={bodyPlaceholder}
+            className="w-full py-2 px-3 border border-line rounded text-[12px] bg-white resize-y focus:outline-none focus:border-brand-dark"
+          />
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[10.5px] text-ink-mid font-semibold">
+              등록된 글은 관리 콘솔 「게시판 관리」에서 함께 관리됩니다
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="ml-auto py-1.5 px-3 bg-white border border-line rounded text-[11.5px] font-bold text-ink-dark hover:bg-surface"
+            >취소</button>
+            <button
+              type="button"
+              onClick={submit}
+              className="py-1.5 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
+            >등록</button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
         {posts.length === 0 && (
           <div className="card px-5 py-8 text-center text-[12px] text-ink-light font-semibold">
-            게시글이 없습니다
+            {emptyLabel}
           </div>
         )}
         {posts.map((p) => (
@@ -323,6 +494,9 @@ function KnowledgeBoardTab({ myTenant }: { myTenant: string }) {
               <span className="text-[12.5px] font-extrabold text-ink">{p.title}</span>
               <span className="ml-auto pill bg-surface-soft text-ink-mid border border-line-soft">{TENANT_SHORT[p.tenant]}</span>
             </div>
+            {p.body && (
+              <p className="text-[11px] text-ink-dark font-medium leading-snug mb-1 line-clamp-2">{p.body}</p>
+            )}
             <div className="text-[10.5px] text-ink-mid font-semibold">{p.author} · {p.createdAt}</div>
           </div>
         ))}
@@ -336,13 +510,16 @@ function KnowledgeBoardTab({ myTenant }: { myTenant: string }) {
 function ItemCard({
   item,
   myTenant,
-  requested,
+  requestedId,
   onRequest,
+  onUse,
 }: {
   item: CatalogItem;
   myTenant: string;
-  requested: boolean;
+  /** 상신된 승격 결재번호 (없으면 미상신). */
+  requestedId?: string;
   onRequest: () => void;
+  onUse: () => void;
 }) {
   const km = KIND_META[item.kind];
   const verdict = useVerdict(item.tenant, item.meta.scope, myTenant as never);
@@ -434,8 +611,15 @@ function ItemCard({
         <span className={cn('pill border', vm.cls)}>{vm.label}</span>
         <span className="ml-auto">
           {verdict === 'request' ? (
-            requested ? (
-              <span className="pill bg-info-bg text-info border border-info-border">결재 진행 중</span>
+            requestedId ? (
+              // 상신된 결재 건으로 바로 넘어간다 — 요청이 어디로 갔는지 화면에서 끊기지 않게.
+              <Link
+                to={`/approvals/${requestedId}`}
+                className="pill bg-info-bg text-info border border-info-border hover:border-info"
+                title="공유범위 승격 결재 상세로 이동"
+              >
+                결재 진행 중 · {requestedId}
+              </Link>
             ) : (
               <button
                 onClick={onRequest}
@@ -445,7 +629,10 @@ function ItemCard({
               </button>
             )
           ) : (
-            <button className="py-1 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark">
+            <button
+              onClick={onUse}
+              className="py-1 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark"
+            >
               사용하기
             </button>
           )}
@@ -617,6 +804,18 @@ function GroupAgentDetail({ agent }: { agent: GroupAgent }) {
             주력 모델
           </div>
           <div className="text-[11px] font-mono font-bold text-ink-dark">{agent.model}</div>
+          {/*
+           * AGB-006 — 예전에는 이 상세가 정보 카드로 끝나서 "10종을 제공한다"는 말만
+           * 있고 눌러 볼 수가 없었다. 발주처가 카드를 클릭해 보자고 하면 그 자리에서
+           * 드러난다. 그룹 범위 배포 자산이므로 전 계열사가 자기 Namespace 에서
+           * 그대로 호출한다 — 대화 진입도 같은 원칙으로 열어 둔다.
+           */}
+          <Link
+            to={`/chat?agent=${agent.id}`}
+            className="mt-3 inline-flex items-center justify-center gap-1 w-full h-8 rounded bg-brand border border-brand-dark text-white text-[12px] font-extrabold hover:bg-brand-dark"
+          >
+            이 에이전트로 대화 시작 →
+          </Link>
         </div>
       </div>
     </div>

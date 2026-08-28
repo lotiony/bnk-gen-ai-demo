@@ -53,17 +53,55 @@ export interface IntakeRequest {
 
 export const INTAKE_REQUESTS: IntakeRequest[] = [
   {
+    id: 'IN-2043',
+    kind: '모델',
+    target: 'onprem/bge-reranker-ko-v3',
+    source: '외부 반입 매체 (오프라인 · 해시 검증)',
+    tenant: '그룹 공통',
+    requestedBy: '민모델',
+    requestedAt: '2026-06-02 09:24',
+    reason: '한국어 재순위 품질 개선 — 규정 인덱스 Top-K 정확도 보강',
+    destination: '모델 카탈로그 · 리랭커 풀',
+    size: '0.6B · 2.4GB (safetensors)',
+    state: '승인 대기',
+    checks: [
+      { name: '라이선스 검토', result: 'pass', detail: 'Apache-2.0 · 상업적 이용 허용' },
+      {
+        name: '직렬화 포맷 취약점',
+        result: 'pass',
+        detail: 'safetensors 포맷 — pickle 역직렬화 임의코드 실행 위험 없음',
+      },
+      { name: '무결성 해시', result: 'pass', detail: 'SHA-256 일치 · 반입 매체 서명 검증 통과' },
+      {
+        name: '벤치마크',
+        result: 'running',
+        detail: '규정 인덱스 재순위 정확도 측정 진행 중 (58%)',
+      },
+    ],
+  },
+  {
     id: 'IN-2041',
     kind: '모델',
     target: 'kakao/kanana-flag-32.5B-it',
     source: '외부 반입 매체 (오프라인 · 해시 검증)',
     tenant: '그룹 공통',
     requestedBy: '민모델',
-    requestedAt: '2026-01-06 10:12',
+    requestedAt: '2026-05-21 10:12',
     reason: '한국어 금융 도메인 응답 품질 비교 후보 · 현행 대비 요약 정확도 개선 기대',
     destination: '모델 카탈로그 · 학습계 서빙',
     size: '32.5B · 65GB (safetensors)',
-    state: '승인 대기',
+    /*
+     * 게시판 공지(`mockContent` NTC-039 「kanana-flag-32.5B 반입 완료 안내」,
+     * 2026-05-28 게시)가 이미 "반입 완료" 를 알리고 있다. 이 건이 '승인 대기' 로
+     * 남아 있으면 같은 사실을 두 화면이 다르게 말한다. 공지보다 하루 앞선
+     * 05-27 에 **조건부 승인** 으로 닫는다 — 편향 셋이 기준 미달(warn)이라
+     * 학습계 한정으로만 열었고, 그 조건이 `mockModels` 의 화이트리스트 표기와
+     * 이어진다.
+     */
+    state: '승인',
+    decidedBy: '임정보',
+    decidedAt: '2026-05-27 16:40',
+    note: '학습계 한정 조건부 승인 — 편향 셋 기준 미달로 대고객 서빙계 승격은 별도 결재 필요',
     checks: [
       {
         name: '라이선스 검토',
@@ -99,7 +137,7 @@ export const INTAKE_REQUESTS: IntakeRequest[] = [
     source: '부산은행 콜센터 NAS',
     tenant: '부산은행',
     requestedBy: '조디비',
-    requestedAt: '2026-01-05 16:40',
+    requestedAt: '2026-05-31 16:40',
     reason: '민원 분류 에이전트 학습·평가셋 보강',
     destination: 'ns-bank-bs · Object Storage → 지식 인덱스',
     size: '41,200건 · 18.4GB',
@@ -127,13 +165,13 @@ export const INTAKE_REQUESTS: IntakeRequest[] = [
     source: '경남은행 KMS',
     tenant: '경남은행',
     requestedBy: '남데이터',
-    requestedAt: '2026-01-04 09:05',
+    requestedAt: '2026-05-30 09:05',
     reason: '지식/상품 어시스턴트(GRP-007) 인덱스 구축',
     destination: 'ns-bank-kn · 지식 인덱스',
     size: '1,240건 · 3.1GB (HWP·PDF)',
     state: '승인',
     decidedBy: '임정보',
-    decidedAt: '2026-01-04 14:22',
+    decidedAt: '2026-05-30 14:22',
     note: '개인정보 미검출 · DRM 해제 확인 · 인덱스 반영 승인',
     checks: [
       { name: '개인정보 스캔', result: 'pass', detail: '검출 0건' },
@@ -153,13 +191,13 @@ export const INTAKE_REQUESTS: IntakeRequest[] = [
     source: '인터넷망 다운로드 요청',
     tenant: '그룹 공통',
     requestedBy: '민모델',
-    requestedAt: '2025-12-28 11:30',
+    requestedAt: '2026-05-23 11:30',
     reason: '금융 특화 임베딩 모델 도입 검토',
     destination: '모델 카탈로그 · 임베딩',
     size: '1.2B · 4.6GB (pytorch_model.bin)',
     state: '반려',
     decidedBy: '임정보',
-    decidedAt: '2025-12-29 09:14',
+    decidedAt: '2026-05-24 09:14',
     note: 'pickle 기반 직렬화로 임의코드 실행 위험 · safetensors 변환본으로 재요청할 것',
     checks: [
       { name: '라이선스 검토', result: 'pass', detail: 'Apache-2.0' },

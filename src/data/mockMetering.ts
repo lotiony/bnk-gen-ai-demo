@@ -19,11 +19,13 @@
 import {
   getConglomerateTokenSeries,
   getCostByConglomerate,
+  getMeteringAgentBase,
+  AFFILIATE_HEADCOUNT,
 } from '@/data/mockAdminDashboard';
 import { AFFILIATES } from '@/data/tenants';
 
-/** 정산 대상 월 — 데모는 한 달만 다룬다. */
-export const BILLING_MONTH = '2026-01';
+/** 정산 대상 월 — 데모는 한 달만 다룬다. 대시보드 기준일(2026-06-03)의 직전 마감월. */
+export const BILLING_MONTH = '2026-05';
 
 /**
  * 출력 토큰 가중치. 생성이 입력 처리보다 GPU 를 더 쓴다는 사실을 반영한 값이며,
@@ -36,7 +38,10 @@ export interface MeteringRow {
   color: string;
   namespace: string;
   users: number;
+  /** 이 계열사가 제작 주관한 자체 에이전트 수. */
   agents: number;
+  /** 그룹 공통 운영영역에서 함께 쓰는 에이전트 수(전 계열사 공용). */
+  sharedAgents: number;
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
@@ -62,18 +67,12 @@ const DELTA: Record<string, number> = {
   BNK엘앤에스: 0.9,
 };
 
-const USERS: Record<string, number> = {
-  부산은행: 4820,
-  경남은행: 3140,
-  BNK캐피탈: 780,
-  BNK투자증권: 640,
-  BNK저축은행: 310,
-  BNK자산운용: 190,
-  BNK벤처투자: 90,
-  BNK시스템: 520,
-  BNK신용정보: 240,
-  BNK엘앤에스: 160,
-};
+/**
+ * 계열사별 이용자 수는 `mockAdminDashboard.AFFILIATE_HEADCOUNT` 가 단일 출처다 —
+ * 같은 값이 그룹 공통 에이전트 사용량을 계열사에 배분하는 가중치로도 쓰이므로
+ * 여기서 따로 적으면 두 화면이 다른 모수를 말하게 된다.
+ */
+const USERS: Record<string, number> = AFFILIATE_HEADCOUNT;
 
 export function getMeteringRows(): MeteringRow[] {
   const series = getConglomerateTokenSeries();
@@ -94,6 +93,7 @@ export function getMeteringRows(): MeteringRow[] {
       namespace: meta?.namespace ?? '-',
       users: USERS[s.name] ?? 0,
       agents: c?.agentCount ?? 0,
+      sharedAgents: c?.sharedAgentCount ?? 0,
       inputTokens: s.inputTotal,
       outputTokens: s.outputTotal,
       totalTokens: s.total,
@@ -297,30 +297,30 @@ export interface SettlementReport {
 
 export const SETTLEMENT_REPORTS: SettlementReport[] = [
   {
-    id: 'STL-2026-01',
-    month: '2026-01',
+    id: 'STL-2026-05',
+    month: '2026-05',
     state: 'scheduled',
-    runAt: '2026-02-01 06:00 자동 산출 예정',
+    runAt: '2026-06-01 06:00 자동 산출 예정',
     tenants: 10,
     totalCost: 0, // 화면에서 현재 합계로 채운다
     formats: ['XLSX', 'PDF'],
   },
   {
-    id: 'STL-2025-12',
-    month: '2025-12',
+    id: 'STL-2026-04',
+    month: '2026-04',
     state: 'issued',
-    runAt: '2026-01-01 06:00',
+    runAt: '2026-05-01 06:00',
     tenants: 10,
-    totalCost: 41_820_000,
+    totalCost: 189_400_000,
     formats: ['XLSX', 'PDF'],
   },
   {
-    id: 'STL-2025-11',
-    month: '2025-11',
+    id: 'STL-2026-03',
+    month: '2026-03',
     state: 'issued',
-    runAt: '2025-12-01 06:00',
-    tenants: 9,
-    totalCost: 37_140_000,
+    runAt: '2026-04-01 06:00',
+    tenants: 10,
+    totalCost: 176_800_000,
     formats: ['XLSX', 'PDF'],
   },
 ];
@@ -335,12 +335,21 @@ export const SETTLEMENT_REPORTS: SettlementReport[] = [
  * 계열사·부서·사용자 축(LSM-010)과 별개로 **에이전트 축**이 필요하다.
  * "어느 조직이 썼나" 와 "무엇이 비용을 먹나" 는 다른 질문이고,
  * 후자가 있어야 비싼 에이전트를 골라 최적화할 수 있다.
+ *
+ * ⚠️ **전수 표다.** 예전에는 손으로 적은 9행만 있어서, 바로 위 계열사 표가
+ * 47개 에이전트를 말하는데 아래 표는 9행뿐인 상태가 한 화면에 같이 떠 있었다.
+ * 지금은 `mockAdminDashboard.getMeteringAgentBase()` 가 카탈로그 13종 +
+ * 그룹 공통 10종에서 **호출이 발생한 에이전트 전부**를 넘겨 준다.
  */
 export interface AgentMeteringRow {
   agentId: string;
   name: string;
   /** 제작 주관 계열사. */
   tenant: string;
+  /** 그룹 공통 운영영역 자산인가 — 10개 계열사가 함께 쓴다. */
+  groupShared: boolean;
+  /** 소속 과제. */
+  taskId: string;
   /** 이번 달 호출 수. */
   calls: number;
   inputTokens: number;
@@ -352,35 +361,28 @@ export interface AgentMeteringRow {
   deltaPct: number;
 }
 
-const AGENT_SEED: { agentId: string; name: string; tenant: string; calls: number; inTok: number; outTok: number; deltaPct: number }[] = [
-  { agentId: 'GRP-003', name: '회의 보조 에이전트', tenant: '그룹 공통', calls: 164_800, inTok: 412_000_000, outTok: 68_400_000, deltaPct: 12.4 },
-  { agentId: 'GRP-004', name: '품의 · 보고서 작성 도우미', tenant: '그룹 공통', calls: 106_800, inTok: 214_000_000, outTok: 94_200_000, deltaPct: 8.1 },
-  { agentId: 'GRP-008', name: '여신업무 어시스턴트', tenant: '부산은행', calls: 98_400, inTok: 388_000_000, outTok: 41_600_000, deltaPct: 21.7 },
-  { agentId: 'GRP-001', name: '규정 · 책무 어시스턴트', tenant: '그룹 공통', calls: 89_600, inTok: 296_000_000, outTok: 38_200_000, deltaPct: 4.2 },
-  { agentId: 'GRP-002', name: '그룹웨어 문서 어시스턴트', tenant: '그룹 공통', calls: 75_600, inTok: 182_000_000, outTok: 52_800_000, deltaPct: -2.6 },
-  { agentId: 'GRP-005', name: '고객 · 민원 분석 에이전트', tenant: '부산은행', calls: 63_600, inTok: 148_000_000, outTok: 33_400_000, deltaPct: 6.8 },
-  { agentId: 'AGT-204', name: 'PB 자산진단 어시스턴트', tenant: '부산은행', calls: 49_920, inTok: 156_000_000, outTok: 24_200_000, deltaPct: 15.3 },
-  { agentId: 'GRP-009', name: '외환업무 어시스턴트', tenant: '경남은행', calls: 24_400, inTok: 78_000_000, outTok: 11_800_000, deltaPct: 3.1 },
-  { agentId: 'GRP-006', name: '광고심의 지원 에이전트', tenant: 'BNK캐피탈', calls: 19_200, inTok: 42_000_000, outTok: 14_600_000, deltaPct: -8.4 },
-];
-
 export function getAgentRows(): AgentMeteringRow[] {
   const totals = getMeteringTotals();
+  const base = getMeteringAgentBase();
   // 토큰 비중대로 총 정산액을 나눈다 — 조직 축 합계와 어긋나면 화면이 서로 다른 말을 한다.
-  const weighted = AGENT_SEED.map((a) => a.inTok + a.outTok * OUTPUT_WEIGHT);
-  const sum = weighted.reduce((x, y) => x + y, 0);
-  return AGENT_SEED.map((a, i) => {
-    const cost = Math.round((totals.cost * weighted[i]) / sum);
-    return {
-      agentId: a.agentId,
-      name: a.name,
-      tenant: a.tenant,
-      calls: a.calls,
-      inputTokens: a.inTok,
-      outputTokens: a.outTok,
-      cost,
-      costPerCall: Math.round(cost / a.calls),
-      deltaPct: a.deltaPct,
-    };
-  }).sort((x, y) => y.cost - x.cost);
+  const weighted = base.map((a) => a.inputTokens + a.outputTokens * OUTPUT_WEIGHT);
+  const sum = weighted.reduce((x, y) => x + y, 0) || 1;
+  return base
+    .map((a, i) => {
+      const cost = Math.round((totals.cost * weighted[i]) / sum);
+      return {
+        agentId: a.agentId,
+        name: a.name,
+        tenant: a.tenant,
+        groupShared: a.groupShared,
+        taskId: a.taskId,
+        calls: a.calls,
+        inputTokens: a.inputTokens,
+        outputTokens: a.outputTokens,
+        cost,
+        costPerCall: Math.round(cost / Math.max(1, a.calls)),
+        deltaPct: a.deltaPct,
+      };
+    })
+    .sort((x, y) => y.cost - x.cost);
 }

@@ -1,3 +1,13 @@
+/**
+ * 프로젝트(레거시 계층) mock.
+ *
+ * ⚠️ 인물의 소속 부서는 `mockPersonas` 가 정본이다. 여기 부서명이 페르소나
+ *   정의와 다르면, 같은 사람이 화면마다 다른 부서 소속으로 뜬다.
+ *   `AI디지털전략부` 는 그룹 공통(김플랫) 부서이므로 부산은행 과제 멤버에게
+ *   붙이지 않는다 — SEC-001 의 계열사 귀속을 흐린다.
+ *
+ * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
+ */
 import type { Project } from '@/types';
 import { MOCK_KNOWLEDGE_TASKS } from './mockKnowledgeTasks';
 import { MOCK_PIPELINE_TASKS } from './mockPipelineTasks';
@@ -9,7 +19,7 @@ export const pbAgentProject: Project = {
   id: 'PRJ-2025-PB-001',
   name: 'PB 에이전트 프로젝트',
   status: '운영 중',
-  dept: 'AI디지털전략부',
+  dept: '디지털혁신부',
   pmName: '정오너',
   pmBackups: ['박서연', '이도현'],
   startDate: '2025-08-01',
@@ -23,7 +33,7 @@ export const pbAgentProject: Project = {
   costMonthly: { value: '₩0.6M', budget: '₩1.2M', deltaPct: 5.4, ptu: '₩0.42M', variable: '₩0.18M' },
   slo30d: { value: 99.42, target: 99.5, p95Resp: '2.1s', availability: '99.96%' },
   safety7d: { count: 14, deltaCount: 3, guardrailBlocks: 14, piiMasked: 218 },
-  recentActivity: '2026-05-12 14:22 (정오너)',
+  recentActivity: '2026-06-02 14:22 (정오너)',
   bizGoal:
     'PB(Private Banker)의 1차 고객 상담 업무를 지원한다. 상품 안내·시장 동향·간단한 자산 진단에 필요한 자료를 즉시 조회·요약해 답변 초안을 제공하고, PB는 고난도·고가치 상담에 집중하도록 한다.',
   painPoints: [
@@ -82,7 +92,7 @@ export const pbAgentProject: Project = {
           id: 'jung-owner',
           name: '정오너',
           initial: '정',
-          dept: 'AI디지털전략부',
+          dept: '디지털혁신부',
           roleLabel: '프로젝트 오너',
           roleKey: 'pm',
           isLead: true,
@@ -92,7 +102,7 @@ export const pbAgentProject: Project = {
           id: 'park-sy-pm',
           name: '박서연',
           initial: '서',
-          dept: 'AI디지털전략부',
+          dept: '디지털혁신부',
           roleLabel: '프로젝트 오너',
           roleKey: 'pm',
           active: true,
@@ -101,7 +111,8 @@ export const pbAgentProject: Project = {
           id: 'lee-dh',
           name: '이도현',
           initial: '도',
-          dept: 'AI디지털전략부',
+          // 그룹 플랫폼 관리 그룹 소속 승인권자 — 계열사 과제 결재선에 든다.
+          dept: '플랫폼 관리 그룹',
           roleLabel: '프로젝트 오너',
           roleKey: 'pm',
           active: true,
@@ -115,7 +126,7 @@ export const pbAgentProject: Project = {
           id: 'kang-dev',
           name: '강개발',
           initial: '강',
-          dept: 'AI디지털전략부',
+          dept: 'IT개발부',
           roleLabel: '에이전트 개발자',
           roleKey: 'dev',
           active: true,
@@ -124,7 +135,7 @@ export const pbAgentProject: Project = {
           id: 'cho-db',
           name: '조디비',
           initial: '조',
-          dept: '고객채널부',
+          dept: '데이터관리부',
           roleLabel: '데이터 개발자',
           roleKey: 'data',
           active: true,
@@ -138,7 +149,7 @@ export const pbAgentProject: Project = {
           id: 'yoon-member',
           name: '윤참여',
           initial: '윤',
-          dept: '고객채널부',
+          dept: '여신기획부',
           roleLabel: '프로젝트 참여자',
           roleKey: 'pmo',
           active: true,
@@ -235,10 +246,10 @@ export const projectsList = [
     id: pbAgentProject.id,
     name: pbAgentProject.name,
     status: pbAgentProject.status,
-    dept: 'AI디지털전략부',
+    dept: '디지털혁신부',
     pmName: pbAgentProject.pmName,
     startMonth: '2025-08',
-    lastActivity: '05-12 14:22',
+    lastActivity: '06-02 14:22',
     target: pbAgentProject.target,
     sensitivity: pbAgentProject.sensitivity,
     piiTag: '개인정보·신용정보',
@@ -275,10 +286,10 @@ export const projectsList = [
     id: 'PRJ-2024-FC-001',
     name: '금융상담 에이전트 프로젝트',
     status: '운영 중' as const,
-    dept: 'AI디지털전략부',
+    dept: '디지털혁신부',
     pmName: '정오너',
     startMonth: '2024-04',
-    lastActivity: '05-14 09:48',
+    lastActivity: '05-24 09:48',
     target: '대고객',
     sensitivity: 3,
     piiTag: '개인정보',

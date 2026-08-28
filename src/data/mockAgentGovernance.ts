@@ -71,7 +71,7 @@ const PII_ITEMS: Record<string, PiiItem[]> = {
       active: true,
       locked: true,
       hits7d: 142,
-      lastMatchAt: '2026-05-23 18:14',
+      lastMatchAt: '2026-06-02 18:14',
       category: '식별번호',
     },
     {
@@ -84,7 +84,7 @@ const PII_ITEMS: Record<string, PiiItem[]> = {
       active: true,
       locked: true,
       hits7d: 4,
-      lastMatchAt: '2026-05-22 14:08',
+      lastMatchAt: '2026-06-01 14:08',
       category: '식별번호',
     },
     {
@@ -121,7 +121,7 @@ const PII_ITEMS: Record<string, PiiItem[]> = {
       active: true,
       locked: true,
       hits7d: 18,
-      lastMatchAt: '2026-05-23 11:42',
+      lastMatchAt: '2026-06-02 11:42',
       category: '금융',
     },
     {
@@ -134,7 +134,7 @@ const PII_ITEMS: Record<string, PiiItem[]> = {
       active: true,
       locked: true,
       hits7d: 47,
-      lastMatchAt: '2026-05-23 17:22',
+      lastMatchAt: '2026-06-02 17:22',
       category: '금융',
     },
     {
@@ -147,7 +147,7 @@ const PII_ITEMS: Record<string, PiiItem[]> = {
       active: true,
       locked: true,
       hits7d: 12,
-      lastMatchAt: '2026-05-23 09:58',
+      lastMatchAt: '2026-06-02 09:58',
       category: '연락처',
     },
     {
@@ -160,7 +160,7 @@ const PII_ITEMS: Record<string, PiiItem[]> = {
       active: true,
       locked: true,
       hits7d: 8,
-      lastMatchAt: '2026-05-23 16:30',
+      lastMatchAt: '2026-06-02 16:30',
       category: '연락처',
     },
     // 사용자 추가 (정규식)
@@ -174,7 +174,7 @@ const PII_ITEMS: Record<string, PiiItem[]> = {
       active: true,
       locked: false,
       hits7d: 3,
-      lastMatchAt: '2026-05-22 10:11',
+      lastMatchAt: '2026-06-01 10:11',
       category: '내부코드',
     },
     {
@@ -196,7 +196,7 @@ const EVENTS: Record<string, PiiFilterEvent[]> = {
   'AGT-204': [
     {
       id: 'pe-9c3a',
-      ts: '2026-05-23 18:14',
+      ts: '2026-06-02 18:14',
       itemCode: 'RRN-13',
       itemName: '주민등록번호',
       contextSnippet: '고객님 본인 확인 위해 [XXXXXX-XXXXXXX] 알려주시면…',
@@ -205,7 +205,7 @@ const EVENTS: Record<string, PiiFilterEvent[]> = {
     },
     {
       id: 'pe-9c39',
-      ts: '2026-05-23 17:22',
+      ts: '2026-06-02 17:22',
       itemCode: 'ACCT-KR',
       itemName: '계좌번호',
       contextSnippet: '부산은행 [XXX-XX-XXXXXX]로 이체 부탁드립니다',
@@ -214,7 +214,7 @@ const EVENTS: Record<string, PiiFilterEvent[]> = {
     },
     {
       id: 'pe-9c38',
-      ts: '2026-05-23 16:30',
+      ts: '2026-06-02 16:30',
       itemCode: 'EMAIL',
       itemName: '이메일 주소',
       contextSnippet: '안내문은 [x***@***.com]으로 발송됩니다',
@@ -223,7 +223,7 @@ const EVENTS: Record<string, PiiFilterEvent[]> = {
     },
     {
       id: 'pe-9c37',
-      ts: '2026-05-23 11:42',
+      ts: '2026-06-02 11:42',
       itemCode: 'CARD-16',
       itemName: '신용카드번호',
       contextSnippet: '현재 등록된 카드 [XXXX-XXXX-XXXX-XXXX]의 한도는…',
@@ -232,7 +232,7 @@ const EVENTS: Record<string, PiiFilterEvent[]> = {
     },
     {
       id: 'pe-9c36',
-      ts: '2026-05-23 09:58',
+      ts: '2026-06-02 09:58',
       itemCode: 'PHONE-MOBILE',
       itemName: '휴대전화번호',
       contextSnippet: '본인 명의 [010-XXXX-XXXX]로 OTP 전송 예정',
@@ -241,7 +241,7 @@ const EVENTS: Record<string, PiiFilterEvent[]> = {
     },
     {
       id: 'pe-9c30',
-      ts: '2026-05-22 10:11',
+      ts: '2026-06-01 10:11',
       itemCode: 'CUSTOM-VIP-001',
       itemName: 'PB VIP 등급 코드',
       contextSnippet: '[VIP-**-****] 등급 고객님께 적용되는 혜택은…',
@@ -260,7 +260,7 @@ const CHANGE_REQUESTS: Record<string, PiiChangeRequest[]> = {
       reason: '대화 로그에서 카톡 ID 노출 우려 — 마스킹 추가 요청',
       pattern: '^[a-z0-9_.-]{4,20}$',
       requestedBy: '박서연',
-      requestedAt: '2026-05-23 14:20',
+      requestedAt: '2026-06-02 14:20',
       status: 'pending',
       stage: '프로젝트 오너 그룹 → 정보보호부',
     },
@@ -271,7 +271,7 @@ const CHANGE_REQUESTS: Record<string, PiiChangeRequest[]> = {
       reason: '신규 등급 체계 도입에 따른 패턴 보강',
       pattern: '^VIP-[A-Z]{2}-\\d{4,6}$',
       requestedBy: '박서연',
-      requestedAt: '2026-05-19 16:42',
+      requestedAt: '2026-05-29 16:42',
       status: 'approved',
     },
     {
@@ -281,7 +281,7 @@ const CHANGE_REQUESTS: Record<string, PiiChangeRequest[]> = {
       reason: '임직원 ID 노출 시 내부 통제 우회 위험',
       pattern: '^M-\\d{5}$',
       requestedBy: '박서연',
-      requestedAt: '2026-04-30 10:00',
+      requestedAt: '2026-05-10 10:00',
       status: 'approved',
     },
   ],

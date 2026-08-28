@@ -69,7 +69,7 @@ export const REINDEX_JOBS: ReindexJob[] = [
     progress: 100,
     docs: 12_480,
     chunks: 186_200,
-    startedAt: '2026-01-08 02:00',
+    startedAt: '2026-06-03 02:00',
     eta: '검증 완료 · 스왑 승인 대기',
     quality: [
       { metric: 'Recall@10', before: 0.81, after: 0.88, threshold: 0.81 },
@@ -89,7 +89,7 @@ export const REINDEX_JOBS: ReindexJob[] = [
     progress: 62,
     docs: 4_120,
     chunks: 71_400,
-    startedAt: '2026-01-08 06:30',
+    startedAt: '2026-06-03 06:30',
     eta: '약 2시간 20분 남음',
   },
   {
@@ -104,7 +104,7 @@ export const REINDEX_JOBS: ReindexJob[] = [
     progress: 34,
     docs: 1_240,
     chunks: 18_600,
-    startedAt: '2026-01-08 08:15',
+    startedAt: '2026-06-03 08:15',
     eta: '약 40분 남음',
   },
 ];

@@ -16,7 +16,7 @@
  * 메시지다 — "추측으로 답하면 근거를 제시할 수 없다".
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
@@ -42,7 +42,11 @@ import {
   detectPii,
   maskPii,
   seedHistory,
+  chatAgentsFor,
+  suggestedQuestions,
+  matchDocAnswer,
   type ChatAgentOption,
+  type DocAnswer,
 } from '@/data/mockChat';
 
 interface Msg {
@@ -63,9 +67,24 @@ export default function ChatPage() {
    * 설정이 화면과 안 이어지면 개인화가 거짓말이 된다.
    */
   const prefs = usePersonalization();
-  const [agent, setAgent] = useState<ChatAgentOption>(
-    () => CHAT_AGENTS.find((a) => a.name === prefs.defaultAgent) ?? CHAT_AGENTS[0],
-  );
+  /*
+   * SEC-001 — 선택 가능한 에이전트는 그룹 공통 + 자기 계열사 것뿐이다.
+   * 예전에는 전체 목록을 그대로 그려서 타 계열사 전용 에이전트가 드롭다운에 보였다.
+   */
+  const agentOptions = useMemo(() => chatAgentsFor(tenant), [tenant]);
+  /*
+   * AGB-006 — 마켓플레이스의 그룹 공동 사용 에이전트 카드에서 `?agent=GRP-00N` 으로
+   * 넘어온다. 카드가 정보만 보여 주고 대화로 이어지지 않으면 요건을 절반만 채운다.
+   */
+  const [params] = useSearchParams();
+  const [agent, setAgent] = useState<ChatAgentOption>(() => {
+    const wanted = params.get('agent');
+    return (
+      (wanted ? agentOptions.find((a) => a.id === wanted) : undefined) ??
+      agentOptions.find((a) => a.name === prefs.defaultAgent) ??
+      agentOptions[0]
+    );
+  });
   /** 전체 프롬프트 보기 — 해당 에이전트 관리자에게만 열린다(2-1). */
   const [showPrompt, setShowPrompt] = useState(false);
   const [model, setModel] = useState(
@@ -73,7 +92,11 @@ export default function ChatPage() {
   );
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
-  const [pending, setPending] = useState<{ q: string; sc: QueryScenario | null } | null>(null);
+  const [pending, setPending] = useState<{
+    q: string;
+    sc: QueryScenario | null;
+    doc: DocAnswer | null;
+  } | null>(null);
   const [stepIdx, setStepIdx] = useState(-1);
   const [activeRef, setActiveRef] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -82,16 +105,24 @@ export default function ChatPage() {
   const blocked = piiHits.length > 0;
 
   /** 근거를 잇지 못하면 앵커링에서 멈춘다 — 단계를 끝까지 돌리지 않는다. */
-  const steps = pending?.sc ? RUN_STEPS : RUN_STEPS.slice(0, 2);
+  const steps = pending?.sc || pending?.doc ? RUN_STEPS : RUN_STEPS.slice(0, 2);
 
   /* 재생 — 단계 하나씩 진행 후 답변을 커밋한다. */
   useEffect(() => {
     if (!pending) return;
     if (stepIdx >= steps.length) {
       const sc = pending.sc;
+      const doc = pending.doc;
       setMsgs((m) => [
         ...m,
-        { role: 'assistant', text: sc ? sc.verdict : UNGROUNDED_ANSWER.head, sc: sc ?? undefined },
+        {
+          role: 'assistant',
+          // 온톨로지 에이전트는 확정 판정을, 문서 RAG 에이전트는 인용 요약을 낸다.
+          // 둘 다 못 잡으면 그때만 "근거를 잇지 못했다"로 떨어진다.
+          text: sc ? sc.verdict : (doc?.a ?? UNGROUNDED_ANSWER.head),
+          sc: sc ?? undefined,
+          plain: !sc && !!doc,
+        },
       ]);
       setActiveRef(null);
       setPending(null);
@@ -113,7 +144,11 @@ export default function ChatPage() {
     if (detectPii(q).length > 0) return; // 차단 상태에서는 전송 자체가 일어나지 않는다
     setMsgs((m) => [...m, { role: 'user', text: q }]);
     setInput('');
-    setPending({ q, sc: agent.ontology ? matchScenario(q) : null });
+    setPending({
+      q,
+      sc: agent.ontology ? matchScenario(q) : null,
+      doc: agent.ontology ? null : matchDocAnswer(agent.id, q),
+    });
     setStepIdx(0);
   };
 
@@ -201,9 +236,9 @@ export default function ChatPage() {
               label="에이전트"
               value={agent.name}
               hint={agent.grounding}
-              options={CHAT_AGENTS.map((a) => ({ k: a.id, label: a.name, hint: a.desc }))}
+              options={agentOptions.map((a) => ({ k: a.id, label: a.name, hint: a.desc }))}
               onPick={(k) => {
-                const a = CHAT_AGENTS.find((x) => x.id === k)!;
+                const a = agentOptions.find((x) => x.id === k)!;
                 setAgent(a);
               }}
             />
@@ -274,7 +309,10 @@ export default function ChatPage() {
               <span className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.4px]">
                 추천 질의
               </span>
-              {GROUNDED_QUESTIONS.map((q) => (
+              {/* 에이전트마다 답할 수 있는 질의가 다르다 — 온톨로지 계열은 규정 판정,
+                  문서 RAG 계열은 자기 지식 인덱스 범위. 목록을 고정하면 고른 에이전트가
+                  답하지 못하는 질의를 추천하게 된다. */}
+              {suggestedQuestions(agent.id).map((q) => (
                 <button
                   key={q}
                   onClick={() => send(q)}
@@ -753,7 +791,7 @@ function EvidencePanel({
       </div>
 
       <Link
-        to="/projects/PRJ-2025-PB-001/tasks/ontology"
+        to="/knowledge/ontology"
         className="w-full inline-flex items-center justify-center gap-1.5 h-8 rounded border border-line text-[11.5px] font-extrabold text-ink-dark hover:border-brand hover:text-brand mb-3.5"
       >
         근거 그래프 자세히 보기 →

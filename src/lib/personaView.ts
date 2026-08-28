@@ -35,7 +35,9 @@ function approvalCategoryAllowlist(persona: PersonaLike): string[] | null {
       return ['register', 'discard', 'policy'];
     case 'governance_admin':
       // 거버넌스 관리자는 위 항목 + 레드팀 검증 결재 담당.
-      return ['register', 'discard', 'policy', 'redteam'];
+      // `promote`(자산 공유범위 승격)는 결재선 마지막 단계가 「그룹 거버넌스 승인」이라
+      // 이 역할이 반드시 봐야 한다 — 빠져 있으면 승격 결재가 최종 승인자에게 안 보인다.
+      return ['register', 'discard', 'policy', 'redteam', 'promote'];
     case 'security_admin':
       // 정보보호 관리자는 접근통제·인증 관점의 계정 결재만 관심.
       return ['account'];
@@ -54,7 +56,10 @@ function isDrafterOnlyPersona(persona: PersonaLike): boolean {
 
 /** 현재 페르소나가 볼 수 있는 결재 리스트 전체 (필터 후, 아직 slice 전). */
 export function getVisibleApprovals(persona: PersonaLike): ApprovalItem[] {
-  if (persona?.id === 'service_user') return [];
+  // 일반 사용자는 결재 주체가 아니다. 예전에는 `service_user`(부산은행) 한 명만
+  // 막아서 하사용(경남은행)·표사용(BNK캐피탈)로 전환하면 **타 계열사 결재 건까지
+  // 전부 보였다** — SEC-001 격리 서사가 그 자리에서 깨진다. 그룹 단위로 막는다.
+  if (persona?.group === '사용자') return [];
   // 서빙계 배포 결재(스토어)를 기존 정적 결재와 합쳐서 노출.
   let list: ApprovalItem[] = [...getDeployApprovals(), ...approvals];
   // 개발자 그룹: 본인 기안 건만. (draftedBy에 "(SoD 자동 위임)" 같은 접미사가 붙을 수 있어 prefix 비교)
@@ -204,17 +209,81 @@ export function canAccessArea(persona: PersonaLike, area: NavArea): boolean {
     // 제작 워크스페이스 — 에이전트 개발자·모델러·과제 오너 및 관리자
     case 'studio':
       return persona.group === '개발자' || persona.group === '관리자';
-    // 데이터 워크스페이스 — 데이터 담당자·모델러·에이전트 개발자 및 관리자
+    // 데이터 워크스페이스 — 데이터 담당자·모델러·에이전트 개발자, 과제 오너, 관리자
+    //
+    // 과제 오너(rfpRole='관리자' · group='개발자')를 넣은 이유 —
+    // 소속 계열사 과제에 전권을 갖는 역할이고, 시연 대본 화면 9 「승인 기반 DB
+    // 동적 라우팅」(/knowledge/routing)을 이 페르소나가 진행한다. 데이터 접근
+    // 라우팅은 기안·운영 책임이 과제 오너에게 있는 화면이라 영역을 여는 것이 맞다.
+    // (승인 자체는 별개다 — 직무 분리는 화면 안에서 따로 막는다. ONM-003)
     case 'knowledge':
       return (
         persona.rfpRole === '데이터 담당자' ||
         persona.rfpRole === '모델러' ||
         persona.rfpRole === '에이전트 개발자' ||
+        persona.rfpRole === '관리자' ||
         persona.group === '관리자'
       );
     case 'admin':
       return canAccessAdminConsole(persona);
   }
+}
+
+/* ═══════════════════ 영역 밖 단건 경로 예외 (읽기 전용) ═══════════════════ */
+
+/**
+ * 온톨로지 근거 그래프(`/knowledge/ontology`) **읽기 전용** 진입 허용 여부.
+ *
+ * 시연 대본 화면 4 는 일반 사용자(`service_user`)가 챗 답변의
+ * "근거 그래프 자세히 보기 →" 를 눌러 이 화면으로 들어간다. 답변의 근거를
+ * 사용자가 직접 확인하는 동선이라 막으면 RAG-007 의 설명력이 사라진다.
+ *
+ * 그렇다고 **지식·데이터 영역 전체를 열어서는 안 된다.** 그 안에는 지식 데이터
+ * 적재·DB 스키마·데이터 라우팅처럼 일반 사용자 권한 밖 화면이 함께 있고,
+ * 데모에 그려 둔 것은 그대로 계약 확약이 된다(RFP Ⅳ.4.1 · Ⅳ.6.7).
+ *
+ * 그래서 `canAccessArea('knowledge')` 는 건드리지 않고 **이 화면 하나만**,
+ * 그것도 **조회(Query) 뷰만** 연다. 편집 하위 탭(그래프 설계 · 데이터 매핑 ·
+ * Auto-Map · Materialize · 진단)은 읽기 전용 셸에서 렌더되지 않으므로
+ * 클래스 병합·삭제 같은 편집 컨트롤에 손이 닿지 않는다.
+ *
+ * RFP 2-1 "접근 가능한 워크스페이스·메뉴·기능만 노출" 을 지키면서
+ * RAG-007 근거 제시를 살리는 절충이다.
+ */
+export function canViewOntologyReadOnly(persona: PersonaLike): boolean {
+  if (!persona) return false;
+  // 정식 권한자는 편집 가능한 워크스페이스 화면으로 들어간다.
+  if (canAccessArea(persona, 'knowledge')) return false;
+  return persona.rfpRole === '일반 사용자';
+}
+
+/* ═══════════════════════ 직무 분리 (SoD) ═══════════════════════ */
+
+/** 데이터 접근 라우팅 화면의 승인 관문. */
+export type ApprovalGate = 'deploy' | 'consent';
+
+/**
+ * 관문별 승인 자격 — ONM-003(필수·상세제안) 직무 분리.
+ *
+ * 화면 9 의 기안자는 과제 오너(정오너)다. **기안자 그룹(개발자)은 자기 기안을
+ * 스스로 승인할 수 없다.** 결재함 필터가 이미 같은 규칙을 쓰고 있다
+ * (`isDrafterOnlyPersona` — 개발자 그룹은 결재자가 아니라 기안자).
+ * 화면에서도 같은 말을 해야 조견표와 어긋나지 않는다.
+ *
+ *   · 배포 승인(SEC-006)      → 승인권자, 즉 관리자 그룹
+ *   · 동의 권원 확인(SEC-007) → 정보보호·거버넌스 관리자
+ */
+export function canApproveGate(persona: PersonaLike, gate: ApprovalGate): boolean {
+  if (!persona) return false;
+  if (gate === 'deploy') return persona.group === '관리자';
+  return persona.id === 'security_admin' || persona.id === 'governance_admin';
+}
+
+/** 승인 자격이 없을 때 화면에 띄울 안내 — 어느 계정으로 바꿔야 하는지까지 적는다. */
+export function gateDenialHint(gate: ApprovalGate): string {
+  return gate === 'deploy'
+    ? '승인권자 계정으로 전환해야 합니다 (플랫폼 관리 그룹)'
+    : '정보보호 그룹 계정으로 전환해야 합니다';
 }
 
 /**

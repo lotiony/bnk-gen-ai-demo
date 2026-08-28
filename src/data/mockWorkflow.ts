@@ -115,9 +115,15 @@ export const SEED_NODES: WfNode[] = [
     ],
   },
   {
-    id: 'n4', kind: 'agent', title: '여신심사 보조 에이전트', x: 610, y: 112,
+    /*
+     * 여신 사전심사 담당은 카탈로그의 **AGT-512 비대면 여신 사전심사 보조**다.
+     * AGT-204 는 'PB 자산진단 어시스턴트'(부산은행·박서연)이며 업무 축이 다르다 —
+     * 시연 정거장 6(마켓플레이스)에서 AGT-204 카드를 본 직후 정거장 7에서 이
+     * 노드를 열면 같은 ID 가 다른 이름을 달고 있는 게 바로 드러난다.
+     */
+    id: 'n4', kind: 'agent', title: '비대면 여신 사전심사 보조', x: 610, y: 112,
     config: [
-      { k: '에이전트', v: 'AGT-204 여신심사 보조' },
+      { k: '에이전트', v: 'AGT-512 비대면 여신 사전심사 보조' },
       { k: '배포 상태', v: 'Approved (서빙계)' },
       { k: '타임아웃', v: '30s' },
     ],
@@ -389,7 +395,7 @@ export interface LongRun {
 export const LONG_RUNS: LongRun[] = [
   {
     runId: 'RUN-7712',
-    startedAt: '2026-05-16 09:41',
+    startedAt: '2026-05-26 09:41',
     lastCheckpoint: 'ckpt-1 · 접수 확정',
     waitingOn: '고객 서류 보완 대기 (소득증빙 미제출)',
     elapsed: '2일 6시간',
@@ -397,7 +403,7 @@ export const LONG_RUNS: LongRun[] = [
   },
   {
     runId: 'RUN-7698',
-    startedAt: '2026-05-15 14:02',
+    startedAt: '2026-05-25 14:02',
     lastCheckpoint: 'ckpt-2 · 심사 보조 완료',
     waitingOn: '전결규정 API 장애로 중단 — 복구 후 ckpt-2 에서 재개',
     elapsed: '3일 2시간',
@@ -405,7 +411,7 @@ export const LONG_RUNS: LongRun[] = [
   },
   {
     runId: 'RUN-7655',
-    startedAt: '2026-05-13 10:15',
+    startedAt: '2026-05-23 10:15',
     lastCheckpoint: 'ckpt-3 · 전결권 확정',
     waitingOn: '심사역 최종 검토 대기',
     elapsed: '5일 8시간',
@@ -456,7 +462,7 @@ export const NL_GENERATION: NlGeneration = {
   ],
   todo: [
     '임계값 5억을 규정 개정에 맞춰 확인할 것 — 문장에서 그대로 읽었다',
-    '에이전트는 AGT-204 로 임의 지정했다. 다른 에이전트라면 속성에서 교체할 것',
+    '에이전트는 AGT-512(비대면 여신 사전심사 보조)로 임의 지정했다. 다른 에이전트라면 속성에서 교체할 것',
     '부수효과가 있는 노드의 보상 트랜잭션은 자동 생성되지 않는다 — 직접 정의해야 한다',
   ],
 };

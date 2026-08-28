@@ -37,13 +37,18 @@ export default function AdminSecurityPage() {
 
   const filteredLogs = useMemo(() => {
     const lower = q.trim().toLowerCase();
-    return UNIFIED_AUDIT.filter((l) => {
-      if (cat !== 'all' && l.category !== cat) return false;
-      if (!lower) return true;
-      return [l.actor, l.via ?? '', l.tenant, l.action, l.target, l.consentBasis ?? ''].some((v) =>
-        v.toLowerCase().includes(lower),
-      );
-    });
+    return (
+      UNIFIED_AUDIT.filter((l) => {
+        if (cat !== 'all' && l.category !== cat) return false;
+        if (!lower) return true;
+        return [l.actor, l.via ?? '', l.tenant, l.action, l.target, l.consentBasis ?? ''].some((v) =>
+          v.toLowerCase().includes(lower),
+        );
+      })
+        /* 감사 원장은 시간순이 생명이다 — 필터·검색을 거쳐도 최신순을 유지한다.
+           (ONM-004 · SEC-009 근거 화면이라 시간이 역행하면 그대로 지적 대상) */
+        .sort((a, b) => b.at.localeCompare(a.at))
+    );
   }, [q, cat]);
 
   return (

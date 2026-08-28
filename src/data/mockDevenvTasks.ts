@@ -38,7 +38,7 @@ export const MOCK_DEVENV_TASKS: DevenvTask[] = [
     ownerName: '박서연',
     ownerInitial: '서연',
     state: '실행 중',
-    lastActivity: '2026-05-24 14:38',
+    lastActivity: '2026-06-03 14:38',
     meta: 'VS Code · Python 3.12 · GPU 1× A100',
   },
   {
@@ -49,7 +49,7 @@ export const MOCK_DEVENV_TASKS: DevenvTask[] = [
     ownerName: '이도현',
     ownerInitial: '도현',
     state: '정지',
-    lastActivity: '2026-05-23 18:02',
+    lastActivity: '2026-06-02 18:02',
     meta: 'JetBrains PyCharm · Python 3.11 · CPU only',
   },
   // 프로젝트 Jenkins
@@ -61,7 +61,7 @@ export const MOCK_DEVENV_TASKS: DevenvTask[] = [
     ownerName: '박서연',
     ownerInitial: '서연',
     state: '실행 중',
-    lastActivity: '2026-05-24 14:02',
+    lastActivity: '2026-06-03 14:02',
     meta: '파이프라인 4 · 오늘 빌드 12회 · 성공률 91.7%',
   },
   // 프로젝트 ArgoCD
@@ -73,7 +73,7 @@ export const MOCK_DEVENV_TASKS: DevenvTask[] = [
     ownerName: '강민호',
     ownerInitial: '민호',
     state: '동기화 대기',
-    lastActivity: '2026-05-24 13:47',
+    lastActivity: '2026-06-03 13:47',
     meta: '앱 3 · 동기화 OK 2 · OutOfSync 1',
   },
 ];

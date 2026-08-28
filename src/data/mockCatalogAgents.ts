@@ -62,7 +62,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 3,
     ownerName: '박서연',
     ownerInitial: '서연',
-    updatedAt: '2026-05-19 16:08',
+    updatedAt: '2026-05-29 16:42',
     description: '보유 자산 위험도·분산도·유동성 점수 산출 + 개선안 JSON 반환',
   },
   {
@@ -84,7 +84,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 3,
     ownerName: '조현우',
     ownerInitial: '현우',
-    updatedAt: '2026-05-23 10:42',
+    updatedAt: '2026-06-02 10:42',
     description: '통화 내용에서 보이스피싱 의심 단서 식별 후 risk_score 반환',
   },
   {
@@ -105,7 +105,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 3,
     ownerName: '박서연',
     ownerInitial: '서연',
-    updatedAt: '2026-05-22 14:18',
+    updatedAt: '2026-06-01 14:18',
     description: '사내 규정·지침 인용형 답변 — 검색엔진 SRC-301 연동',
   },
   {
@@ -127,7 +127,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 4,
     ownerName: '윤지수',
     ownerInitial: '지수',
-    updatedAt: '2026-05-21 11:30',
+    updatedAt: '2026-05-31 11:30',
     description: '신청서·증빙 OCR + 약식 신용평가 — 심사역 보조용 (대내)',
   },
   {
@@ -148,7 +148,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 2,
     ownerName: '한지민',
     ownerInitial: '지민',
-    updatedAt: '2026-05-20 09:14',
+    updatedAt: '2026-05-30 09:14',
     description: '카드 분실·재발급 1차 응대 — 본인 인증 통과 시 즉시 정지 처리',
   },
   {
@@ -169,7 +169,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 3,
     ownerName: '정우진',
     ownerInitial: '우진',
-    updatedAt: '2026-05-23 13:02',
+    updatedAt: '2026-06-02 13:02',
     description: '진단서·소견서·영수증 자동 분류·태깅 + 누락 항목 알림',
   },
   {
@@ -190,7 +190,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 3,
     ownerName: '이서연',
     ownerInitial: '서연',
-    updatedAt: '2026-05-22 08:00',
+    updatedAt: '2026-06-01 08:00',
     description: '시장 데이터 + 리스크 한도 위반 모니터링 → 오전 브리프 자동 생성',
   },
   {
@@ -210,7 +210,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 2,
     ownerName: '김재훈',
     ownerInitial: '재훈',
-    updatedAt: '2026-05-18 17:24',
+    updatedAt: '2026-05-28 17:24',
     description: '연금 상품 비교·예상 수령액 시뮬레이션 — 학습계 검증 중',
   },
   {
@@ -232,7 +232,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 2,
     ownerName: '박서연',
     ownerInitial: '서연',
-    updatedAt: '2026-05-19 09:30',
+    updatedAt: '2026-05-29 09:30',
     description: '국내외 시장 지표·뉴스·리서치 리포트를 실시간 수집·요약해 오전 브리핑과 리스크 알람을 자동 생성',
   },
   {
@@ -253,7 +253,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 2,
     ownerName: '오민지',
     ownerInitial: '민지',
-    updatedAt: '2026-05-14 09:48',
+    updatedAt: '2026-05-24 09:48',
     description: '예·적금 상품 안내와 금리 비교, 가입 자격·우대 조건 확인을 자동화하여 상담 초안을 제공',
   },
   {
@@ -274,7 +274,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 2,
     ownerName: '정수민',
     ownerInitial: '수민',
-    updatedAt: '2026-05-13 15:20',
+    updatedAt: '2026-05-23 15:20',
     description: '환율 조회·환전 시나리오·해외 송금 규정 안내를 자동화하고 고객 문의 초안을 실시간으로 지원',
   },
   {
@@ -295,7 +295,7 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     sensitivity: 2,
     ownerName: '한지훈',
     ownerInitial: '지훈',
-    updatedAt: '2026-05-25 16:02',
+    updatedAt: '2026-06-02 16:02',
     description: '상담원 응대 중 실시간으로 답변 초안·근거 문서를 제시하는 코파일럿',
   },
   {

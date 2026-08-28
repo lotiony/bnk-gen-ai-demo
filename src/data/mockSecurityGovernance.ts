@@ -118,7 +118,13 @@ export interface UnifiedAuditRow {
   note?: string;
 }
 
-export const UNIFIED_AUDIT: UnifiedAuditRow[] = [
+/**
+ * ⚠️ **감사 원장은 시간순이 생명이다.** 아래 배열은 카테고리별로 묶어 읽기 좋게
+ * 적어 두었으므로 배열 순서가 곧 시간순은 아니다. 그래서 아래에서 한 번
+ * **최신순으로 정렬한 값**을 export 한다 — 화면이 배열 순서를 그대로 그리면
+ * 06-03 → 06-02 → 06-03 처럼 시간이 역행해 보인다(ONM-004 · SEC-009 근거 화면).
+ */
+const UNIFIED_AUDIT_RAW: UnifiedAuditRow[] = [
   // ── 복호화요청 — 데이터 라우팅 화면(DRT-101 · AGT-204)과 같은 원장 ──
   {
     at: '2026-06-03 09:41:02', actor: '박서연', via: 'AGT-204 PB 자산진단', tenant: '부산은행',
@@ -153,9 +159,11 @@ export const UNIFIED_AUDIT: UnifiedAuditRow[] = [
   },
   // ── 모델배포 ──
   {
-    at: '2026-06-01 08:55:44', actor: '노운영', tenant: 'BNK시스템',
+    // 서비스 등록부(mockServiceRegistry)의 GRP-007 행과 같은 사건이다 —
+    // 행위자·계열사를 그 행(남데이터 · 경남은행)에 맞춘다.
+    at: '2026-06-01 08:55:44', actor: '남데이터', tenant: '경남은행',
     category: '모델배포', action: '서비스 게시 대기 등록', target: 'GRP-007 지식·상품 어시스턴트',
-    verdict: '허용',
+    verdict: '허용', note: '과제 PRJ-KN-031 · v0.9-rc1 검증 중',
   },
   {
     at: '2026-05-30 14:02:18', actor: '이도현 (승인권자)', tenant: '부산은행',
@@ -186,10 +194,15 @@ export const UNIFIED_AUDIT: UnifiedAuditRow[] = [
   },
   {
     at: '2026-05-31 09:15:40', actor: '김플랫', tenant: 'BNK시스템',
-    category: '자원변경', action: 'GPU 상한 정책 변경', target: '프로젝트 GPU 상한 4장 → 6장',
+    category: '자원변경', action: 'GPU 상한 정책 변경', target: '과제 GPU 상한 4장 → 6장',
     verdict: '허용', note: '다음 배정부터 적용',
   },
 ];
+
+/** 통합 감사 원장 — **최신순**. 소비처는 이 배열을 그대로 그리면 된다. */
+export const UNIFIED_AUDIT: UnifiedAuditRow[] = [...UNIFIED_AUDIT_RAW].sort((a, b) =>
+  b.at.localeCompare(a.at),
+);
 
 export const UNIFIED_AUDIT_CATEGORIES: UnifiedAuditCategory[] = [
   '복호화요청', '프롬프트실행', '모델배포', '권한양도', '자원변경',

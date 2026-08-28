@@ -42,6 +42,8 @@ export interface BoardPost {
   createdAt: string;
   reportCount: number;
   state: BoardPostState;
+  /** 본문 — 마켓플레이스 게시판에서 작성한 글이 담는다(선택). */
+  body?: string;
 }
 
 export const BOARD_POSTS: BoardPost[] = [

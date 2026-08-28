@@ -170,7 +170,7 @@ export interface DrmFlowLog {
 
 export const DRM_FLOW_LOGS: DrmFlowLog[] = [
   {
-    at: '2026-01-08 09:41:02',
+    at: '2026-06-03 09:41:02',
     tenant: '부산은행',
     channel: '프롬프트 첨부',
     fileName: '여신심사_내규발췌.hwp',
@@ -179,7 +179,7 @@ export const DRM_FLOW_LOGS: DrmFlowLog[] = [
     detail: '복호화 후 PII 스캔 → 주민번호 2건 마스킹 → 모델 입력',
   },
   {
-    at: '2026-01-08 09:38:55',
+    at: '2026-06-03 09:38:55',
     tenant: '경남은행',
     channel: '파이프라인 수집',
     fileName: '상품매뉴얼_2026개정.pdf',
@@ -188,7 +188,7 @@ export const DRM_FLOW_LOGS: DrmFlowLog[] = [
     detail: '복호화 → 파싱 → 청킹 → 임베딩 · 인덱스 반영 대기',
   },
   {
-    at: '2026-01-08 09:31:10',
+    at: '2026-06-03 09:31:10',
     tenant: '부산은행',
     channel: '파이프라인 수집',
     fileName: '고객상담이력_202512.xlsx',
@@ -197,7 +197,7 @@ export const DRM_FLOW_LOGS: DrmFlowLog[] = [
     detail: 'Object Storage 적재 시 플랫폼 키로 재암호화 — 평문 상태로 저장하지 않는다',
   },
   {
-    at: '2026-01-08 09:22:47',
+    at: '2026-06-03 09:22:47',
     tenant: 'BNK투자증권',
     channel: '프롬프트 첨부',
     fileName: 'IB_딜리뷰_초안.docx',
@@ -206,7 +206,7 @@ export const DRM_FLOW_LOGS: DrmFlowLog[] = [
     detail: '제품 C 연동 진행 중 — 첨부는 차단되고 사용자에게 사유가 안내됐다',
   },
   {
-    at: '2026-01-08 09:14:33',
+    at: '2026-06-03 09:14:33',
     tenant: 'BNK시스템',
     channel: '파이프라인 수집',
     fileName: '운영매뉴얼_v3.pdf',

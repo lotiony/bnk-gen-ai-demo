@@ -79,8 +79,15 @@ export interface StudioTask {
  */
 const TENANT_OF: Record<string, Tenant> = {
   'AGT-204': '부산은행',
+  'KNW-198': '부산은행',
   'KNW-201': '부산은행',
-  'KNW-187': '경남은행',
+  /*
+   * KNW-187 은 보이스피싱 과제(부산은행 PRJ-101)의 커넥터이고 소유자도 부산은행
+   * 사람이다. 테넌트 전환 효과를 보이겠다고 여기서만 경남은행으로 돌려놓으면,
+   * 같은 카드가 소유자는 부산은행 · 계열사는 경남은행으로 뜬다.
+   * 경남은행 자산은 MDL-308 이 맡는다.
+   */
+  'KNW-187': '부산은행',
   'SRC-301': '그룹 공통',
   'MDL-301': '부산은행',
   'MDL-308': '경남은행',
@@ -166,7 +173,7 @@ export const STUDIO_TASKS: StudioTask[] = [
     state: '학습계 배포',
     ownerName: '강개발',
     ownerInitial: '강',
-    updatedAt: '2026-05-18',
+    updatedAt: '2026-05-28',
     note: '조건 분기 2개 · 보상 트랜잭션 구간 지정',
     href: '/studio/workflow',
     tenant: '부산은행',
@@ -178,7 +185,7 @@ export const STUDIO_TASKS: StudioTask[] = [
     state: '운영 중',
     ownerName: '조디비',
     ownerInitial: '조',
-    updatedAt: '2026-05-16',
+    updatedAt: '2026-05-26',
     note: '기업·재무·담보 클래스 관계 정비 · Graph RAG 리트리버 연결',
     href: '/knowledge/ontology',
     tenant: '그룹 공통',

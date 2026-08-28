@@ -24,6 +24,8 @@ import Crumb from '@/components/ui/Crumb';
 import { useWorkCrumb, useWorkContainer, useWorkReturnPath, useWorkReturnLabel, useInWorkspace } from '@/lib/crumbs';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { useCurrentPersona } from '@/lib/persona';
+import { canApproveGate, gateDenialHint, type ApprovalGate } from '@/lib/personaView';
 import {
   ROUTING_GATES,
   ROUTING_TARGETS,
@@ -54,6 +56,20 @@ export default function DataRoutingTaskPage() {
   const returnPath = useWorkReturnPath(pid);
   const returnLabel = useWorkReturnLabel();
   const inWorkspace = useInWorkspace();
+
+  /**
+   * 현재 로그인 계정 — **직무 분리(SoD)의 주체**다.
+   *
+   * ONM-003(필수·상세제안). 이 화면의 기안자는 과제 오너이고, 대본도 이 화면을
+   * 과제 오너 계정으로 연다. 그 계정으로 결재까지 눌러지면 화면이 직무 분리를
+   * 부정하게 된다 — 그래서 관문마다 자격을 따로 본다.
+   * 판정 규칙은 결재함 필터와 같은 곳(`personaView`)에 둔다.
+   */
+  const persona = useCurrentPersona();
+  const canApproveDeploy = canApproveGate(persona, 'deploy');
+  const canApproveConsent = canApproveGate(persona, 'consent');
+  const canApprove = (id: ApprovalGate) =>
+    id === 'deploy' ? canApproveDeploy : canApproveConsent;
 
   /** 게이트 ① 승인권자 결재. */
   const [deployApproved, setDeployApproved] = useState(false);
@@ -128,6 +144,50 @@ export default function DataRoutingTaskPage() {
         </Button>
       </div>
 
+      {/* ── 직무 분리 스트립 ── */}
+      <section className="card px-5 py-3 mb-3.5">
+        <div className="flex items-start gap-2.5">
+          <span className="text-[15px] leading-none mt-[1px]" aria-hidden>
+            {canApproveDeploy || canApproveConsent ? '🔑' : '🔒'}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-[13px] font-extrabold text-ink">직무 분리 (SoD)</h2>
+              <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
+                ONM-003
+              </span>
+              <span className="text-[11px] text-ink-mid font-semibold">
+                현재 계정 <b className="text-ink-dark">{persona?.name ?? '-'}</b> ·{' '}
+                {persona?.role ?? '-'} ({persona?.group ?? '-'} 그룹)
+              </span>
+            </div>
+            <div className="text-[11px] text-ink-mid font-semibold leading-relaxed mt-1">
+              {persona?.group === '개발자' ? (
+                <>
+                  이 계정은 <b className="text-ink-dark">기안자</b>다. 기안한 사람이 자기 건을
+                  승인할 수 없으므로 아래 두 관문은 잠겨 있다 — 배포 승인은 승인권자(플랫폼 관리
+                  그룹), 동의 권원 확인은 정보보호 그룹의 몫이다.{' '}
+                  <b className="text-ink-dark">상단 계정 전환</b>으로 승인권자 계정으로 바꾸면
+                  관문이 열린다.
+                </>
+              ) : (
+                <>
+                  관문별로 승인 자격을 따로 본다 — 배포 승인{' '}
+                  <b className={canApproveDeploy ? 'text-ok' : 'text-ink-dark'}>
+                    {canApproveDeploy ? '가능' : '불가'}
+                  </b>{' '}
+                  · 동의 권원 확인{' '}
+                  <b className={canApproveConsent ? 'text-ok' : 'text-ink-dark'}>
+                    {canApproveConsent ? '가능' : '불가'}
+                  </b>
+                  . 결재·전환 이력은 모두 감사 원장에 남는다.
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── 2중 승인 통제 스트립 ── */}
       <section className="card px-5 py-4 mb-3.5">
         <div className="flex items-center gap-2 mb-3">
@@ -188,16 +248,44 @@ export default function DataRoutingTaskPage() {
                 </div>
                 <div className="text-[10.5px] text-ink-mid font-semibold leading-snug">{g.actor}</div>
                 <div className="text-[11px] text-ink-dark font-semibold leading-snug mt-1">{g.desc}</div>
-                {actionable && (
-                  <button
-                    onClick={() =>
-                      g.id === 'deploy' ? setDeployApproved(true) : setConsentVerified(true)
-                    }
-                    className="mt-auto self-start inline-flex items-center h-[26px] px-2.5 rounded bg-brand border border-brand-dark text-white text-[11px] font-extrabold hover:bg-brand-dark"
-                  >
-                    {g.id === 'deploy' ? '승인권자 결재 승인' : '동의 권원 확인'}
-                  </button>
-                )}
+                {actionable &&
+                  (() => {
+                    // ONM-003 — 관문마다 승인 자격을 본다. 자격이 없으면 버튼을
+                    // 감추지 않고 **잠긴 채로 보여 준다**. 무엇이 왜 막혔는지가
+                    // 이 화면이 증명해야 할 내용이기 때문이다.
+                    const gate = g.id as ApprovalGate;
+                    const allowed = canApprove(gate);
+                    return (
+                      <div className="mt-auto">
+                        <button
+                          type="button"
+                          disabled={!allowed}
+                          onClick={() =>
+                            gate === 'deploy' ? setDeployApproved(true) : setConsentVerified(true)
+                          }
+                          title={allowed ? undefined : gateDenialHint(gate)}
+                          className={cn(
+                            'self-start inline-flex items-center h-[26px] px-2.5 rounded text-[11px] font-extrabold border',
+                            allowed
+                              ? 'bg-brand border-brand-dark text-white hover:bg-brand-dark'
+                              : 'bg-surface-soft border-line text-ink-light cursor-not-allowed',
+                          )}
+                        >
+                          {!allowed && (
+                            <span className="mr-1" aria-hidden>
+                              🔒
+                            </span>
+                          )}
+                          {gate === 'deploy' ? '승인권자 결재 승인' : '동의 권원 확인'}
+                        </button>
+                        {!allowed && (
+                          <div className="text-[10px] text-warn font-extrabold leading-snug mt-1">
+                            {gateDenialHint(gate)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 {g.id === 'access' && (
                   <div
                     className={cn(

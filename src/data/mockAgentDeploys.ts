@@ -1,3 +1,30 @@
+/**
+ * 에이전트 배포 mock — 학습계 배포 · 서빙계 프로모션 · API 키 · 부하 테스트.
+ *
+ * ⚠️ **타임스탬프 순서가 곧 배포 게이트의 증명이다.**
+ *   화면은 "평가·레드팀이 끝나지 않으면 결재 기안 자체가 불가"라고 말하는데,
+ *   데이터의 시각이 그 순서를 어기면 발주처가 표만 훑어도 반증된다
+ *   (RFP Ⅳ.4.1 — 제안서 = 계약서). 그래서 아래 순서를 **항상** 지킨다.
+ *
+ *     커밋/태그 → 학습계 배포 → 평가(mockAgentEvals)
+ *       → 레드팀 신청·수행(mockAgentRedTeam) → [미달 시 보강 후 재검]
+ *       → 결재 → 서빙계 승격
+ *
+ *   AGT-204 의 실제 축(데모 세계관 오늘 = 2026-06-03):
+ *     v3.5.0  태그 04-20 09:10 → 학습계 04-20 09:30 → 평가 04-20 11:20 → 승격 04-22 11:10
+ *     v4.0.0  태그 05-08 10:30 → 학습계 05-08 12:08 → 평가 05-08 14:42
+ *             → 레드팀 05-09(RT-A·RT-B 미달) → 재검 05-10 통과 → 승격 05-12 10:24
+ *     v4.1.0  태그 05-22 14:08 → 학습계 05-22 16:30 → 평가 05-22 17:10·17:34
+ *             → 레드팀 05-23(RT-A·RT-B 미달) → 재검 05-24 통과 → 승격 05-25 14:08
+ *     v4.2.0  태그 05-29 16:42 → 학습계 05-29 17:08 → 평가 05-29 17:48·18:02
+ *             → 레드팀 05-30(RT-E 미달) → 재검 05-31 통과 → **결재 대기(승격 전)**
+ *     v4.3.0-rc1 태그 05-30 14:12 → 학습계 미배포·평가 미완 → 결재 기안 불가
+ *
+ *   날짜를 옮길 때는 세 파일(deploys · evals · redteam)을 **같은 오프셋으로**
+ *   함께 옮긴다. 한 파일만 옮기면 검증이 태그보다 앞서는 상태가 다시 생긴다.
+ *
+ * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
+ */
 export interface GitLabRepo {
   url: string;
   branch: string;
@@ -115,7 +142,7 @@ export interface ServingDeployData {
 const REPO: GitLabRepo = {
   url: 'git.aip.group.local/aip/pb-advisor',
   branch: 'main',
-  lastFetchedAt: '2026-05-20 18:32',
+  lastFetchedAt: '2026-06-02 18:32',
 };
 
 const TAGS: GitTag[] = [
@@ -125,7 +152,7 @@ const TAGS: GitTag[] = [
     commitSha: '9a2f7c1',
     commitMessage: '응답 형식 JSON 강제 + 환각 사례 8건 패치 (RC)',
     author: '박서연',
-    authoredAt: '2026-05-20 14:12',
+    authoredAt: '2026-05-30 14:12',
     ci: 'success',
     linkedEvalRunIds: [],
   },
@@ -135,7 +162,7 @@ const TAGS: GitTag[] = [
     commitSha: '7f3a9c2',
     commitMessage: '응답 형식 JSON 강제 추가',
     author: '박서연',
-    authoredAt: '2026-05-19 16:42',
+    authoredAt: '2026-05-29 16:42',
     ci: 'success',
     linkedEvalRunIds: ['eval-9f2a', 'eval-9f2b'],
   },
@@ -145,7 +172,7 @@ const TAGS: GitTag[] = [
     commitSha: '3b1d5e8',
     commitMessage: 'PII 마스킹 룰 보강 · 주민번호 패턴 추가',
     author: '박서연',
-    authoredAt: '2026-05-12 14:08',
+    authoredAt: '2026-05-22 14:08',
     ci: 'success',
     linkedEvalRunIds: ['eval-9e84', 'eval-9e85'],
   },
@@ -155,7 +182,7 @@ const TAGS: GitTag[] = [
     commitSha: 'a0c4f12',
     commitMessage: '시스템 프롬프트 전면 개편 · few-shot 5개 도입',
     author: '조현우',
-    authoredAt: '2026-04-28 10:30',
+    authoredAt: '2026-05-08 10:30',
     ci: 'success',
     linkedEvalRunIds: ['eval-9d11'],
   },
@@ -165,7 +192,7 @@ const TAGS: GitTag[] = [
     commitSha: '8d2e6a4',
     commitMessage: '응답 길이 제한 1024 토큰으로 조정',
     author: '박서연',
-    authoredAt: '2026-04-10 09:10',
+    authoredAt: '2026-04-20 09:10',
     ci: 'success',
     linkedEvalRunIds: ['eval-9b01'],
   },
@@ -175,7 +202,7 @@ const TAGS: GitTag[] = [
     commitSha: '4f0b2c9',
     commitMessage: 'hotfix · 한국어 토큰 잘림 보정',
     author: '윤지수',
-    authoredAt: '2026-03-28 11:42',
+    authoredAt: '2026-04-07 11:42',
     ci: 'failed',
     linkedEvalRunIds: [],
   },
@@ -185,7 +212,7 @@ const HISTORY: DeployRecord[] = [
   {
     id: 'deploy-204-12',
     tagName: 'v4.2.0',
-    deployedAt: '2026-05-19 17:08',
+    deployedAt: '2026-05-29 17:08',
     deployedBy: '박서연',
     status: 'active',
     approvedBy: '김플랫 (프로젝트 오너 그룹)',
@@ -193,7 +220,7 @@ const HISTORY: DeployRecord[] = [
   {
     id: 'deploy-204-11',
     tagName: 'v4.1.0',
-    deployedAt: '2026-05-12 16:30',
+    deployedAt: '2026-05-22 16:30',
     deployedBy: '박서연',
     status: 'replaced',
     approvedBy: '김플랫 (프로젝트 오너 그룹)',
@@ -201,7 +228,7 @@ const HISTORY: DeployRecord[] = [
   {
     id: 'deploy-204-10',
     tagName: 'v4.0.0',
-    deployedAt: '2026-04-28 12:08',
+    deployedAt: '2026-05-08 12:08',
     deployedBy: '박서연',
     status: 'replaced',
     approvedBy: '김플랫 (프로젝트 오너 그룹)',
@@ -209,7 +236,7 @@ const HISTORY: DeployRecord[] = [
   {
     id: 'deploy-204-09',
     tagName: 'v3.5.0',
-    deployedAt: '2026-04-10 09:30',
+    deployedAt: '2026-04-20 09:30',
     deployedBy: '박서연',
     status: 'replaced',
     approvedBy: '이도현 (프로젝트 오너 그룹)',
@@ -238,24 +265,24 @@ const SERVING_DATA: Record<string, ServingDeployData> = {
       {
         tagName: 'v4.2.0',
         evalVersion: 'v4.2',
-        trainDeployedAt: '2026-05-19 17:08',
+        trainDeployedAt: '2026-05-29 17:08',
         trainDuration: '학습계 운영 5일',
         evalPassRate: 95.5,
-        evalCompletedAt: '2026-05-19',
+        evalCompletedAt: '2026-05-29',
         redteamPassed: true,
         status: 'recommended',
-        note: '회귀 평가 통과 · 레드팀 게이트 통과 · 학습계 무중단 5일',
+        note: '회귀 평가 통과 · 레드팀 윤리 셋(RT-E) 미달 → 가드레일 보강 후 재검 통과 · 학습계 무중단 5일',
       },
       {
         tagName: 'v4.1.0',
         evalVersion: 'v4.1',
-        trainDeployedAt: '2026-05-12 16:30',
+        trainDeployedAt: '2026-05-22 16:30',
         trainDuration: '서빙계 운영 중',
         evalPassRate: 94.0,
-        evalCompletedAt: '2026-05-18',
+        evalCompletedAt: '2026-05-22',
         redteamPassed: true,
         status: 'ready',
-        note: '현재 서빙계 활성 버전',
+        note: '현재 서빙계 활성 버전 · 레드팀 1차 미달분(RT-A·RT-B) 재검 통과 후 승격',
       },
       {
         tagName: 'v4.3.0-rc1',
@@ -273,7 +300,7 @@ const SERVING_DATA: Record<string, ServingDeployData> = {
       {
         id: 'serv-204-08',
         tagName: 'v4.1.0',
-        promotedAt: '2026-05-15 14:08',
+        promotedAt: '2026-05-25 14:08',
         promotedBy: '박서연',
         approvedBy: '플랫폼 부서장',
         trafficPct: 100,
@@ -283,7 +310,7 @@ const SERVING_DATA: Record<string, ServingDeployData> = {
       {
         id: 'serv-204-07',
         tagName: 'v4.0.0',
-        promotedAt: '2026-05-02 10:24',
+        promotedAt: '2026-05-12 10:24',
         promotedBy: '박서연',
         approvedBy: '플랫폼 부서장',
         trafficPct: 0,
@@ -293,7 +320,7 @@ const SERVING_DATA: Record<string, ServingDeployData> = {
       {
         id: 'serv-204-06',
         tagName: 'v3.5.0',
-        promotedAt: '2026-04-12 11:10',
+        promotedAt: '2026-04-22 11:10',
         promotedBy: '이도현',
         approvedBy: '플랫폼 부서장',
         trafficPct: 0,
@@ -303,7 +330,7 @@ const SERVING_DATA: Record<string, ServingDeployData> = {
       {
         id: 'serv-204-05',
         tagName: 'v3.4.0',
-        promotedAt: '2026-03-22 09:42',
+        promotedAt: '2026-04-01 09:42',
         promotedBy: '박서연',
         approvedBy: '플랫폼 부서장',
         trafficPct: 0,
@@ -343,20 +370,20 @@ const API_KEYS: Record<string, Record<ApiKeyEnv, ApiKey>> = {
       env: 'train',
       fullKey: 'sk-train-9a2f7c1b4e0d8f6a3c5e2b1d4f7c9a02',
       lastFour: '9a02',
-      issuedAt: '2026-04-12 09:30',
+      issuedAt: '2026-04-22 09:30',
       issuedBy: '박서연',
       callCount: 1842,
-      lastUsedAt: '2026-05-23 18:14',
+      lastUsedAt: '2026-06-02 18:14',
       endpoint: 'https://api-dev.aip.group.local/agents/AGT-204',
     },
     serv: {
       env: 'serv',
       fullKey: 'sk-live-7f3a9c2b1d4e0d8f6a3c5e2b1d4f0a3c',
       lastFour: '0a3c',
-      issuedAt: '2026-05-15 14:08',
+      issuedAt: '2026-05-25 14:08',
       issuedBy: '박서연',
       callCount: 12032,
-      lastUsedAt: '2026-05-23 18:20',
+      lastUsedAt: '2026-06-02 18:20',
       endpoint: 'https://api.aip.group.local/agents/AGT-204',
     },
   },
@@ -397,7 +424,7 @@ const LOAD_TEST_RUNS: Record<string, LoadTestRun[]> = {
     {
       id: 'lt-9c4a',
       version: 'v4.2.0',
-      ranAt: '2026-05-20 11:42',
+      ranAt: '2026-05-30 11:42',
       ranBy: '박서연',
       concurrentUsers: 100,
       durationMin: 15,
@@ -413,7 +440,7 @@ const LOAD_TEST_RUNS: Record<string, LoadTestRun[]> = {
     {
       id: 'lt-9c49',
       version: 'v4.2.0',
-      ranAt: '2026-05-19 18:30',
+      ranAt: '2026-05-29 18:30',
       ranBy: '박서연',
       concurrentUsers: 200,
       durationMin: 5,
@@ -429,7 +456,7 @@ const LOAD_TEST_RUNS: Record<string, LoadTestRun[]> = {
     {
       id: 'lt-9b30',
       version: 'v4.1.0',
-      ranAt: '2026-05-14 14:10',
+      ranAt: '2026-05-24 14:10',
       ranBy: '이도현',
       concurrentUsers: 100,
       durationMin: 15,
@@ -445,7 +472,7 @@ const LOAD_TEST_RUNS: Record<string, LoadTestRun[]> = {
     {
       id: 'lt-9a12',
       version: 'v4.0.0',
-      ranAt: '2026-04-27 16:05',
+      ranAt: '2026-05-09 16:05',
       ranBy: '박서연',
       concurrentUsers: 100,
       durationMin: 10,

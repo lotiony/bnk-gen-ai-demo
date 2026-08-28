@@ -1,5 +1,6 @@
 import type { ModelCategory, ModelEntry, ModelStatus } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 
 interface Props {
   models: ModelEntry[];
@@ -42,9 +43,25 @@ export default function ModelsTab({ models }: Props) {
         <span className="text-[11.5px] text-ink-mid font-medium">
           사용 가능 모델 화이트리스트 · 학습계/서빙계 사용 비율
         </span>
-        <a href="#" className="ml-auto text-[11.5px] font-bold text-info hover:underline">
+        {/*
+          `href="#"` 는 HashRouter 에서 해시를 비워 홈으로 튕긴다. 모델 카탈로그는
+          아직 대응 화면이 없으므로(마켓플레이스는 에이전트·프롬프트·MCP 자산만
+          다룬다) 이동시키지 않고 안내만 띄운다.
+        */}
+        <button
+          type="button"
+          onClick={() =>
+            toast(
+              '모델 카탈로그',
+              '사용 가능 모델 화이트리스트는 관리 콘솔의 모델·자원 관리에서 확정됩니다.\n' +
+                '과제 화면에서는 배정된 모델의 사용 현황만 조회합니다.',
+              'info',
+            )
+          }
+          className="ml-auto text-[11.5px] font-bold text-info hover:underline"
+        >
           모델 카탈로그 →
-        </a>
+        </button>
       </div>
 
       {groups.map((g) => (

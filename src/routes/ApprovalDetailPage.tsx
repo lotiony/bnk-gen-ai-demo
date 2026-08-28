@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { approvals } from '@/data/mockApprovals';
+import {
+  approvals,
+  useApprovalRevision,
+  findPromotion,
+  decideApproval,
+  getApprovalDecision,
+  namespaceOf,
+  promotionKindLabel,
+  type ScopePromotion,
+  type ApprovalDecisionKind,
+} from '@/data/mockApprovals';
+import { SCOPE_ORDER, SCOPE_META } from '@/data/mockCatalog';
+import type { ApprovalItem } from '@/types';
+import { TENANTS } from '@/data/tenants';
+import { toast } from '@/lib/toast';
 import {
   useDeployApprovals,
   decideDeployApproval,
@@ -19,12 +33,27 @@ import { useCurrentPersona } from '@/lib/persona';
 import { canViewApproval, canViewPtuPool } from '@/lib/personaView';
 
 /**
- * 결재 상세 — 좌측: 영역 A~J 아코디언 / 우측: 결재선 진행·이력·첨부 / 하단: 의견 + 액션 sticky bar
- * (PRJ-101_approval.html 포팅)
+ * 결재 상세.
+ *
+ * RFP: 1.3.2(관리자 승인 절차 기반 공유 범위 통제) · LSM-009(승인 기반 배포)
+ *      ONM-004(누가·언제·무엇을 승인했는가 감사 추적)
+ *
+ * 세 가지 상세를 한 라우트에서 분기한다.
+ *   ① 서빙계·학습계 **배포** 결재  → DeployApprovalDetail
+ *   ② 공유범위 **승격** 결재       → ScopePromotionDetail (RFP 1.3.2)
+ *   ③ 그 외 프로젝트 결재          → 아래 기본 아코디언 (PRJ-101_approval.html 포팅)
+ *
+ * ② 를 ③ 의 레이아웃(프로젝트 기본 정보·비즈니스 케이스·데이터 자산)에 태우면
+ * 결재자가 판단할 것("이 자산을 11개 Namespace 에 열어도 되는가")이 화면에
+ * 없다. 그래서 자산·범위 중심의 전용 화면을 따로 세운다.
  */
 export default function ApprovalDetailPage() {
   const { approvalId } = useParams();
   const persona = useCurrentPersona();
+  const navigate = useNavigate();
+  // 승격 상신·승인·반려로 목록이 바뀌면 상세도 함께 갱신된다.
+  useApprovalRevision();
+  const [note, setNote] = useState('');
 
   // 서빙계 배포 결재는 전용 상세로 렌더.
   const deployApprovals = useDeployApprovals();
@@ -47,7 +76,38 @@ export default function ApprovalDetailPage() {
     return <DeployApprovalDetail dep={dep} all={deployApprovals} />;
   }
 
+  // 공유범위 승격 결재 — 자산·범위 중심 전용 상세 (RFP 1.3.2).
+  const promo = findPromotion(approvalId);
+  const promoItem = approvals.find((a) => a.id === approvalId);
+  if (promo && promoItem) {
+    if (persona && !canViewApproval(persona, promo.approvalId)) {
+      return <NoAccess role={persona.role} />;
+    }
+    return <ScopePromotionDetail promo={promo} item={promoItem} />;
+  }
+
   const approval = approvals.find((a) => a.id === approvalId) ?? approvals[0];
+  const pending = approval.state === 'pending';
+  const decision = getApprovalDecision(approval.id);
+
+  /** 승인·반려·보류 — 상태가 실제로 바뀌고, **누가** 처리했는지 남는다(ONM-004). */
+  const decide = (kind: ApprovalDecisionKind) => {
+    decideApproval(
+      approval.id,
+      kind,
+      persona?.name ?? '현재 사용자',
+      persona?.role ?? '결재자',
+      note,
+    );
+    const label = kind === 'approve' ? '승인' : kind === 'reject' ? '반려' : '보류';
+    toast(
+      `${approval.id} · ${label} 처리했습니다`,
+      `${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'}) · 통합 감사 원장에 기록되었습니다`,
+      kind === 'reject' ? 'warn' : 'ok',
+    );
+    setNote('');
+    if (kind !== 'hold') navigate('/approvals');
+  };
   const showPtuPool = canViewPtuPool(persona);
 
   // 목록에서 걸러진 결재는 상세 URL로 직접 들어와도 열람 불가.
@@ -282,9 +342,13 @@ export default function ApprovalDetailPage() {
                 >
                   <span className="text-[12.5px] font-bold text-ink-dark flex-1">{name}</span>
                   <span className="pill bg-bad-bg text-bad border border-bad-border">필수</span>
-                  <a href="#" className="text-info text-[12px] font-semibold hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => openDoc(name, file)}
+                    className="text-info text-[12px] font-semibold hover:underline"
+                  >
                     ✓ {file}
-                  </a>
+                  </button>
                 </div>
               ))}
             </div>
@@ -312,6 +376,30 @@ export default function ApprovalDetailPage() {
                 대직원 리스크 관리 Agent 신규 구축 건입니다. 우선 검토 부탁드립니다.
               </p>
             </div>
+            {/* 처리 결과 — 누가 언제 무엇을 결정했는지 남는다 (ONM-004). */}
+            {decision && (
+              <div className="pt-2.5">
+                <div className="flex items-center gap-2 text-[11.5px] mb-1">
+                  <span className="font-bold text-ink-dark">{decision.reviewer}</span>
+                  <span
+                    className={cn(
+                      'pill border',
+                      decision.kind === 'approve'
+                        ? 'bg-ok-bg text-ok border-ok-border'
+                        : decision.kind === 'reject'
+                        ? 'bg-bad-bg text-bad border-bad-border'
+                        : 'bg-warn-bg text-warn border-warn-border',
+                    )}
+                  >
+                    {decision.kind === 'approve' ? '승인' : decision.kind === 'reject' ? '반려' : '보류'}
+                  </span>
+                  <span className="ml-auto text-ink-mid">{decision.decidedAt}</span>
+                </div>
+                <p className="text-[11.5px] text-ink-dark leading-relaxed">
+                  {decision.note ?? `${decision.reviewerRole} 권한으로 처리했습니다.`}
+                </p>
+              </div>
+            )}
           </SidebarCard>
 
           <SidebarCard title="첨부 빠른 보기" icon="📎">
@@ -324,31 +412,93 @@ export default function ApprovalDetailPage() {
               'AI 업무 위수탁 체크리스트',
               '혁신금융서비스 지정 서류',
             ].map((f) => (
-              <a
+              <button
                 key={f}
-                href="#"
-                className="flex items-center justify-between py-1.5 px-2 text-[11.5px] text-ink-dark hover:bg-surface-soft rounded"
+                type="button"
+                onClick={() => openDoc(f)}
+                className="w-full flex items-center justify-between py-1.5 px-2 text-[11.5px] text-ink-dark hover:bg-surface-soft rounded"
               >
                 <span>{f}</span>
                 <span className="text-ok font-bold">✓</span>
-              </a>
+              </button>
             ))}
           </SidebarCard>
         </aside>
       </div>
 
-      {/* Sticky action bar */}
+      {/* Sticky action bar — 승인·반려·보류가 실제로 상태를 바꾼다. */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
-          <textarea
-            placeholder="결재 의견을 입력하세요 (선택)"
-            rows={2}
-            className="flex-1 border border-line rounded px-3 py-2 text-[12.5px] resize-none focus:outline-none focus:border-brand-dark"
-          />
-          <Button variant="danger">반려</Button>
-          <Button>보류</Button>
-          <Button variant="primary">✓ 승인</Button>
+          {pending ? (
+            <>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="결재 의견을 입력하세요 (선택)"
+                rows={2}
+                className="flex-1 border border-line rounded px-3 py-2 text-[12.5px] resize-none focus:outline-none focus:border-brand-dark"
+              />
+              <Button variant="danger" onClick={() => decide('reject')}>반려</Button>
+              <Button onClick={() => decide('hold')}>보류</Button>
+              <Button variant="primary" onClick={() => decide('approve')}>✓ 승인</Button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2.5 text-[12px] font-semibold text-ink-mid">
+              <span
+                className={cn(
+                  'pill border',
+                  approval.state === 'done'
+                    ? 'bg-ok-bg text-ok border-ok-border'
+                    : 'bg-bad-bg text-bad border-bad-border',
+                )}
+              >
+                {approval.state === 'done' ? '승인 완료' : '반려'}
+              </span>
+              {decision && (
+                <span>
+                  <b className="text-ink-dark">{decision.reviewer}</b> ({decision.reviewerRole}) ·{' '}
+                  {decision.decidedAt}
+                  {decision.note && <> · 의견 “{decision.note}”</>}
+                </span>
+              )}
+              <Link to="/approvals" className="ml-3 text-info font-bold hover:underline">
+                결재함으로 →
+              </Link>
+            </div>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════ 공용 조각 ═══════════════════════ */
+
+/**
+ * 첨부 문서 열람.
+ *
+ * 이전에는 `href="#"` 였는데, 이 앱은 HashRouter 라 해시가 비면 라우터가 `/` 로
+ * 이동한다 — 결재 상세에서 첨부를 누르면 홈으로 튕겼다. 2막 승인 서사가 그
+ * 자리에서 끊기므로 기본 동작을 막고 안내만 띄운다.
+ */
+function openDoc(name: string, file?: string) {
+  toast('첨부 문서', file ? `「${name}」 · ${file}` : `「${name}」`, 'info');
+}
+
+/** 열람 권한 없음 — 목록 필터와 같은 규칙이라 상세 URL 로도 못 들어온다. */
+function NoAccess({ role }: { role: string }) {
+  return (
+    <div className="max-w-[1360px] mx-auto px-6 py-6">
+      <Crumb items={[{ label: '결재함', to: '/approvals' }, { label: '열람 권한 없음' }]} />
+      <div className="card px-6 py-10 text-center">
+        <div className="text-[32px] mb-2">🔒</div>
+        <h1 className="text-lg font-extrabold text-ink mb-1.5">열람 권한이 없는 결재입니다</h1>
+        <p className="text-xs text-ink-mid font-semibold">
+          {role} 권한으로는 이 결재 건을 볼 수 없습니다. 결재함에서 담당 결재를 확인해 주세요.
+        </p>
+        <Link to="/approvals" className="inline-block mt-4 text-[12px] font-bold text-info hover:underline">
+          결재함으로 →
+        </Link>
       </div>
     </div>
   );
@@ -444,6 +594,7 @@ function PoolRow({
 
 function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployApproval[] }) {
   const navigate = useNavigate();
+  const persona = useCurrentPersona();
   const [note, setNote] = useState('');
   const pending = dep.state === 'pending';
   const isServ = dep.category === 'serv';
@@ -452,7 +603,14 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
   const current = all.find((d) => d.category === dep.category && d.state === 'done' && d.id !== dep.id);
 
   const decide = (decision: 'approve' | 'reject') => {
-    decideDeployApproval(dep.id, decision, note);
+    // 결재자는 현재 로그인 페르소나다 — 감사 원장의 '누가' 가 여기서 정해진다(ONM-004).
+    const reviewer = persona ? `${persona.name} (${persona.role})` : '현재 사용자';
+    decideDeployApproval(dep.id, decision, note, reviewer);
+    toast(
+      `${dep.id} · ${decision === 'approve' ? '승인' : '반려'} 처리했습니다`,
+      `${reviewer} · 통합 감사 원장에 기록되었습니다`,
+      decision === 'approve' ? 'ok' : 'warn',
+    );
     navigate('/approvals');
   };
   const cancel = () => {
@@ -740,6 +898,382 @@ function FormRow({ k, v }: { k: string; v: React.ReactNode }) {
     <div className="flex items-start gap-3 py-2.5 px-4 text-[12.5px]">
       <span className="w-[110px] flex-shrink-0 text-ink-mid font-semibold text-[11.5px]">{k}</span>
       <span className="flex-1 min-w-0 text-ink-dark font-semibold">{v}</span>
+    </div>
+  );
+}
+
+/* ═══════════════════════ 공유범위 승격 결재 상세 ═══════════════════════ */
+
+/**
+ * RFP 구축범위 1.3.2 마켓플레이스:
+ *   "… **관리자 승인 절차 기반** 배포·공유 범위(개인/부서/본부/해당계열사/그룹 전체) 통제"
+ *
+ * 결재자가 이 화면에서 판단할 것은 하나다 — **이 자산을 11개 Namespace 전체에
+ * 열어도 되는가.** 그래서 화면을 자산과 범위 두 축으로만 세운다.
+ *   ① 대상 자산이 무엇인가 (ID·종류·소유 계열사·버전)
+ *   ② 현재 범위 → 요청 범위 (5단계 축 위에서 눈으로 확인)
+ *   ③ 왜 올리는가 (사용량·평가·도입 부서)
+ *   ④ 검증은 끝났는가 (레드팀·가드레일·PII·SLO 산출물)
+ *   ⑤ 승인하면 무슨 일이 일어나는가 (Namespace 11개 노출)
+ */
+function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: ApprovalItem }) {
+  const navigate = useNavigate();
+  const persona = useCurrentPersona();
+  const [note, setNote] = useState('');
+  const pending = item.state === 'pending';
+  const decision = getApprovalDecision(item.id);
+
+  const fromIdx = SCOPE_ORDER.indexOf(promo.fromScope);
+  const toIdx = SCOPE_ORDER.indexOf(promo.toScope);
+  const ownerNs = namespaceOf(promo.ownerTenant);
+
+  const decide = (kind: ApprovalDecisionKind) => {
+    decideApproval(item.id, kind, persona?.name ?? '현재 사용자', persona?.role ?? '결재자', note);
+    const label = kind === 'approve' ? '승인' : kind === 'reject' ? '반려' : '보류';
+    toast(
+      `${item.id} · 공유범위 승격 ${label}`,
+      kind === 'approve'
+        ? `${promo.assetId} ${promo.assetName} 이(가) 그룹 범위로 공개됩니다 — 11개 Namespace 전체 노출\n처리 ${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'})`
+        : `처리 ${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'}) · 통합 감사 원장에 기록되었습니다`,
+      kind === 'reject' ? 'warn' : 'ok',
+    );
+    setNote('');
+    if (kind !== 'hold') navigate('/approvals');
+  };
+
+  const statePill = pending
+    ? { cls: 'bg-warn-bg text-warn border-warn-border', label: '승인 대기' }
+    : item.state === 'done'
+    ? { cls: 'bg-ok-bg text-ok border-ok-border', label: '승격 완료 · 그룹 공개' }
+    : { cls: 'bg-bad-bg text-bad border-bad-border', label: '반려 · 범위 유지' };
+
+  return (
+    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
+      <Crumb
+        items={[
+          { label: '결재함', to: '/approvals' },
+          { label: '공유범위 승격 결재' },
+          { label: promo.assetName },
+        ]}
+        trailing={item.id}
+      />
+
+      {/* ── 헤더 ── */}
+      <div className="card px-6 py-5 mb-3.5">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className="pill bg-accent-purple-bg text-accent-purple border border-accent-purple-border">
+            공유범위 승격
+          </span>
+          <span className={cn('pill border', statePill.cls)}>{statePill.label}</span>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
+            1.3.2 관리자 승인 절차 기반 공유 범위 통제
+          </span>
+        </div>
+        <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px] mb-1.5">
+          {promo.assetName}
+          <span className="ml-2 text-[13px] font-mono font-bold text-ink-light align-middle">
+            {promo.assetId}
+          </span>
+        </h1>
+        <p className="text-xs text-ink-mid font-semibold">
+          요청 <b className="text-ink-dark">{promo.requestedBy}</b> ({promo.requesterTenant}) · 신청{' '}
+          <b className="text-ink-dark">{item.draftedAt}</b> · 결재선{' '}
+          <b className="text-ink-dark">{item.stage.label}</b> ({item.stage.current}/{item.stage.total} 단계)
+        </p>
+      </div>
+
+      <div className="grid grid-cols-[1fr_340px] gap-3.5">
+        <div>
+          {/* ── ② 현재 범위 → 요청 범위 (이 화면의 핵심) ── */}
+          <section className="card px-5 py-4 mb-3.5">
+            <div className="flex items-baseline gap-2 mb-3 flex-wrap">
+              <h2 className="text-[15px] font-extrabold text-ink">공유 범위 승격</h2>
+              <span className="text-[11.5px] text-ink-mid font-semibold">
+                개인 → 부서 → 본부 → 계열사 → 그룹 5단계 중{' '}
+                <b className="text-ink-dark">{toIdx - fromIdx}단계</b> 승격 요청
+              </span>
+              <span className="ml-auto text-[12px] font-extrabold">
+                <span className="text-warn">{promo.fromScope}</span>
+                <span className="mx-1.5 text-ink-light">→</span>
+                <span className="text-ok">{promo.toScope}</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-5 gap-1.5">
+              {SCOPE_ORDER.map((sc, i) => {
+                const isFrom = i === fromIdx;
+                const isTo = i === toIdx;
+                const opened = i <= fromIdx;
+                const delta = i > fromIdx && i <= toIdx;
+                return (
+                  <div key={sc} className="flex flex-col">
+                    <div className="h-[16px] text-center text-[9.5px] font-extrabold tracking-[0.3px]">
+                      {isFrom && <span className="text-warn">현재 범위</span>}
+                      {isTo && <span className="text-ok">요청 범위</span>}
+                    </div>
+                    <div
+                      className={cn(
+                        'rounded px-2.5 py-2.5 border-2 text-center transition-colors',
+                        isTo
+                          ? 'border-ok bg-ok-bg'
+                          : isFrom
+                          ? 'border-warn bg-warn-bg'
+                          : delta
+                          ? 'border-dashed border-ok-border bg-ok-bg/30'
+                          : opened
+                          ? 'border-line-soft bg-surface-soft'
+                          : 'border-line-soft bg-white',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'text-[13px] font-extrabold leading-tight',
+                          isTo ? 'text-ok' : isFrom ? 'text-warn' : 'text-ink-mid',
+                        )}
+                      >
+                        {sc}
+                      </div>
+                      <div className="text-[10px] text-ink-mid font-semibold mt-0.5 leading-snug">
+                        {SCOPE_META[sc].desc}
+                      </div>
+                    </div>
+                    <div className="h-[15px] mt-1 text-center text-[9.5px] font-bold">
+                      {opened && <span className="text-ink-light">이미 열림</span>}
+                      {delta && <span className="text-ok">승인 시 신규 개방</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="mt-2 text-[11px] text-ink-mid font-semibold leading-snug">
+              승격은 <b className="text-ink-dark">소유권을 옮기지 않는다</b> — 자산은{' '}
+              {promo.ownerTenant}({ownerNs}) 소유로 남고, 노출 범위만 넓어진다. 승인 후에도 소유
+              계열사와 거버넌스가 언제든 범위를 회수할 수 있다.
+            </p>
+          </section>
+
+          {/* ── ⑤ 승인 시 노출되는 Namespace ── */}
+          <section className="card px-5 py-4 mb-3.5">
+            <div className="flex items-baseline gap-2 mb-2.5 flex-wrap">
+              <h2 className="text-[13px] font-extrabold text-ink">승인 시 노출 범위</h2>
+              <span className="text-[11.5px] text-ink-mid font-semibold">
+                노출 Namespace <b className="text-warn">1</b>
+                <span className="mx-1 text-ink-light">→</span>
+                <b className="text-ok">{TENANTS.length}</b> (계열사 10 + 그룹 공통 1)
+              </span>
+            </div>
+            <div className="grid grid-cols-6 gap-1.5">
+              {TENANTS.map((t) => {
+                const already = t.name === promo.ownerTenant;
+                return (
+                  <div
+                    key={t.name}
+                    className={cn(
+                      'rounded px-2 py-1.5 border text-center',
+                      already ? 'border-warn bg-warn-bg' : 'border-dashed border-ok-border bg-ok-bg/30',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'text-[11px] font-extrabold leading-tight truncate',
+                        already ? 'text-warn' : 'text-ok',
+                      )}
+                      title={t.name}
+                    >
+                      {t.short}
+                    </div>
+                    <div className="text-[9px] font-mono text-ink-light truncate" title={t.namespace}>
+                      {t.namespace}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-3 mt-2 text-[10.5px] text-ink-mid font-semibold">
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-warn-bg border border-warn" />
+                현재 노출 (소유 계열사)
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-ok-bg border border-dashed border-ok-border" />
+                승인 시 신규 노출
+              </span>
+            </div>
+          </section>
+
+          {/* ── ① 대상 자산 ── */}
+          <FormSection title="대상 자산">
+            <FormRow k="자산 ID" v={<code className="text-[11.5px] font-mono font-bold text-ink-dark">{promo.assetId}</code>} />
+            <FormRow k="자산 종류" v={promotionKindLabel(promo.assetKind)} />
+            <FormRow k="자산명" v={promo.assetName} />
+            <FormRow
+              k="소유 계열사"
+              v={
+                <>
+                  {promo.ownerTenant}
+                  <span className="ml-1.5 text-[11px] font-mono text-ink-light">{ownerNs}</span>
+                </>
+              }
+            />
+            <FormRow k="소유자" v={promo.ownerName} />
+            <FormRow k="버전" v={promo.version} />
+            <FormRow k="최근 갱신" v={promo.updatedAt} />
+          </FormSection>
+
+          {/* ── ③ 승격 근거 ── */}
+          <FormSection title="승격 근거">
+            {promo.evidence.map((e) => (
+              <FormRow
+                key={e.k}
+                k={e.k}
+                v={
+                  <span className="flex items-center gap-2">
+                    <span className="flex-1 min-w-0">{e.v}</span>
+                    <span
+                      className={cn(
+                        'pill border flex-shrink-0',
+                        e.pass
+                          ? 'bg-ok-bg text-ok border-ok-border'
+                          : 'bg-warn-bg text-warn border-warn-border',
+                      )}
+                    >
+                      {e.pass ? '기준 충족' : '확인 필요'}
+                    </span>
+                  </span>
+                }
+              />
+            ))}
+            <FormRow k="요청 사유" v={<span className="leading-relaxed font-medium">{promo.reason}</span>} />
+          </FormSection>
+
+          {/* ── ④ 검증 산출물 ── */}
+          <FormSection title="검증 산출물">
+            {promo.artifacts.map((a) => (
+              <FormRow
+                key={a.ref}
+                k={a.ok ? '✓' : '⚠'}
+                v={
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => openDoc(a.name, a.ref)}
+                      className="text-[12.5px] font-extrabold text-info hover:underline"
+                    >
+                      {a.name}
+                    </button>
+                    <span className="text-[10.5px] font-mono text-ink-light">{a.ref}</span>
+                    <span
+                      className={cn(
+                        'ml-auto pill border',
+                        a.ok ? 'bg-ok-bg text-ok border-ok-border' : 'bg-warn-bg text-warn border-warn-border',
+                      )}
+                    >
+                      {a.result}
+                    </span>
+                  </span>
+                }
+              />
+            ))}
+          </FormSection>
+
+          {/* ── 승인 시 적용 사항 ── */}
+          <section className="card px-5 py-4">
+            <h2 className="text-[13px] font-extrabold text-ink mb-2">승인하면 적용되는 것</h2>
+            <ul className="space-y-1">
+              {[
+                `${promo.assetId} ${promo.assetName} 의 공유 범위가 ${promo.fromScope} → ${promo.toScope} 으로 변경된다.`,
+                `11개 Namespace(계열사 10 + 그룹 공통) 전체의 마켓플레이스 카탈로그에 노출되고, 타 계열사 사용자가 별도 요청 없이 바로 사용한다.`,
+                `자산 소유·과금 주체는 ${promo.ownerTenant} 로 유지되며, 호출량은 계열사별 미터링에 각각 집계된다.`,
+                `공유 범위 변경 이력이 통합 감사 원장에 기록된다 — 누가·언제·어느 자산의 범위를 어떻게 바꿨는지(ONM-004).`,
+                `소유 계열사 또는 그룹 거버넌스가 범위를 회수하면 즉시 ${promo.fromScope} 범위로 되돌아간다.`,
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-1.5">
+                  <span className="text-brand text-[11px] leading-[1.6] font-extrabold">·</span>
+                  <span className="text-[11.5px] text-ink-dark font-semibold leading-snug">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+
+        {/* ── 우측: 결재선 ── */}
+        <aside className="sticky top-[106px] self-start">
+          <SidebarCard title="결재선 진행" icon="📋">
+            <div className="space-y-1.5">
+              {promo.line.map((st) => (
+                <ApprStep
+                  key={st.seq + st.label}
+                  seq={st.seq}
+                  label={st.label}
+                  sub={st.sub}
+                  tone={
+                    !pending && st.tone === 'current'
+                      ? item.state === 'done'
+                        ? 'done'
+                        : 'rejected'
+                      : st.tone
+                  }
+                />
+              ))}
+            </div>
+          </SidebarCard>
+
+          {decision && (
+            <SidebarCard title="결재 결과" icon="🕒">
+              <div className="space-y-1 text-[11.5px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-ink-dark">{decision.reviewer}</span>
+                  <span className="text-ink-mid">({decision.reviewerRole})</span>
+                  <span className="ml-auto text-ink-mid">{decision.decidedAt}</span>
+                </div>
+                <div className="text-ink-dark font-semibold">
+                  {decision.kind === 'approve' ? '승인' : decision.kind === 'reject' ? '반려' : '보류'}
+                  {decision.note && ` · ${decision.note}`}
+                </div>
+              </div>
+            </SidebarCard>
+          )}
+
+          {pending && (
+            <SidebarCard title="결재 의견" icon="✎">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="승인·반려 사유 (선택)"
+                className="w-full text-[12px] text-ink-dark leading-[1.6] border border-line rounded p-2 bg-white resize-y focus:outline-none focus:border-brand-dark"
+              />
+            </SidebarCard>
+          )}
+        </aside>
+      </div>
+
+      {/* ── 하단 고정 액션 바 ── */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+        <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
+          <div className="text-[11.5px] text-ink-mid font-semibold">
+            <span className={cn('font-extrabold', pending ? 'text-warn' : 'text-ink-dark')}>
+              {statePill.label}
+            </span>
+            <span className="mx-2 text-line">·</span>
+            공유범위 승격 · {promo.fromScope} → {promo.toScope} · {item.stage.label}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            {pending ? (
+              <>
+                <Button variant="danger" onClick={() => decide('reject')}>반려</Button>
+                <Button onClick={() => decide('hold')}>보류</Button>
+                <Button variant="primary" onClick={() => decide('approve')}>✓ 승인 · 그룹 공개</Button>
+              </>
+            ) : (
+              <Link to="/approvals" className="text-[12px] font-bold text-info hover:underline">
+                결재함으로 →
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

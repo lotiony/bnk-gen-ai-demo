@@ -24,6 +24,11 @@ import { TENANTS } from '@/data/tenants';
 export default function LoginPage() {
   const navigate = useNavigate();
   const [loadingId, setLoadingId] = useState<PersonaId | null>(null);
+  /**
+   * "다른 계정 사용" 안내 노출 여부.
+   * 로그인 화면은 `Layout` 밖이라 전역 Toaster 가 붙지 않는다 — 안내는 인라인으로 띄운다.
+   */
+  const [showOtherAccountHint, setShowOtherAccountHint] = useState(false);
 
   const handleSelect = (id: PersonaId) => {
     setLoadingId(id);
@@ -130,12 +135,27 @@ export default function LoginPage() {
             })}
           </div>
 
+          {/*
+            `href="#"` 는 HashRouter 에서 해시를 비워 홈으로 튕긴다. 갈 곳이 따로 없는
+            링크이므로 버튼으로 바꾸고 인라인 안내만 펼친다.
+          */}
           <div className="px-6 py-3 border-t border-line-soft flex items-center justify-between text-[10.5px] text-ink-mid font-semibold">
             <span>🔒 그룹 통합 SSO · 자회사별 AD 연동 (ONM-001)</span>
-            <a href="#" className="hover:text-ink-dark">
+            <button
+              type="button"
+              onClick={() => setShowOtherAccountHint((v) => !v)}
+              className="hover:text-ink-dark underline-offset-2 hover:underline"
+            >
               다른 계정 사용
-            </a>
+            </button>
           </div>
+          {showOtherAccountHint && (
+            <div className="px-6 py-2.5 border-t border-line-soft bg-surface-soft/60 text-[10.5px] text-ink-mid font-semibold leading-relaxed">
+              계정은 소속 계열사 IdP 가 확정합니다. 실제 운영에서는 계열사 AD 로그인 페이지로
+              이동하며, 이 화면의 목록은 <b className="text-ink-dark">시연용 선택지</b>입니다.
+              위에서 계정을 선택해 주세요.
+            </div>
+          )}
         </div>
 
         <div className="text-center text-[10.5px] text-ink-light font-semibold mt-5">

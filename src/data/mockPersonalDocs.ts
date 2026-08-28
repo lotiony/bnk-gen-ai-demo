@@ -27,8 +27,13 @@ export interface PersonalDoc {
   index: string;
 }
 
+/**
+ * ⚠️ **최신순(내림차순)으로 둔다.** 화면은 새 업로드를 목록 맨 앞에 꽂는데
+ *   시드가 오름차순이면, 시연 중 문서를 하나 올리는 순간 새 항목만 위로 튀고
+ *   그 아래는 오래된 것부터 쌓인 채로 남아 정렬이 깨진 것처럼 보인다.
+ */
 export const PERSONAL_DOCS: PersonalDoc[] = [
-  { id: 'PDOC-01', name: '5월_영업전략_초안.docx', ext: 'DOCX', sizeMB: 1.2, uploadedAt: '2026-06-01 10:20', state: '적재 완료', chunks: 24, index: 'idx-personal-usr_8f3a' },
-  { id: 'PDOC-02', name: '거래처_미팅_메모.pdf', ext: 'PDF', sizeMB: 0.4, uploadedAt: '2026-06-02 14:05', state: '적재 완료', chunks: 8, index: 'idx-personal-usr_8f3a' },
   { id: 'PDOC-03', name: '분기_실적_초안.xlsx', ext: 'XLSX', sizeMB: 2.8, uploadedAt: '2026-06-03 09:11', state: '파싱 중', index: 'idx-personal-usr_8f3a' },
+  { id: 'PDOC-02', name: '거래처_미팅_메모.pdf', ext: 'PDF', sizeMB: 0.4, uploadedAt: '2026-06-02 14:05', state: '적재 완료', chunks: 8, index: 'idx-personal-usr_8f3a' },
+  { id: 'PDOC-01', name: '5월_영업전략_초안.docx', ext: 'DOCX', sizeMB: 1.2, uploadedAt: '2026-06-01 10:20', state: '적재 완료', chunks: 24, index: 'idx-personal-usr_8f3a' },
 ];

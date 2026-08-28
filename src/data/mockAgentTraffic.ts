@@ -193,7 +193,7 @@ function buildLiveSnapshot(agentId: string): AgentTrafficSnapshot {
   const outputTokens24h = models.reduce((a, m) => a + m.outputTokens24h, 0);
 
   return {
-    updatedAt: '2026-05-24 14:08',
+    updatedAt: '2026-06-03 14:08',
     isLive: true,
 
     rps: +rpsNow.toFixed(2),

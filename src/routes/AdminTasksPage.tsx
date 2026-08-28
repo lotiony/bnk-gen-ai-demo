@@ -18,25 +18,81 @@ export default function AdminTasksPage() {
   const [tenantFilter, setTenantFilter] = useState<string>('all');
   const [stageFilter, setStageFilter] = useState<AdminTaskStage | 'all'>('all');
   const [selectedId, setSelectedId] = useState<string>(ADMIN_TASKS[0].id);
+  /**
+   * RFP 2-1 은 이 화면에 "등록·검토·**결재**·이행 모니터링" 을 요구한다.
+   * 예전에는 승인·반려가 토스트만 띄우고 단계가 그대로여서 요건의 한가운데인
+   * 결재가 동작하지 않았다. 원장(mock)은 불변으로 두고 세션 메모리 위에
+   * 결재 진행분만 얹는다 — 브라우저 스토리지 금지 규칙에 맞는 방식이다.
+   */
+  const [tasks, setTasks] = useState<AdminTask[]>(ADMIN_TASKS);
 
   const filtered = useMemo(
     () =>
-      ADMIN_TASKS.filter(
+      tasks.filter(
         (t) =>
           (tenantFilter === 'all' || t.tenant === tenantFilter) &&
           (stageFilter === 'all' || t.stage === stageFilter),
       ),
-    [tenantFilter, stageFilter],
+    [tasks, tenantFilter, stageFilter],
   );
-  const selected = ADMIN_TASKS.find((t) => t.id === selectedId) ?? filtered[0];
+  const selected = tasks.find((t) => t.id === selectedId) ?? filtered[0];
 
   const totals = useMemo(() => {
-    const budget = ADMIN_TASKS.reduce((a, t) => a + t.budget, 0);
-    const spent = ADMIN_TASKS.reduce((a, t) => a + t.spent, 0);
-    const active = ADMIN_TASKS.filter((t) => t.stage === '이행 중').length;
-    const pending = ADMIN_TASKS.filter((t) => t.stage === '검토' || t.stage === '결재').length;
+    const budget = tasks.reduce((a, t) => a + t.budget, 0);
+    const spent = tasks.reduce((a, t) => a + t.spent, 0);
+    const active = tasks.filter((t) => t.stage === '이행 중').length;
+    const pending = tasks.filter((t) => t.stage === '검토' || t.stage === '결재').length;
     return { budget, spent, active, pending };
-  }, []);
+  }, [tasks]);
+
+  /**
+   * 승인 — 진행 중인 결재 한 단계를 완료 처리하고 다음 단계를 '진행'으로 올린다.
+   * 검토 단계에서 1차가 끝나면 stage 가 `결재` 로, 마지막 단계가 끝나면
+   * `이행 중` 으로 넘어간다.
+   */
+  const approve = (id: string) => {
+    setTasks((arr) =>
+      arr.map((t) => {
+        if (t.id !== id) return t;
+        const running = t.approvals.findIndex((a) => a.status === '진행');
+        const cur = running >= 0 ? running : t.approvals.findIndex((a) => a.status === '대기');
+        if (cur < 0) return t;
+
+        const approvals = t.approvals.map((a, i) =>
+          i === cur
+            ? { ...a, status: '완료' as const }
+            : i === cur + 1
+              ? { ...a, status: '진행' as const }
+              : a,
+        );
+        const done = approvals.every((a) => a.status === '완료');
+        const stage: AdminTaskStage = done ? '이행 중' : t.stage === '검토' ? '결재' : t.stage;
+        toast(
+          done
+            ? `${t.name} 결재 완료 — 이행 단계로 전환했습니다`
+            : `${t.name} · ${t.approvals[cur].role} 승인 — 다음 단계로 넘어갑니다`,
+        );
+        return { ...t, approvals, stage };
+      }),
+    );
+  };
+
+  /** 반려 — 진행 중 단계를 대기로 되돌리고 과제를 `반려` 로 내린다. */
+  const reject = (id: string) => {
+    setTasks((arr) =>
+      arr.map((t) => {
+        if (t.id !== id) return t;
+        toast(`${t.name} 반려 — 기안 부서로 반송했습니다 · 감사 원장에 기록됩니다`);
+        return {
+          ...t,
+          stage: '반려' as AdminTaskStage,
+          approvals: t.approvals.map((a) =>
+            a.status === '진행' ? { ...a, status: '대기' as const } : a,
+          ),
+        };
+      }),
+    );
+  };
 
   const fmt = (n: number) => `₩${(n / 100_000_000).toFixed(1)}억`;
 
@@ -139,8 +195,25 @@ export default function AdminTasksPage() {
                 <div className="text-[12.5px] font-extrabold text-ink tabular-nums">{fmt(selected.spent)}</div>
               </div>
             </div>
-            <div className="text-[10.5px] text-ink-dark font-semibold mb-3">
+            <div className="text-[10.5px] text-ink-dark font-semibold mb-1">
               자원 · {selected.resource}
+            </div>
+            {/* 산출물 — 대시보드의 호출·토큰·비용이 이 목록에서 파생된다. */}
+            <div className="text-[10.5px] text-ink-dark font-semibold mb-3">
+              산출물 ·{' '}
+              {selected.agentIds.length + selected.pendingAgentIds.length === 0 ? (
+                <span className="text-ink-mid">미배정</span>
+              ) : (
+                <span className="font-mono">
+                  {selected.agentIds.join(' · ')}
+                  {selected.pendingAgentIds.length > 0 && (
+                    <span className="text-ink-mid">
+                      {selected.agentIds.length > 0 ? ' · ' : ''}
+                      {selected.pendingAgentIds.join(' · ')} (계측 전)
+                    </span>
+                  )}
+                </span>
+              )}
             </div>
 
             <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
@@ -163,12 +236,12 @@ export default function AdminTasksPage() {
               <div className="flex items-center gap-1.5 pt-2 border-t border-line-soft">
                 <button
                   type="button"
-                  onClick={() => toast(`${selected.name} 반려 처리`)}
+                  onClick={() => reject(selected.id)}
                   className="flex-1 py-1.5 border border-line rounded text-[11.5px] font-extrabold text-ink-dark hover:border-bad hover:text-bad"
                 >반려</button>
                 <button
                   type="button"
-                  onClick={() => toast(`${selected.name} 다음 단계로 승인`)}
+                  onClick={() => approve(selected.id)}
                   className="flex-1 py-1.5 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark"
                 >승인</button>
               </div>

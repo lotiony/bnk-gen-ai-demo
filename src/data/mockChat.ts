@@ -78,7 +78,7 @@ export const CHAT_AGENTS: ChatAgentOption[] = [
     grounding: 'PB_상담_지식인덱스 v4 (문서 RAG)',
     ontology: false,
     tenant: '부산은행',
-    admins: ['project_owner', 'agent_dev', 'platform_admin'],
+    admins: ['agent_lead', 'project_owner', 'agent_dev', 'platform_admin'],
     systemPrompt: `당신은 PB 자산진단 어시스턴트입니다.
 
 [역할]
@@ -93,23 +93,50 @@ export const CHAT_AGENTS: ChatAgentOption[] = [
 - 고객 식별정보를 응답에 되쓰지 않습니다.`,
   },
   {
-    id: 'AGT-118',
-    name: '사내 규정 안내 봇',
-    desc: '복리후생·근태 등 사내 규정 안내',
-    grounding: '그룹 공통 인사규정 인덱스 (문서 RAG)',
+    /*
+     * 예전에는 여기에 `AGT-118 사내 규정 안내 봇` 이 있었다. 그런데 그 ID 는
+     * 카탈로그(`mockCatalogAgents`)에도 그룹 공통 에이전트(`mockGroupAgents`)
+     * 에도 없었다 — 정거장 2·3 드롭다운에는 3개가 보이는데 정거장 6
+     * 마켓플레이스에는 2개만 있는 상태였다. 그래서 **실제로 등재된**
+     * AGB-006② 그룹웨어 문서 어시스턴트(GRP-002)로 교체했다.
+     */
+    id: 'GRP-002',
+    name: '그룹웨어 문서 어시스턴트',
+    desc: '사내 전자문서·규정 문서를 찾아 요약한다',
+    grounding: '그룹웨어 전자문서 인덱스 (문서 RAG · HWP·DOCX·PDF 파서)',
     ontology: false,
     tenant: '그룹 공통',
-    admins: ['platform_admin'],
-    systemPrompt: `당신은 사내 규정 안내 봇입니다.
+    admins: ['platform_admin', 'operator'],
+    systemPrompt: `당신은 그룹웨어 문서 어시스턴트입니다.
 
 [역할]
-- 복리후생·근태·인사 규정 문의에 사내 규정집 근거로 답합니다.
+- 그룹웨어에 게시된 내부문서·규정 문서를 검색해 근거 문서를 밝히고 요약합니다.
+- 문서에서 확인되지 않는 내용은 "문서에서 확인되지 않습니다"라고 답합니다.
+
+[출력 형식]
+1) 요약 답변
+2) 근거 문서명 · 게시 부서 · 최종 개정일
 
 [금칙]
 - 개별 직원의 인사 정보를 조회하거나 언급하지 않습니다.
-- 규정 해석이 갈리는 사안은 담당 부서 문의를 안내합니다.`,
+- 규정 해석이 갈리는 사안은 소관 부서 문의를 안내합니다.`,
   },
 ];
+
+/**
+ * 현재 계열사에서 고를 수 있는 에이전트.
+ *
+ * 그룹 공통 자산은 10개 계열사 전 임직원이 쓰고, 계열사 자산은 그 Namespace
+ * 안에서만 보인다(SEC-001). 필터를 걸지 않으면 경남은행 일반 사용자
+ * (`kn_service_user` 하사용)에게 부산은행 자산인 AGT-204 가 그대로 보인다 —
+ * 시연 중 페르소나를 잘못 바꾸는 순간 격리 서사가 그 자리에서 깨진다.
+ *
+ * ⚠️ 화면(ChatPage)이 아직 `CHAT_AGENTS` 를 그대로 쓰고 있다. 드롭다운을
+ *    `chatAgentsFor(tenant)` 로 바꿔야 이 통제가 실제로 걸린다.
+ */
+export function chatAgentsFor(tenant: Tenant): ChatAgentOption[] {
+  return CHAT_AGENTS.filter((a) => a.tenant === '그룹 공통' || a.tenant === tenant);
+}
 
 /** 사용자 포털에서 고를 수 있는 생성 모델 — 전량 On-Premise. */
 export const CHAT_MODELS = [
@@ -134,10 +161,10 @@ export const CHAT_HISTORY: ChatHistoryItem[] = [
   { id: 'C-118', title: '대성정밀 신규 여신 전결 확인', at: '10:24', agent: '규정·책무', group: '오늘' },
   { id: 'C-117', title: '여신 8억 전결 기준 확인', at: '09:41', agent: '규정·책무', group: '오늘' },
   { id: 'C-116', title: 'ISA 만기 후 운용 상담 정리', at: '어제 17:02', agent: 'PB 자산진단', group: '어제' },
-  { id: 'C-115', title: '연차 이월 규정 확인', at: '어제 11:35', agent: '사내 규정', group: '어제' },
-  { id: 'C-114', title: '여신협의회 부의 기준', at: '01-06', agent: '규정·책무', group: '지난 7일' },
-  { id: 'C-113', title: '퇴직연금 IRP 이전 절차', at: '01-05', agent: 'PB 자산진단', group: '지난 7일' },
-  { id: 'C-112', title: '여신 심사부실 책무 소재', at: '01-03', agent: '규정·책무', group: '지난 7일' },
+  { id: 'C-115', title: '연차 이월 규정 확인', at: '어제 11:35', agent: '그룹웨어 문서', group: '어제' },
+  { id: 'C-114', title: '여신협의회 부의 기준', at: '06-01', agent: '규정·책무', group: '지난 7일' },
+  { id: 'C-113', title: '퇴직연금 IRP 이전 절차', at: '05-31', agent: 'PB 자산진단', group: '지난 7일' },
+  { id: 'C-112', title: '여신 심사부실 책무 소재', at: '05-29', agent: '규정·책무', group: '지난 7일' },
 ];
 
 export const HISTORY_GROUPS: HistoryGroup[] = ['오늘', '어제', '지난 7일'];
@@ -181,12 +208,12 @@ const HISTORY_SEED: Record<string, { agentId: string; msgs: HistorySeedMsg[] }> 
     ],
   },
   'C-115': {
-    agentId: 'AGT-118',
+    agentId: 'GRP-002',
     msgs: [
       { role: 'user', text: '연차 이월은 며칠까지 가능한가요?' },
       {
         role: 'assistant', plain: true,
-        text: '그룹 공통 인사규정 인덱스 기준, 미사용 연차는 최대 5일까지 다음 해로 이월할 수 있으며 이월분은 다음 해 6월 말까지 사용해야 합니다. 부서별 운영 기준이 다를 수 있으니 확정 판단은 인사 담당 부서 안내를 따르십시오.',
+        text: '그룹웨어 전자문서 인덱스에서 「인사규정 시행세칙」(인사부 · 최종 개정 2026-04-17)을 찾았습니다. 미사용 연차는 최대 5일까지 다음 해로 이월할 수 있으며 이월분은 다음 해 6월 말까지 사용해야 합니다. 부서별 운영 기준이 다를 수 있으니 확정 판단은 인사 담당 부서 안내를 따르십시오.',
       },
     ],
   },
@@ -240,6 +267,110 @@ export function seedHistory(historyId: string): { agent: ChatAgentOption; msgs: 
 
 /** 시나리오가 붙어 있어 확정 답변이 나오는 질의. */
 export const GROUNDED_QUESTIONS: string[] = SCENARIOS.map((s) => s.question);
+
+/* ─────────── 문서 RAG 에이전트의 답변 뱅크 ─────────── */
+
+/**
+ * 온톨로지를 쓰지 않는 에이전트(문서 RAG)의 질의·답변.
+ *
+ * 왜 필요한가 — 근거 그래프를 쓰는 것은 GRP-001 하나뿐이라, 나머지 에이전트는
+ * 무엇을 물어도 "근거를 잇지 못했다"만 냈다. AGB-006 은 필수 Use Case **10종**을
+ * 요구하는데 실제로 답하는 게 1종이면 상세제안 항목에서 바로 지적된다.
+ * 그래서 **문서 RAG 계열도 실제로 답하게** 시나리오를 붙인다.
+ *
+ * 다만 답변에 근거 그래프를 붙이지는 않는다 — 그건 GRP-001 만의 것이고,
+ * 두 계열의 차이(확정 판정 vs 문서 인용 요약)가 화면에서 구분돼야 정거장 4의
+ * "확률적 추측이 아니라 규칙과 계산으로 확정" 이 힘을 갖는다.
+ *
+ * 이력 복원(HISTORY_SEED)의 plain 답변과 같은 톤·같은 인덱스를 쓴다.
+ */
+export interface DocAnswer {
+  q: string;
+  a: string;
+}
+
+export const DOC_ANSWERS: Record<string, DocAnswer[]> = {
+  'AGT-204': [
+    {
+      q: 'ISA 만기 후 운용 방안 상담 초안을 정리해줘.',
+      a:
+        'PB_상담_지식인덱스 v4(KNW-198) 기준으로 ISA 만기 후 선택지는 ① 계약 연장(비과세 한도 유지) ' +
+        '② 연금계좌(IRP·연금저축) 전환 ③ 해지 후 일반 운용 세 갈래입니다. 고객 위험성향이 「중립」이면 ' +
+        '전환 시 세액공제 한도를 함께 안내하는 초안을 권장합니다. 상세 수익률·세율은 상담 화면의 상품 고시 ' +
+        '정보를 따르십시오. (근거: 상품매뉴얼 2026 개정판 · 절세상품 안내서 v3)',
+    },
+    {
+      q: '보유 자산 위험도·분산도 진단 결과를 어떻게 읽나요?',
+      a:
+        '위험도·분산도·유동성 세 축을 0~100 으로 산출하고 종합 점수를 냅니다. 분산도 60 미만이면 ' +
+        '단일 자산군 집중, 유동성 50 미만이면 단기 자금 소요 대응 곤란으로 봅니다. 진단 결과는 ' +
+        'JSON 으로 반환되며 개선안은 문장으로 덧붙습니다. 투자 권유가 아니라 상담 초안 작성 보조입니다. ' +
+        '(근거: 그룹 PB 자산진단 가이드 v3.2)',
+    },
+    {
+      q: 'IRP 계좌를 타행에서 이전하는 절차를 알려줘.',
+      a:
+        '실물 이전 신청 → 기존 금융기관 해지·이전 동의 → 이전 완료(영업일 3~5일) 순서입니다. ' +
+        '이전 중에는 매매가 제한되며 디폴트옵션 재지정이 필요합니다. 고객 안내 시 수수료·상품 라인업 ' +
+        '차이를 함께 안내하는 초안을 권장합니다. (근거: 퇴직연금 업무매뉴얼 2026 · 이전 절차편)',
+    },
+  ],
+  'GRP-002': [
+    {
+      q: '연차 이월은 며칠까지 가능한가요?',
+      a:
+        '그룹웨어 전자문서 인덱스에서 「인사규정 시행세칙」(인사부 · 최종 개정 2026-04-17)을 찾았습니다. ' +
+        '미사용 연차는 최대 5일까지 다음 해로 이월할 수 있으며 이월분은 다음 해 6월 말까지 사용해야 합니다. ' +
+        '부서별 운영 기준이 다를 수 있으니 확정 판단은 인사 담당 부서 안내를 따르십시오.',
+    },
+    {
+      q: '품의서 서식 최신본이 어디 있나요?',
+      a:
+        '「품의·보고 표준서식 v5」(경영관리부 · 최종 개정 2026-05-11)가 그룹웨어 서식함 > 공통서식에 ' +
+        '게시돼 있습니다. v4 대비 예산 근거란과 근거규정 인용란이 필수로 바뀌었습니다. 계열사별 부속 ' +
+        '서식은 각 사 서식함을 함께 확인하십시오.',
+    },
+    {
+      q: '재택근무 신청 절차를 정리해줘.',
+      a:
+        '「유연근무 운영지침」(인사부 · 최종 개정 2026-03-02) 기준, 신청은 전주 목요일까지 그룹웨어 ' +
+        '근태 메뉴에서 하고 부서장 승인으로 확정됩니다. 주 2일까지 신청 가능하며 대고객 창구 직무는 ' +
+        '지침상 제외 직무로 분류돼 있습니다. 예외 운영은 소관 부서 협의가 필요합니다.',
+    },
+  ],
+};
+
+/** 이 에이전트로 확정(또는 문서 인용) 답변이 나오는 추천 질의. */
+export function suggestedQuestions(agentId: string): string[] {
+  const agent = CHAT_AGENTS.find((a) => a.id === agentId);
+  if (agent?.ontology) return GROUNDED_QUESTIONS;
+  return (DOC_ANSWERS[agentId] ?? []).map((d) => d.q);
+}
+
+/**
+ * 문서 RAG 답변 매칭. 못 이으면 null — 그때는 GRP-001 과 똑같이
+ * "근거를 잇지 못했다"로 간다. 근거 없는 확정을 내지 않는다는 원칙은
+ * 문서 RAG 쪽도 같다.
+ */
+export function matchDocAnswer(agentId: string, input: string): DocAnswer | null {
+  const bank = DOC_ANSWERS[agentId] ?? [];
+  const q = input.replace(/\s/g, '');
+  const exact = bank.find((d) => d.q.replace(/\s/g, '') === q);
+  if (exact) return exact;
+  /* 키워드는 좁게 — 넓게 잡으면 엉뚱한 문서 답변이 확정처럼 나간다. */
+  const KEYS: Record<string, string[]> = {
+    'ISA 만기 후 운용 방안 상담 초안을 정리해줘.': ['ISA', '아이에스에이'],
+    '보유 자산 위험도·분산도 진단 결과를 어떻게 읽나요?': ['위험도', '분산도', '진단결과'],
+    'IRP 계좌를 타행에서 이전하는 절차를 알려줘.': ['IRP', '퇴직연금이전'],
+    '연차 이월은 며칠까지 가능한가요?': ['연차', '이월'],
+    '품의서 서식 최신본이 어디 있나요?': ['품의서', '서식'],
+    '재택근무 신청 절차를 정리해줘.': ['재택', '유연근무'],
+  };
+  for (const d of bank) {
+    if ((KEYS[d.q] ?? []).some((k) => q.includes(k))) return d;
+  }
+  return null;
+}
 
 /** 자유 입력을 시나리오에 잇는다. 못 이으면 null — 그때는 확정 답변을 내지 않는다. */
 export function matchScenario(input: string): QueryScenario | null {

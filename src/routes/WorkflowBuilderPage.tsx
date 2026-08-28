@@ -19,6 +19,8 @@ import Crumb from '@/components/ui/Crumb';
 import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { useCurrentPersona } from '@/lib/persona';
+import { addTemplate } from '@/data/mockTemplates';
 import {
   NODE_KINDS,
   KIND_META,
@@ -75,6 +77,8 @@ export default function WorkflowBuilderPage() {
   const crumbItems = useWorkCrumb('워크플로우 빌더', pid);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
+  const persona = useCurrentPersona();
+
   const [nodes, setNodes] = useState<WfNode[]>(SEED_NODES);
   const [edges, setEdges] = useState<WfEdge[]>(SEED_EDGES);
   const [sel, setSel] = useState<string | null>('n3');
@@ -87,6 +91,27 @@ export default function WorkflowBuilderPage() {
    * 성공 경로만 보여 주면 AGB-008 의 절반("일부 단계 실패 시 원상 복구")이 빈다.
    */
   const [runMode, setRunMode] = useState<'ok' | 'fail'>('ok');
+
+  /**
+   * 템플릿으로 저장 — RFP 2-1 "에이전트/워크플로우/프롬프트의 **템플릿화** 및
+   * 조직 내 재사용 자산 관리".
+   *
+   * 토스트만 띄우면 요건 문장이 화면에서 증명되지 않는다. 저장한 템플릿은
+   * AI Studio 「템플릿에서 시작」 목록에 실제로 나타난다(mockTemplates 스토어).
+   */
+  const saveTemplate = () => {
+    const id = addTemplate({
+      kind: '워크플로우',
+      name: `여신 상담 워크플로우 템플릿 (${nodes.length}단계)`,
+      desc: `현재 캔버스 구성을 그대로 복제 — 노드 ${nodes.length} · 연결 ${edges.length}`,
+      savedBy: persona?.name ?? '현재 사용자',
+    });
+    toast(
+      `템플릿으로 저장했습니다 · ${id}`,
+      'AI Studio 「템플릿에서 시작」 목록에 등록되어 다른 팀도 복제해 시작할 수 있습니다',
+      'ok',
+    );
+  };
   /** 자연어 생성(AGB-003) — 입력 문장과 해석 결과 노출 여부. */
   const [nlText, setNlText] = useState('');
   const [nlParsed, setNlParsed] = useState(false);
@@ -271,7 +296,7 @@ export default function WorkflowBuilderPage() {
             ))}
           </div>
           <button
-            onClick={() => toast('워크플로우를 템플릿으로 저장했습니다 — 다른 팀도 복제해 시작할 수 있습니다')}
+            onClick={saveTemplate}
             className="inline-flex items-center h-8 px-3 rounded border border-line bg-white text-[12px] font-bold text-ink-dark hover:bg-surface"
           >
             템플릿으로 저장
@@ -520,7 +545,9 @@ export default function WorkflowBuilderPage() {
             {nodes.map((n) => {
               const m = KIND_META[n.kind];
               const ran = ranNodes.includes(n.id);
-              const now = running && TRACE[runIdx]?.nodeId === n.id;
+              // 실행 중 노드는 **활성 Trace** 기준이어야 한다. 실패→보상 모드에서
+              // TRACE(정상 시나리오)를 보면 캔버스와 Trace 패널이 다른 노드를 가리킨다.
+              const now = running && activeTrace[runIdx]?.nodeId === n.id;
               const skipped = doneAll && !ranNodes.includes(n.id);
               return (
                 <div
@@ -845,6 +872,24 @@ function TracePanel({
  * 멈춰 있는 것이 정상이고, 장애가 나도 **처음이 아니라 마지막 체크포인트에서** 재개한다.
  */
 function LongRunPanel() {
+  /**
+   * 재개한 실행 — runId → 재개 시각.
+   *
+   * "재개합니다" 토스트만 띄우고 배지가 '장애 · 재개 가능' 으로 남으면 화면이
+   * 스스로와 모순된다. AGB-002(필수·상세제안)의 체크포인트 복구 증빙이라
+   * 상태가 실제로 바뀌어야 한다.
+   */
+  const [resumedAt, setResumedAt] = useState<Record<string, string>>({});
+  const resume = (runId: string, checkpoint: string) => {
+    const at = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    setResumedAt((m) => ({ ...m, [runId]: at }));
+    toast(
+      `${runId} 재개`,
+      `${checkpoint} 에서 재개했습니다 — 처음이 아니라 마지막 체크포인트부터 이어집니다`,
+      'ok',
+    );
+  };
+
   return (
     <div>
       <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
@@ -866,11 +911,16 @@ function LongRunPanel() {
       </ol>
 
       <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
-        재개 대기 실행 {LONG_RUNS.length}건
+        재개 대기 실행 {LONG_RUNS.length - Object.keys(resumedAt).length}건
+        {Object.keys(resumedAt).length > 0 && (
+          <span className="ml-1 text-ok">· 재개 {Object.keys(resumedAt).length}건</span>
+        )}
       </div>
       <ul className="space-y-1.5">
         {LONG_RUNS.map((r) => {
-          const broken = r.state === '장애 · 재개 가능';
+          const resumed = resumedAt[r.runId];
+          const broken = r.state === '장애 · 재개 가능' && !resumed;
+          const stateLabel = resumed ? '재개됨' : r.state;
           return (
             <li
               key={r.runId}
@@ -886,17 +936,21 @@ function LongRunPanel() {
                     'pill border',
                     broken
                       ? 'bg-warn text-white border-warn'
+                      : resumed
+                      ? 'bg-ok text-white border-ok'
                       : 'bg-surface-soft text-ink-mid border-line-soft',
                   )}
                 >
-                  {r.state}
+                  {stateLabel}
                 </span>
                 <span className="ml-auto text-[9.5px] font-bold text-ink-mid tabular-nums">
                   경과 {r.elapsed}
                 </span>
               </div>
               <p className="text-[10.5px] text-ink-dark font-semibold leading-snug">
-                {r.waitingOn}
+                {resumed
+                  ? `${r.lastCheckpoint} 에서 재개 · ${resumed} — 이후 단계부터 이어서 실행 중`
+                  : r.waitingOn}
               </p>
               <div className="mt-1 flex items-center gap-1.5">
                 <span className="text-[9.5px] font-extrabold text-info">
@@ -905,11 +959,16 @@ function LongRunPanel() {
                 {broken && (
                   <button
                     type="button"
-                    onClick={() => toast(`${r.runId} · ${r.lastCheckpoint} 에서 재개합니다`)}
+                    onClick={() => resume(r.runId, r.lastCheckpoint)}
                     className="ml-auto text-[10px] font-extrabold text-ink-dark border border-line rounded px-2 py-[2px] bg-white hover:border-brand-dark hover:text-brand"
                   >
                     ↻ 체크포인트에서 재개
                   </button>
+                )}
+                {resumed && (
+                  <span className="ml-auto text-[9.5px] font-extrabold text-ok">
+                    ✓ {resumed} 재개
+                  </span>
                 )}
               </div>
             </li>

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { MemberGroup, RoleKey } from '@/types';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import { toast } from '@/lib/toast';
+import { useCurrentPersona } from '@/lib/persona';
+import { canAccessAdminConsole } from '@/lib/personaView';
 
 interface Props {
   groups: MemberGroup[];
@@ -24,6 +27,9 @@ export default function MembersTab({ groups, totalCount, approvalGroupCount }: P
   // 초기 상태를 prop으로부터 가져와 in-memory로 관리. 새로고침 시 초기 상태로 돌아감.
   const [state, setState] = useState<MemberGroup[]>(groups);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  /** 역할·권한 변경은 관리 콘솔의 기능이다 — 권한이 있을 때만 링크로 연결한다. */
+  const persona = useCurrentPersona();
+  const canOpenAdmin = canAccessAdminConsole(persona);
 
   // prop이 갱신되면 (다른 프로젝트 진입 등) 상태도 따라 갱신.
   useEffect(() => {
@@ -78,9 +84,34 @@ export default function MembersTab({ groups, totalCount, approvalGroupCount }: P
         </span>
         <div className="ml-auto flex items-center gap-1.5">
           <Button>＋ 멤버 추가</Button>
-          <a href="#" className="text-[11.5px] font-bold text-info py-1 px-2 rounded hover:underline">
-            권한 관리 →
-          </a>
+          {/*
+            `href="#"` 는 HashRouter 에서 홈으로 튕긴다. 실제 목적지는 관리 콘솔의
+            멤버 관리(/admin/members)이므로, 권한이 있으면 그리로 보내고
+            없으면 이동시키지 않고 절차만 알린다(RFP 2-1 권한 기반 화면 구성).
+          */}
+          {canOpenAdmin ? (
+            <Link
+              to="/admin/members"
+              className="text-[11.5px] font-bold text-info py-1 px-2 rounded hover:underline"
+            >
+              권한 관리 →
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                toast(
+                  '권한 관리는 관리 콘솔에서 이뤄집니다',
+                  '역할·결재라인·이용권한 변경은 관리자 권한과 결재를 거칩니다.\n' +
+                    '현재 계정에는 관리 콘솔 접근 권한이 없습니다.',
+                  'warn',
+                )
+              }
+              className="text-[11.5px] font-bold text-info py-1 px-2 rounded hover:underline"
+            >
+              권한 관리 →
+            </button>
+          )}
         </div>
       </div>
 

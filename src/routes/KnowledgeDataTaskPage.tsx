@@ -8,6 +8,7 @@ import UploadModal from '@/components/knowledgeData/UploadModal';
 import OriginViewerModal from '@/components/knowledgeData/OriginViewerModal';
 import ParseSection from '@/components/knowledgeData/ParseSection';
 import type { ParseRowSettings, StagedDoc } from '@/components/knowledgeData/ParseSection';
+import ParseRunSection from '@/components/knowledgeData/ParseRunSection';
 import ParseModal, { type ParseStartGroup } from '@/components/knowledgeData/ParseModal';
 import EmbedModal, { type EmbedStartPayload } from '@/components/knowledgeData/EmbedModal';
 import IndexSection from '@/components/knowledgeData/IndexSection';
@@ -1216,6 +1217,21 @@ export default function KnowledgeDataTaskPage() {
               onGotoStorage={() => setTab('storage')}
               onEmbed={detailBundle ? () => setEmbedModalBundle(detailBundle) : undefined}
             />
+            {/*
+              RFP: RAG-003(필수 · 상세제안) — 다양한 포맷(PDF·DOCX·HWPX·XLSX) 전처리 파이프라인.
+              위 ParseSection 이 "문서 단위 큐 진행"을 보여준다면, 아래 진행 매트릭스는
+              **파일 × 단계(추출 → OCR Fallback → 표→마크다운 → PII 사전 마스킹)** 를 보여준다.
+              스캔 PDF 에 OCR 이 붙고, 텍스트 PDF 에서는 `skip` 으로 건너뛴다는 것이
+              이 표에서만 드러나므로 파싱 화면에 함께 건다.
+            */}
+            {parseRun && parseRun.files.length > 0 && (
+              <ParseRunSection
+                files={parseRun.files}
+                startedAt={parseRun.startedAt}
+                onClear={() => setParseRun(null)}
+                onShowResult={setResultFile}
+              />
+            )}
           </>
         ) : (
           /* ===== 묶음 목록 ===== */

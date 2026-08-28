@@ -40,26 +40,26 @@ export interface StageOwner {
  */
 export const STAGE_OWNERS: Record<string, StageOwner[]> = {
   '그룹 공통': [
-    { stage: 'plan', dept: 'AI거버넌스 사무국', owner: '박거버', backup: '한정책', assignedAt: '2025-11-04' },
-    { stage: 'build', dept: '정보보호부', owner: '임정보', backup: '노보안', assignedAt: '2025-11-04' },
-    { stage: 'assess', dept: '리스크관리부', owner: '서리스크', backup: '민평가', assignedAt: '2025-11-11' },
-    { stage: 'operate', dept: 'AI디지털전략부', owner: '김플랫', backup: '정오너', assignedAt: '2025-11-11' },
-    { stage: 'retire', dept: 'AI거버넌스 사무국', owner: '박거버', backup: '한정책', assignedAt: '2025-11-04' },
+    { stage: 'plan', dept: 'AI거버넌스 사무국', owner: '박거버', backup: '한정책', assignedAt: '2026-03-30' },
+    { stage: 'build', dept: '정보보호부', owner: '임정보', backup: '노보안', assignedAt: '2026-03-30' },
+    { stage: 'assess', dept: '리스크관리부', owner: '서리스크', backup: '민평가', assignedAt: '2026-04-06' },
+    { stage: 'operate', dept: 'AI디지털전략부', owner: '김플랫', backup: '정오너', assignedAt: '2026-04-06' },
+    { stage: 'retire', dept: 'AI거버넌스 사무국', owner: '박거버', backup: '한정책', assignedAt: '2026-03-30' },
   ],
   부산은행: [
-    { stage: 'plan', dept: '디지털혁신부', owner: '오기획', backup: '차등록', assignedAt: '2025-12-02' },
-    { stage: 'build', dept: 'IT개발부', owner: '강개발', backup: '표구축', assignedAt: '2025-12-02' },
-    { stage: 'assess', dept: '리스크관리부', owner: '천검증', backup: '유평가', assignedAt: '2025-12-09' },
-    { stage: 'operate', dept: '디지털혁신부', owner: '오기획', backup: '남운영', assignedAt: '2025-12-09' },
-    { stage: 'retire', dept: '준법감시부', owner: '허준법', backup: '차등록', assignedAt: '2025-12-16' },
+    { stage: 'plan', dept: '디지털혁신부', owner: '오기획', backup: '차등록', assignedAt: '2026-04-27' },
+    { stage: 'build', dept: 'IT개발부', owner: '강개발', backup: '표구축', assignedAt: '2026-04-27' },
+    { stage: 'assess', dept: '리스크관리부', owner: '천검증', backup: '유평가', assignedAt: '2026-05-04' },
+    { stage: 'operate', dept: '디지털혁신부', owner: '오기획', backup: '남운영', assignedAt: '2026-05-04' },
+    { stage: 'retire', dept: '준법감시부', owner: '허준법', backup: '차등록', assignedAt: '2026-05-11' },
   ],
   경남은행: [
-    { stage: 'plan', dept: '디지털전략팀', owner: '문전략', backup: '배기획', assignedAt: '2026-01-06' },
-    { stage: 'build', dept: 'IT기획팀', owner: '설개발', backup: '주구축', assignedAt: '2026-01-06' },
+    { stage: 'plan', dept: '디지털전략팀', owner: '문전략', backup: '배기획', assignedAt: '2026-06-01' },
+    { stage: 'build', dept: 'IT기획팀', owner: '설개발', backup: '주구축', assignedAt: '2026-06-01' },
     // 경남은행은 평가·검증을 리스크가 아니라 준법에서 본다 — 계열사별 절차 상이 사례.
-    { stage: 'assess', dept: '준법지원팀', owner: '위준법', backup: '연검증', assignedAt: '2026-01-06' },
-    { stage: 'operate', dept: '디지털전략팀', owner: '문전략', backup: '탁운영', assignedAt: '2026-01-06' },
-    { stage: 'retire', dept: '준법지원팀', owner: '위준법', backup: '연검증', assignedAt: '2026-01-06' },
+    { stage: 'assess', dept: '준법지원팀', owner: '위준법', backup: '연검증', assignedAt: '2026-06-01' },
+    { stage: 'operate', dept: '디지털전략팀', owner: '문전략', backup: '탁운영', assignedAt: '2026-06-01' },
+    { stage: 'retire', dept: '준법지원팀', owner: '위준법', backup: '연검증', assignedAt: '2026-06-01' },
   ],
 };
 
@@ -214,7 +214,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     scope: '건별',
     desc: '서비스 1건의 등록–개발–평가–운영–종료 전 이력과 결재·첨부를 한 문서로 묶는다',
     formats: ['PDF', 'HWP'],
-    lastRunAt: '2026-01-07 17:20',
+    lastRunAt: '2026-06-02 17:20',
   },
   {
     id: 'RPT-CASE-02',
@@ -222,7 +222,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     scope: '건별',
     desc: '고영향 판정 서비스의 영향평가·위험관리방안·잔여 위험을 요약한다',
     formats: ['PDF'],
-    lastRunAt: '2026-01-06 09:44',
+    lastRunAt: '2026-06-01 09:44',
   },
   {
     id: 'RPT-ALL-01',
@@ -230,7 +230,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     scope: '전체',
     desc: '전 계열사 등록 서비스를 위험등급·진행단계·서비스유형 축으로 집계한다',
     formats: ['XLSX', 'PDF'],
-    lastRunAt: '2026-01-08 08:00',
+    lastRunAt: '2026-06-03 08:00',
   },
   {
     id: 'RPT-ALL-02',
@@ -238,7 +238,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     scope: '전체',
     desc: '재평가 기일 도래·경과 건을 계열사별로 집계해 이사회 보고에 쓴다',
     formats: ['XLSX', 'PDF'],
-    lastRunAt: '2026-01-08 08:00',
+    lastRunAt: '2026-06-03 08:00',
   },
   {
     id: 'RPT-ALL-03',

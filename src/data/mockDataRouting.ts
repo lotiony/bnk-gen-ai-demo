@@ -45,7 +45,7 @@ export const ROUTING_GATES: RoutingGate[] = [
     id: 'draft',
     seq: '1',
     label: '기안',
-    actor: '정오너 · 2026-01-08 10:20',
+    actor: '정오너 · 2026-06-03 10:20',
     reqId: 'ONM-003',
     desc: '에이전트 운영 배포와 운영 데이터 접근을 함께 기안한다',
   },
@@ -127,7 +127,7 @@ export const ROUTING_QUERY = `SELECT c.customer_id, c.name, c.birth_date, c.phon
        l.consult_at, l.summary
   FROM consult_log l
   JOIN customer   c ON c.customer_id = l.customer_id
- WHERE l.consult_at >= '2026-01-01'
+ WHERE l.consult_at >= '2026-05-01'
  ORDER BY l.consult_at DESC
  LIMIT 5;`;
 
@@ -180,7 +180,7 @@ export const ROUTING_ROWS: RoutingRow[] = [
       birth_date: '1991-05-23',
       phone: '010-3847-2910',
       grade: '우수',
-      consult_at: '2026-01-06 14:22',
+      consult_at: '2026-06-01 14:22',
       summary: '만기 예금 재예치 상담',
     },
   },
@@ -200,7 +200,7 @@ export const ROUTING_ROWS: RoutingRow[] = [
       birth_date: '1984-11-02',
       phone: '010-2255-6108',
       grade: '일반',
-      consult_at: '2026-01-06 11:47',
+      consult_at: '2026-06-01 11:47',
       summary: '주담대 중도상환수수료 문의',
     },
   },
@@ -220,7 +220,7 @@ export const ROUTING_ROWS: RoutingRow[] = [
       birth_date: '1976-03-14',
       phone: '010-7712-3345',
       grade: '최우수',
-      consult_at: '2026-01-05 16:03',
+      consult_at: '2026-05-31 16:03',
       summary: 'ISA 만기 후 운용 상담',
     },
   },
@@ -240,7 +240,7 @@ export const ROUTING_ROWS: RoutingRow[] = [
       birth_date: '1993-08-30',
       phone: '010-9034-4471',
       grade: '우수',
-      consult_at: '2026-01-05 10:18',
+      consult_at: '2026-05-31 10:18',
       summary: '퇴직연금 IRP 이전 안내',
     },
   },
@@ -260,7 +260,7 @@ export const ROUTING_ROWS: RoutingRow[] = [
       birth_date: '1962-12-07',
       phone: '010-4489-1620',
       grade: '일반',
-      consult_at: '2026-01-04 15:31',
+      consult_at: '2026-05-30 15:31',
       summary: '정기예금 중도해지 이자 문의',
     },
   },
@@ -280,12 +280,12 @@ export interface ConsentEvidence {
  * "이 처리 목적에 대한 권원이 있으니 열어준다" 를 화면에 남긴다.
  */
 export const CONSENT_EVIDENCE: ConsentEvidence[] = [
-  { k: '수집·이용 동의', v: '상담 이력 활용 동의 (2025-04-12 취득)', ok: true },
+  { k: '수집·이용 동의', v: '상담 이력 활용 동의 (2025-09-05 취득)', ok: true },
   { k: '처리 목적 합치', v: '상담 품질 개선 · AI 응답 생성 — 동의 목적 범위 내', ok: true },
-  { k: '보유·이용 기간', v: '동의일로부터 5년 (2030-04-11 까지)', ok: true },
+  { k: '보유·이용 기간', v: '동의일로부터 5년 (2030-09-04 까지)', ok: true },
   { k: '제3자 제공', v: '해당 없음 — 그룹 공동존 내부 처리', ok: true },
   { k: '동의 철회 대상', v: '조회 대상 5건 중 철회 0건', ok: true },
-  { k: '재확인 기일', v: '2026-04-12 (연 1회)', ok: true },
+  { k: '재확인 기일', v: '2026-09-05 (연 1회)', ok: true },
 ];
 
 /** 권원이 확인되지 않았을 때 우측 패널에 띄우는 미충족 사유. */
@@ -316,7 +316,7 @@ export const AUDIT_VERDICT_META: Record<AuditVerdict, { label: string; cls: stri
 /** 화면 진입 시점의 기본 이력 — Draft 상태에서 이미 쌓여 있던 것. */
 export const AUDIT_SEED: AuditRow[] = [
   {
-    at: '2026-01-08 10:20',
+    at: '2026-06-03 10:20',
     actor: '정오너',
     action: '운영 데이터 접근 기안',
     target: 'DRT-101',
@@ -324,7 +324,7 @@ export const AUDIT_SEED: AuditRow[] = [
     note: '결재 진행 중 — 운영 DB 접근 보류',
   },
   {
-    at: '2026-01-08 09:58',
+    at: '2026-06-03 09:58',
     actor: 'svc_pb_consult_ro_dev',
     action: 'SELECT consult_log ⋈ customer',
     target: 'ns-bank-bs-dev',
@@ -332,7 +332,7 @@ export const AUDIT_SEED: AuditRow[] = [
     note: '익명화 복제본 조회 · 5행 반환',
   },
   {
-    at: '2026-01-07 17:41',
+    at: '2026-06-02 17:41',
     actor: 'AGT-204 (Draft)',
     action: '운영 DB 접근 시도',
     target: 'ns-bank-bs-prod',
@@ -347,7 +347,7 @@ export function deriveAuditRows(deployApproved: boolean, consentVerified: boolea
 
   if (deployApproved) {
     rows.push({
-      at: '2026-01-08 11:05',
+      at: '2026-06-03 11:05',
       actor: '이도현 (승인권자)',
       action: '배포 승인 — Draft → Approved',
       target: 'AGT-204',
@@ -357,7 +357,7 @@ export function deriveAuditRows(deployApproved: boolean, consentVerified: boolea
   }
   if (deployApproved && !consentVerified) {
     rows.push({
-      at: '2026-01-08 11:06',
+      at: '2026-06-03 11:06',
       actor: 'AGT-204 (Approved)',
       action: '운영 DB 복호화 조회 시도',
       target: 'ns-bank-bs-prod',
@@ -367,7 +367,7 @@ export function deriveAuditRows(deployApproved: boolean, consentVerified: boolea
   }
   if (consentVerified) {
     rows.push({
-      at: '2026-01-08 11:12',
+      at: '2026-06-03 11:12',
       actor: '박거버 (정보보호 그룹)',
       action: '동의 권원 확인 완료',
       target: '상담 이력 활용 동의 · 5건',
@@ -377,7 +377,7 @@ export function deriveAuditRows(deployApproved: boolean, consentVerified: boolea
   }
   if (deployApproved && consentVerified) {
     rows.push({
-      at: '2026-01-08 11:12',
+      at: '2026-06-03 11:12',
       actor: 'svc_pb_consult_ro',
       action: 'SELECT consult_log ⋈ customer (복호화)',
       target: 'ns-bank-bs-prod',

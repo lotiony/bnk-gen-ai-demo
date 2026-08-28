@@ -23,7 +23,7 @@ import {
   KIND_TONE,
   type StudioTaskKind,
 } from '@/data/studioTasks';
-import { TEMPLATES } from '@/data/mockTemplates';
+import { useTemplates, markTemplateUsed } from '@/data/mockTemplates';
 
 const KIND_ORDER: StudioTaskKind[] = [
   'agent',
@@ -76,6 +76,9 @@ export default function StudioTasksPage() {
   const tenant = useTenant();
   const [kind, setKind] = useState<StudioTaskKind | 'all'>('all');
   const [query, setQuery] = useState('');
+
+  // 워크플로우 빌더·에이전트 빌더에서 저장한 템플릿이 여기에 그대로 나타난다.
+  const templates = useTemplates();
 
   const scoped = useMemo(() => scopeTasks(STUDIO_TASKS, tenant), [tenant]);
   const visible = useMemo(() => {
@@ -133,10 +136,14 @@ export default function StudioTasksPage() {
       <div className="card px-4 py-3 mb-3.5">
         <div className="flex items-baseline gap-2 mb-2">
           <h2 className="text-[12.5px] font-extrabold text-ink">템플릿에서 시작</h2>
-          <span className="text-[10px] font-mono font-bold text-ink-light">2-1 템플릿화</span>
+          <span className="text-[11px] text-ink-mid font-semibold">
+            검증된 자산을 템플릿으로 저장해 두면 다른 조직이 복제해 시작한다 ·{' '}
+            <b className="text-ink-dark">{templates.length}</b>건
+          </span>
+          <span className="ml-auto text-[10px] font-mono font-bold text-ink-light">2-1 템플릿화</span>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {TEMPLATES.map((t) => (
+          {templates.map((t) => (
             <div key={t.id} className="border border-line-soft rounded px-3 py-2.5 bg-white">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{t.kind}</span>
@@ -144,11 +151,18 @@ export default function StudioTasksPage() {
               </div>
               <div className="text-[12px] font-extrabold text-ink leading-tight mb-1">{t.name}</div>
               <p className="text-[10.5px] text-ink-mid font-semibold leading-snug mb-1.5">{t.desc}</p>
-              <button
-                type="button"
-                onClick={() => toast(`${t.name} 템플릿을 복제해 새 과제를 시작합니다`)}
-                className="text-[10.5px] font-extrabold text-info hover:underline"
-              >이 템플릿 사용하기 →</button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 재사용 자산 관리 지표 — 복제하면 사용 횟수가 실제로 올라간다.
+                    markTemplateUsed(t.id);
+                    toast(`${t.name} 템플릿을 복제해 새 과제를 시작합니다`, `${t.id} · 저장 ${t.savedBy}`, 'ok');
+                  }}
+                  className="text-[10.5px] font-extrabold text-info hover:underline"
+                >이 템플릿 사용하기 →</button>
+                <span className="ml-auto text-[9.5px] font-mono font-bold text-ink-light">{t.id}</span>
+              </div>
             </div>
           ))}
         </div>

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import StatusPill from '@/components/ui/StatusPill';
 import { APPROVAL_LINES, ACCESS_HISTORY } from '@/data/mockApprovalLines';
 import { SERVICE_CATEGORIES, DEPT_PERMISSIONS, USER_OVERRIDES } from '@/data/mockUsagePermission';
-import { TENANT_SHORT } from '@/data/tenants';
+import { TENANT_SHORT, TENANTS } from '@/data/tenants';
 import { toast } from '@/lib/toast';
 import {
   ADMIN_MEMBERS,
@@ -28,7 +28,7 @@ const ROLE_TONE: Record<MemberRole, string> = {
 /** 플랫폼 전역 역할(운영 편의상 5단계)과 RFP 2-1 이 명시한 역할 6종의 매핑. */
 const RFP_ROLE_HINT: Record<MemberRole, string> = {
   platform_admin: '관리자',
-  pm: '에이전트 개발자 · 관리자 겸임',
+  pm: '과제 오너 · 에이전트 개발자',
   reviewer: '운영자',
   member: '일반 사용자 · 데이터 담당자',
   viewer: '일반 사용자',
@@ -48,6 +48,8 @@ export default function AdminMembersPage() {
   const [q, setQ] = useState('');
   const [role, setRole] = useState<RoleFilter>('all');
   const [status, setStatus] = useState<StatusFilter>('all');
+  /* 11개 Namespace 테넌트 격리(SEC-001)를 쓰는 화면이므로 계열사 축이 있어야 한다. */
+  const [tenantFilter, setTenantFilter] = useState<string>('all');
   const [members, setMembers] = useState<AdminMember[]>(ADMIN_MEMBERS);
 
   const stats = useMemo(() => {
@@ -56,7 +58,8 @@ export default function AdminMembersPage() {
     const pms = members.filter((m) => m.role === 'pm').length;
     const invited = members.filter((m) => m.status === 'invited').length;
     const mfaMissing = members.filter((m) => !m.mfaEnabled && m.status !== 'suspended').length;
-    return { total, admins, pms, invited, mfaMissing };
+    const tenants = new Set(members.map((m) => m.tenant)).size;
+    return { total, admins, pms, invited, mfaMissing, tenants };
   }, [members]);
 
   const rows = useMemo(() => {
@@ -64,15 +67,17 @@ export default function AdminMembersPage() {
     return members.filter((m) => {
       if (role !== 'all' && m.role !== role) return false;
       if (status !== 'all' && m.status !== status) return false;
+      if (tenantFilter !== 'all' && m.tenant !== tenantFilter) return false;
       if (!lower) return true;
       return (
         m.name.toLowerCase().includes(lower) ||
         m.email.toLowerCase().includes(lower) ||
         m.empNo.includes(lower) ||
-        m.dept.toLowerCase().includes(lower)
+        m.dept.toLowerCase().includes(lower) ||
+        m.tenant.toLowerCase().includes(lower)
       );
     });
-  }, [members, q, role, status]);
+  }, [members, q, role, status, tenantFilter]);
 
   const handleRoleChange = (id: string, nextRole: MemberRole) => {
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: nextRole } : m)));
@@ -118,7 +123,8 @@ export default function AdminMembersPage() {
           </div>
           <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">멤버 관리</h1>
           <div className="text-[12px] text-ink-mid mt-1.5">
-            플랫폼 전역 역할과 MFA·접근 상태를 관리합니다. 모든 변경은 감사 원장에 기록됩니다.
+            계열사(Namespace) · 플랫폼 전역 역할 · MFA · 참여 과제를 한 화면에서 관리합니다.
+            모든 변경은 감사 원장에 기록됩니다.
           </div>
         </div>
         <button className="h-9 px-4 bg-brand text-white text-[12.5px] font-extrabold rounded border border-brand-dark hover:bg-brand-dark">
@@ -127,10 +133,11 @@ export default function AdminMembersPage() {
       </div>
 
       {/* Stat band */}
-      <div className="grid grid-cols-5 gap-3 mb-3.5">
+      <div className="grid grid-cols-6 gap-3 mb-3.5">
         <StatTile label="전체 멤버" value={stats.total} />
+        <StatTile label="소속 계열사" value={stats.tenants} />
         <StatTile label="플랫폼 관리자" value={stats.admins} tone="warn" />
-        <StatTile label="PM" value={stats.pms} tone="ok" />
+        <StatTile label="과제 담당" value={stats.pms} tone="ok" />
         <StatTile label="초대 대기" value={stats.invited} tone="warn" />
         <StatTile label="MFA 미등록" value={stats.mfaMissing} tone={stats.mfaMissing > 0 ? 'bad' : 'ok'} />
       </div>
@@ -157,6 +164,18 @@ export default function AdminMembersPage() {
             ))}
           </select>
           <select
+            value={tenantFilter}
+            onChange={(e) => setTenantFilter(e.target.value)}
+            className="h-8 px-2 border border-line rounded text-[12px] outline-none bg-white"
+          >
+            <option value="all">계열사 · 전체</option>
+            {TENANTS.map((t) => (
+              <option key={t.name} value={t.name}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
             className="h-8 px-2 border border-line rounded text-[12px] outline-none bg-white"
@@ -178,10 +197,10 @@ export default function AdminMembersPage() {
           <thead>
             <tr className="text-[10.5px] uppercase tracking-[0.3px] text-ink-mid border-b border-line bg-surface-soft/40">
               <th className="text-left font-bold py-2.5 px-4">멤버</th>
-              <th className="text-left font-bold py-2.5 px-2 w-[120px] whitespace-nowrap">부서</th>
+              <th className="text-left font-bold py-2.5 px-2 w-[150px] whitespace-nowrap">계열사 · 부서</th>
               <th className="text-left font-bold py-2.5 px-2 w-[210px] whitespace-nowrap">역할</th>
               <th className="text-center font-bold py-2.5 px-2 w-[60px]">MFA</th>
-              <th className="text-right font-bold py-2.5 px-2 w-[80px] whitespace-nowrap">프로젝트</th>
+              <th className="text-right font-bold py-2.5 px-2 w-[110px] whitespace-nowrap">참여 과제</th>
               <th className="text-left font-bold py-2.5 px-2 w-[80px] whitespace-nowrap">상태</th>
               <th className="text-right font-bold py-2.5 px-4 w-[110px] whitespace-nowrap">최근 활동</th>
             </tr>
@@ -209,7 +228,10 @@ export default function AdminMembersPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="py-2.5 px-2 text-ink-dark font-semibold whitespace-nowrap">{m.dept}</td>
+                  <td className="py-2.5 px-2 whitespace-nowrap">
+                    <div className="text-ink-dark font-extrabold">{TENANT_SHORT[m.tenant]}</div>
+                    <div className="text-[10.5px] text-ink-mid font-semibold">{m.dept}</div>
+                  </td>
                   <td className="py-2.5 px-2">
                     <div className="text-[9px] text-ink-light font-semibold mb-0.5">{RFP_ROLE_HINT[m.role]}</div>
                     <div className="flex items-center gap-1.5">
@@ -237,8 +259,19 @@ export default function AdminMembersPage() {
                       <span className="text-bad font-extrabold" title="MFA 미등록">✗</span>
                     )}
                   </td>
-                  <td className="py-2.5 px-2 text-right tabular-nums font-extrabold text-ink">
-                    {m.projectCount > 0 ? `${m.projectCount}건` : '—'}
+                  {/* 참여 건수는 과제 원장의 실재 ID 배열 길이다 — 손으로 적은 숫자가 아니다. */}
+                  <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                    <div className="tabular-nums font-extrabold text-ink">
+                      {m.taskIds.length > 0 ? `${m.taskIds.length}건` : '—'}
+                    </div>
+                    {m.taskIds.length > 0 && (
+                      <div
+                        className="text-[9.5px] font-mono text-ink-light truncate max-w-[110px]"
+                        title={m.taskIds.join(' · ')}
+                      >
+                        {m.taskIds.join(' · ')}
+                      </div>
+                    )}
                   </td>
                   <td className={cn('py-2.5 px-2 font-extrabold whitespace-nowrap', STATUS_TONE[m.status])}>
                     {STATUS_LABEL[m.status]}
@@ -256,6 +289,7 @@ export default function AdminMembersPage() {
 
       <div className="text-[10.5px] text-ink-mid bg-surface-soft border border-line-soft rounded px-3 py-2 mt-3.5">
         🔒 역할 변경·초대·정지는 감사 원장에 기록됩니다. 플랫폼 관리자 부여는 2인 결재가 필요합니다.
+        계열사(Namespace) 경계를 넘는 권한 부여는 그룹 AI거버넌스 승인 대상입니다.
       </div>
       </>
       )}

@@ -22,15 +22,43 @@ export interface KnowledgeTask {
   changeNote: string;
 }
 
-/** "보이스피싱탐지 에이전트_디지털전략부" 프로젝트의 지식데이터 과제 예시. */
+/**
+ * 지식데이터 과제 원장.
+ *
+ * ⚠️ 에이전트가 `linkedKnowledge` 로 가리키는 KNW-* 는 **여기 반드시 있어야 한다.**
+ *   과제 상세에서 연결 지식을 클릭하면 그대로 빈 화면이 된다.
+ *
+ * 결재 ID 접두사는 `APV-` 로 통일한다(정본은 `mockApprovals.approvals`).
+ *   한때 `APR-` 을 쓰던 곳이 있었는데, 같은 결재함을 두 이름으로 부르면
+ *   "이 둘이 같은 겁니까"에 답이 없다.
+ */
 export const MOCK_KNOWLEDGE_TASKS: KnowledgeTask[] = [
+  {
+    /*
+     * AGT-204(PB 자산진단 어시스턴트)가 연결해 쓰는 지식 인덱스.
+     * 포털 Chat 의 에이전트 설명(`mockChat.CHAT_AGENTS`)이 이 자산을
+     * "PB_상담_지식인덱스 v4" 로 부르므로 이름·버전을 그쪽과 맞춘다.
+     */
+    id: 'KNW-198',
+    name: 'PB_상담_지식인덱스',
+    state: '완료',
+    assetKind: '지식 데이터',
+    assetId: 'idx-pb-consult-v4',
+    updatedAt: '2026-05-28 14:36',
+    ownerName: '박서연',
+    ownerInitial: '서연',
+    sourceCount: 5,
+    chunkCount: 3260,
+    progress: 100,
+    changeNote: '상품매뉴얼 2026 개정판·시장브리프 2026Q2 반영 — v4 빌드 완료',
+  },
   {
     id: 'KNW-201',
     name: '보이스피싱 사례매뉴얼',
     state: '실행 중',
     assetKind: '지식 데이터',
     assetId: 'idx-voice-phishing-v3',
-    updatedAt: '2026-05-18 10:42',
+    updatedAt: '2026-05-28 10:42',
     ownerName: '조현우',
     ownerInitial: '현우',
     sourceCount: 3,
@@ -44,11 +72,11 @@ export const MOCK_KNOWLEDGE_TASKS: KnowledgeTask[] = [
     state: '계획',
     assetKind: 'DB 커넥터',
     assetId: 'db-fss-vp-stats',
-    updatedAt: '2026-05-15 09:12',
+    updatedAt: '2026-05-25 09:12',
     ownerName: '박서연',
     ownerInitial: '서연',
     sourceCount: 1,
     progress: 0,
-    changeNote: 'PostgreSQL 읽기 전용 커넥터 추가 · 결재 대기 (APR-2026-051)',
+    changeNote: 'PostgreSQL 읽기 전용 커넥터 추가 · 결재 대기 (APV-2026-092)',
   },
 ];

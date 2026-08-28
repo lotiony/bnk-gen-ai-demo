@@ -1,47 +1,346 @@
 /**
  * 플랫폼 관리자 대시보드 mock.
  *
- * 계열사(부산은행) 내 모든 프로젝트의 사용 현황을 한 레이어 위에서 합산한다.
- * 프로젝트 대시보드(모니터링 탭)가 가진 메트릭을 동일 기준으로 cross-project 집계.
+ * RFP 2-1 관리자 포털 [34] "플랫폼 사용 현황 대시보드 화면 제공 (Export 기능 포함)"
+ * RFP 2-1 관리자 포털 [36] "GPU/CPU 자원 현황 및 자원 정책 관리"
+ * RFP LSM-010 · ONM-005 (미터링·정산과 같은 원장을 쓴다)
+ *
+ * ════════════════════════════════════════════════════════════════════
+ * 이 파일의 세 가지 원칙 — 어기면 화면끼리 다른 말을 하게 된다
+ * ════════════════════════════════════════════════════════════════════
+ *
+ * ① **'프로젝트'라는 계층은 없다.** RFP 관리자 포털 구축범위가 쓰는 단위는
+ *    `과제` 하나뿐이다("과제 관리 화면: 계열사별 과제 등록·검토·결재·이행
+ *    모니터링, 과제별 자원·비용 현황"). 이 파일은 자체 과제 목록을 갖지 않고
+ *    `mockAdminTasks.ADMIN_TASKS` 원장을 그대로 읽어 파생한다.
+ *
+ * ② **수치를 손으로 적지 않는다.** 호출·토큰·비용·에이전트 수는 전부
+ *    `mockCatalogAgents`(계열사 자산 13종) + `mockGroupAgents`(AGB-006 공통 10종)
+ *    = 23종에서 파생한다. 두 파일은 **읽기 전용**이다. 예전 버전은 여기에 월
+ *    호출량을 직접 적어 두어 소속 에이전트 실측 합과 최대 98배까지 어긋났고,
+ *    "플랫폼 전체 에이전트 수"가 화면마다 6/13/47/54 로 달랐다.
+ *
+ * ③ **PTU 는 이 사업에 존재하지 않는다.** PTU(Provisioned Throughput Unit)는
+ *    Azure OpenAI 류 클라우드 SaaS 의 처리용량 예약 단위다. 본 사업은 공동존
+ *    On-Premise BareMetal K8s 에 GPU 를 직접 조달하는 구조이므로 용량 단위는
+ *    **GPU 장(card)** 이고 비용 단위는 **GPU-hour** 다. 고정비(GPU 감가상각·상면·
+ *    전력·운영)를 가중 토큰 점유율로 계열사에 배분하는 방식은 미터링 화면
+ *    (`mockMetering.BILLING_RULES`)과 동일하다 — 두 화면이 같은 과금 모델을
+ *    말해야 한다.
+ *
+ * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
  */
 
 import { MOCK_CATALOG_AGENTS } from './mockCatalogAgents';
+import { GROUP_AGENTS } from './mockGroupAgents';
+import { ADMIN_TASKS, type AdminTask } from './mockAdminTasks';
+import { TENANTS, AFFILIATES } from './tenants';
 
-export interface ProjectUsageRow {
+/** 대시보드 기준 시각 — 통합 감사 원장(mockSecurityGovernance)의 최신 행과 맞춘다. */
+export const DASHBOARD_TODAY = '2026-06-03';
+const TODAY_DATE = new Date(`${DASHBOARD_TODAY}T00:00:00`);
+
+/** 주간 호출 → 월(30일) 환산 계수. 미터링(`getAgentRows`)과 같은 값이어야 한다. */
+export const WEEKS_PER_MONTH = 4.3;
+
+/** 출력 토큰 가중치 — 생성이 입력 처리보다 GPU 를 더 쓴다. 정산 규칙과 같은 값. */
+export const OUTPUT_TOKEN_WEIGHT = 3;
+
+/* ═══════════════════════════════════════════════════════════════
+ * 0) 에이전트 인덱스 — 플랫폼 전체 에이전트의 단일 출처
+ * ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * 모델별 1회 호출 평균 토큰. 계측 스키마상 실측치가 들어올 자리이며,
+ * 데모에서는 업무 성격(조회형 vs 생성형)에 따른 고정 계수로 둔다.
+ */
+const MODEL_TOKENS_PER_CALL: Record<string, { input: number; output: number }> = {
+  'onprem/gpt-oss-120b': { input: 2400, output: 620 },
+  'onprem/qwen3-32b': { input: 1800, output: 480 },
+  'onprem/llama-3.3-70b': { input: 3200, output: 700 },
+  'google/gemma-4-31B-it-assistant': { input: 900, output: 320 },
+  'Whisper-Large-KO + onprem/gpt-oss-120b': { input: 5200, output: 900 },
+};
+const DEFAULT_TOKENS_PER_CALL = { input: 1800, output: 500 };
+
+/** 모델별 P95 기본값(ms) — 카탈로그에 p95 가 없는 그룹 공통 에이전트에 쓴다. */
+const MODEL_P95_MS: Record<string, number> = {
+  'onprem/gpt-oss-120b': 2100,
+  'onprem/qwen3-32b': 1750,
+  'onprem/llama-3.3-70b': 3800,
+  'google/gemma-4-31B-it-assistant': 980,
+  'Whisper-Large-KO + onprem/gpt-oss-120b': 5400,
+};
+
+/** 이 모델이 올라가는 GPU 등급의 시간당 배분 단가(원/GPU-hour). */
+export const MODEL_GPU_HOUR_PRICE: Record<string, number> = {
+  'onprem/gpt-oss-120b': 5_600, // H100 80GB 등급 (감가상각 + 상면 + 전력 + 운영)
+  'onprem/qwen3-32b': 3_400, // L40S 등급
+  'google/gemma-4-31B-it-assistant': 2_800, // L40S 등급 · 경량 서빙
+};
+/** 1개월 = 30일 × 24시간. */
+export const GPU_HOURS_PER_MONTH = 720;
+
+export interface PlatformAgent {
   id: string;
   name: string;
+  /** 제작 주관 계열사. */
+  tenant: string;
+  /** 그룹 공통 운영영역에 배포되어 10개 계열사가 공용하는가. */
+  groupShared: boolean;
+  model: string;
+  callsWeekly: number;
+  monthCalls: number;
+  monthTokenInput: number;
+  monthTokenOutput: number;
+  p95Ms: number;
+  /** 서빙계에 실제로 떠 있는가. */
+  serving: boolean;
+  /** PII 발생률 산정용 민감도 1~4. */
+  sensitivity: number;
+}
+
+function tokensOf(model: string) {
+  return MODEL_TOKENS_PER_CALL[model] ?? DEFAULT_TOKENS_PER_CALL;
+}
+
+/**
+ * 플랫폼 전체 에이전트 = 계열사 자산(13) + AGB-006 그룹 공통 Use Case(10) = **23종**.
+ * 대시보드 KPI·미터링·정산의 "에이전트 수"는 전부 이 배열에서 나온다.
+ */
+export const PLATFORM_AGENTS: PlatformAgent[] = [
+  ...MOCK_CATALOG_AGENTS.map((a) => {
+    const t = tokensOf(a.mainModel);
+    const monthCalls = Math.round(a.callsWeekly * WEEKS_PER_MONTH);
+    return {
+      id: a.id,
+      name: a.name,
+      tenant: a.tenant as string,
+      groupShared: a.tenant === '그룹 공통',
+      model: a.mainModel,
+      callsWeekly: a.callsWeekly,
+      monthCalls,
+      monthTokenInput: monthCalls * t.input,
+      monthTokenOutput: monthCalls * t.output,
+      p95Ms: a.p95Ms ?? MODEL_P95_MS[a.mainModel] ?? 2000,
+      serving: a.stage === '서빙계',
+      sensitivity: a.sensitivity as number,
+    };
+  }),
+  ...GROUP_AGENTS.map((g) => {
+    const t = tokensOf(g.model);
+    const monthCalls = Math.round(g.callsWeekly * WEEKS_PER_MONTH);
+    return {
+      id: g.id,
+      name: g.name,
+      tenant: g.ownerTenant,
+      // GRP-* 은 정의상 ns-group-common 에 배포되어 10개 계열사 전 임직원이 호출한다.
+      groupShared: true,
+      model: g.model,
+      callsWeekly: g.callsWeekly,
+      monthCalls,
+      monthTokenInput: monthCalls * t.input,
+      monthTokenOutput: monthCalls * t.output,
+      p95Ms: MODEL_P95_MS[g.model] ?? 2000,
+      serving: g.status === '운영 중',
+      sensitivity: 3,
+    };
+  }),
+];
+
+export const AGENT_BY_ID: Record<string, PlatformAgent> = PLATFORM_AGENTS.reduce(
+  (acc, a) => ({ ...acc, [a.id]: a }),
+  {} as Record<string, PlatformAgent>,
+);
+
+/** 계열사별 임직원 수 — 그룹 공통 에이전트 사용량을 계열사에 배분하는 가중치. */
+export const AFFILIATE_HEADCOUNT: Record<string, number> = {
+  부산은행: 4820,
+  경남은행: 3140,
+  BNK캐피탈: 780,
+  BNK투자증권: 640,
+  BNK저축은행: 310,
+  BNK자산운용: 190,
+  BNK벤처투자: 90,
+  BNK시스템: 520,
+  BNK신용정보: 240,
+  BNK엘앤에스: 160,
+};
+
+/* ═══════════════════════════════════════════════════════════════
+ * 1) 모델 서빙 GPU 할당 — On-Prem 자원 단위
+ *
+ * 예전 버전은 이 자리에 PTU 를 두고 "모델별 월 PTU 단가"까지 정의했다.
+ * PTU 는 클라우드 SaaS 의 처리용량 예약 상품이라 공동존 On-Prem BareMetal
+ * 구조에는 존재하지 않는다. 여기서는 **GPU 장 수 × GPU-hour 단가**로 바꾼다.
+ * 장 수는 과제 원장(`gpuCards`)의 합이므로 자원 정책 화면·과제 관리 화면과
+ * 정확히 일치한다.
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface ModelGpuAllocation {
+  model: string;
+  /** 이 모델 서빙에 배정된 GPU 장 수 = 해당 모델을 주력으로 쓰는 과제들의 gpuCards 합. */
+  allocatedGpus: number;
+  /** 월 GPU-hour = 장 수 × 720h. */
+  gpuHoursMonth: number;
+  /** 30일 일별 GPU 점유율(%). 100%면 배정 한도 포화. */
+  dailyUtilizationPct: number[];
+  avgUtilizationPct: number;
+  peakUtilizationPct: number;
+  currentUtilizationPct: number;
+}
+
+function gpuSeries(seed: number, base: number, amp: number, drift = 0): number[] {
+  let s = seed;
+  const out: number[] = [];
+  for (let i = 0; i < 30; i++) {
+    s = (s * 9301 + 49297) % 233280;
+    const r = s / 233280;
+    const v =
+      base + Math.sin((i / 30) * Math.PI * 2 + seed) * amp * 0.45 + (r - 0.5) * amp + drift * (i / 30);
+    out.push(Math.max(2, Math.min(98, +v.toFixed(1))));
+  }
+  return out;
+}
+
+function summarize(series: number[]) {
+  const avg = series.reduce((a, b) => a + b, 0) / series.length;
+  const peak = Math.max(...series);
+  return { avg: +avg.toFixed(1), peak: +peak.toFixed(1), current: series[series.length - 1] };
+}
+
+/** 모델별 GPU 점유 곡선 시드 — 모델마다 곡선이 구분되도록. */
+const GPU_CURVE: Record<string, { seed: number; base: number; amp: number; drift: number }> = {
+  'onprem/gpt-oss-120b': { seed: 29, base: 76, amp: 18, drift: 6 },
+  'onprem/qwen3-32b': { seed: 11, base: 62, amp: 22, drift: 8 },
+  'google/gemma-4-31B-it-assistant': { seed: 47, base: 48, amp: 14, drift: 4 },
+};
+
+export function getModelGpuAllocation(): ModelGpuAllocation[] {
+  // 장 수는 과제 원장에서 나온다 — 자원 정책·과제 상세와 같은 숫자여야 한다.
+  const byModel = new Map<string, number>();
+  for (const t of ADMIN_TASKS) {
+    if (t.gpuCards === 0) continue;
+    byModel.set(t.primaryModel, (byModel.get(t.primaryModel) ?? 0) + t.gpuCards);
+  }
+  return Array.from(byModel.entries())
+    .map(([model, gpus]) => {
+      const c = GPU_CURVE[model] ?? { seed: 61, base: 55, amp: 16, drift: 3 };
+      const series = gpuSeries(c.seed, c.base, c.amp, c.drift);
+      const s = summarize(series);
+      return {
+        model,
+        allocatedGpus: gpus,
+        gpuHoursMonth: gpus * GPU_HOURS_PER_MONTH,
+        dailyUtilizationPct: series,
+        avgUtilizationPct: s.avg,
+        peakUtilizationPct: s.peak,
+        currentUtilizationPct: s.current,
+      };
+    })
+    .sort((a, b) => b.allocatedGpus - a.allocatedGpus);
+}
+
+/** 모델별 월 GPU 비용 (KRW) = GPU-hour × 등급 단가. */
+export function getModelGpuCost() {
+  return getModelGpuAllocation().map((m) => ({
+    model: m.model,
+    gpus: m.allocatedGpus,
+    gpuHours: m.gpuHoursMonth,
+    unitPrice: MODEL_GPU_HOUR_PRICE[m.model] ?? 0,
+    monthCost: m.gpuHoursMonth * (MODEL_GPU_HOUR_PRICE[m.model] ?? 0),
+    avgUtilizationPct: m.avgUtilizationPct,
+  }));
+}
+
+/** 모델 서빙 GPU 월 고정비 합산. */
+export function getTotalGpuCost(): number {
+  return getModelGpuCost().reduce((a, m) => a + m.monthCost, 0);
+}
+
+/** 전사 배정 GPU 장 수 — 과제 원장 합계. */
+export function getTotalAllocatedGpus(): number {
+  return ADMIN_TASKS.reduce((a, t) => a + t.gpuCards, 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * 2) 비용 구성
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface CostCategory {
+  key: 'model_gpu' | 'gpu_platform' | 'storage' | 'network' | 'observability';
+  label: string;
+  color: string;
+  monthCost: number;
+}
+
+/**
+ * 인프라 비용 구성 — 모델 서빙 GPU 고정비 외 학습·평가 공용 GPU·스토리지·
+ * 네트워크·관측. 서빙 GPU 는 과제 원장에서 파생된 값이고, 나머지는 그 대비
+ * 비율 추정이다.
+ */
+export function getCostBreakdownByCategory(): CostCategory[] {
+  const gpu = getTotalGpuCost();
+  const platformGpu = Math.round(gpu * 0.18); // 학습계·평가·임베딩 등 공용 GPU
+  const storage = Math.round(gpu * 0.06); // 지식 인덱스·벡터DB·아카이브
+  const network = Math.round(gpu * 0.04); // 게이트웨이 트래픽
+  const obs = Math.round(gpu * 0.03); // 관측·로깅·감사
+  return [
+    { key: 'model_gpu', label: '모델 서빙 GPU', color: '#CB2C10', monthCost: gpu },
+    { key: 'gpu_platform', label: '학습·평가 공용 GPU', color: '#1F5BB8', monthCost: platformGpu },
+    { key: 'storage', label: '스토리지·벡터DB', color: '#1B8A4D', monthCost: storage },
+    { key: 'network', label: '게이트웨이 트래픽', color: '#6E3BBD', monthCost: network },
+    { key: 'observability', label: '관측·감사', color: '#6B4F2A', monthCost: obs },
+  ];
+}
+
+/** 서빙 GPU 고정비 대비 변동비 비율 (0.18+0.06+0.04+0.03). */
+export const VARIABLE_COST_RATIO = 0.31;
+
+/** 전사 인프라 월 합계 — 정산(chargeback)이 배분하는 총액. */
+export function getTotalInfraCost(): number {
+  return getCostBreakdownByCategory().reduce((a, c) => a + c.monthCost, 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * 3) 과제별 사용 현황 — ADMIN_TASKS 원장에서 파생
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface TaskUsageRow {
+  id: string;
+  name: string;
+  tenant: string;
   dept: string;
+  /** 과제 기안자 = 과제 담당. */
   pmName: string;
+  /** 과제 원장의 결재 단계. */
+  stage: AdminTask['stage'];
   status: '운영 중' | '개발 중' | '보류';
+  namespace: string;
 
-  /** 서빙계에 배포된 에이전트 수. */
+  /** 서빙계에 떠 있는 산출 에이전트 수. */
   servingAgents: number;
-  /** 학습계까지 포함한 총 에이전트 수. */
+  /** 게시 대기·중지 산출물까지 포함한 총 에이전트 수. */
   totalAgents: number;
+  /** 소속 에이전트 ID — 화면에서 근거를 바로 보여 준다. */
+  agentIds: string[];
 
-  /** 30일 호출 총합. */
+  /** 30일 호출 총합 — 소속 에이전트 실측 합계. */
   monthCalls: number;
   /** 최근 30일 일별 호출 시계열 (스파크라인용). */
   monthCallsTrend: number[];
-  /** 전월 대비 증감(%). */
   monthCallsDeltaPct: number;
-  /** 어제 기준 DAU. */
   dau: number;
 
-  /** 30일 비용 (KRW). */
+  /** 30일 인프라 비용 (KRW) — 전사 인프라비의 가중 토큰 점유분. */
   monthCost: number;
-  /** 월 예산 (KRW). */
+  /** 월 예산 (KRW) — 과제 원장에서 결재로 확정된 월 플랫폼 이용 예산. */
   budgetCost: number;
 
-  /** SLO 충족률(%). */
   sloAttainment: number;
-  /** P95 응답(ms). */
   p95Ms: number;
-  /** SLO 목표 P95(ms). */
   sloTargetMs: number;
-  /** 👍 비율(%) — 대화 분석 기반. */
   feedbackUpRate: number;
-  /** 30일 Fallback 발동 횟수. */
   fallbackCount: number;
 
   /** 가드레일 차단 건수 (7일). */
@@ -51,25 +350,19 @@ export interface ProjectUsageRow {
   /** PII 마스킹 건수 (7일). */
   piiMaskCount: number;
 
-  /** 현재 Pod 수. */
+  /** 배정 GPU 장 수 — 과제 원장의 `gpuCards`. */
+  gpuCards: number;
   podsCurrent: number;
-  /** GPU 자원 점유율(%). */
+  /** 배정 GPU 점유율(%). */
   gpuUtilPct: number;
-  /** 월 토큰 쿼터 소진(%). */
   tokenQuotaPct: number;
-  /** TPM 한도 도달률(%). */
   tpmUtilPct: number;
 
-  /** 결재 대기 (전사 기준이 아닌 이 프로젝트 발생분). */
   pendingApprovals: number;
-  /** 마지막 활동 시각. */
   lastActivity: string;
-  /** 주력 모델. */
   primaryModel: string;
 
-  /** 30일 입력 토큰 합계. */
   monthTokenInput: number;
-  /** 30일 출력 토큰 합계. */
   monthTokenOutput: number;
 }
 
@@ -86,196 +379,162 @@ function trend(seed: number, base: number, amp: number): number[] {
   return out;
 }
 
-export const ADMIN_PROJECT_ROWS: ProjectUsageRow[] = [
-  {
-    id: 'PRJ-2025-PB-001',
-    name: 'PB 에이전트 프로젝트',
-    dept: 'PB 사업부',
-    pmName: '김플랫',
-    status: '운영 중',
-    servingAgents: 1,
-    totalAgents: 1,
-    monthCalls: 12_000,
-    monthCallsTrend: trend(101, 400, 180),
-    monthCallsDeltaPct: 8.2,
-    dau: 318,
-    monthCost: 2_400_000,
-    budgetCost: 4_000_000,
-    sloAttainment: 99.42,
-    p95Ms: 2100,
-    sloTargetMs: 3000,
-    feedbackUpRate: 92.1,
-    fallbackCount: 17,
-    guardrailBlocks: 7,
-    policyViolations: 0,
-    piiMaskCount: 218,
-    podsCurrent: 5,
-    gpuUtilPct: 48,
-    tokenQuotaPct: 47.8,
-    tpmUtilPct: 67.8,
-    pendingApprovals: 2,
-    lastActivity: '2026-05-24 14:23',
-    primaryModel: 'onprem/qwen3-32b',
-    monthTokenInput: 3_840_000,
-    monthTokenOutput: 1_080_000,
-  },
-  {
-    id: 'PRJ-2024-FC-001',
-    name: '금융상담 에이전트 프로젝트',
-    dept: '금융상담팀',
-    pmName: '한지수',
-    status: '운영 중',
-    servingAgents: 1,
-    totalAgents: 1,
-    monthCalls: 1_800_000,
-    monthCallsTrend: trend(303, 60_000, 14_000),
-    monthCallsDeltaPct: -3.2,
-    dau: 4_120,
-    monthCost: 240_000_000,
-    budgetCost: 300_000_000,
-    sloAttainment: 97.85,
-    p95Ms: 3120,
-    sloTargetMs: 3000,
-    feedbackUpRate: 81.2,
-    fallbackCount: 184,
-    guardrailBlocks: 92,
-    policyViolations: 3,
-    piiMaskCount: 4_220,
-    podsCurrent: 24,
-    gpuUtilPct: 88,
-    tokenQuotaPct: 91.6,
-    tpmUtilPct: 93.1,
-    pendingApprovals: 3,
-    lastActivity: '2026-05-24 14:48',
-    primaryModel: 'onprem/gpt-oss-120b',
-    monthTokenInput: 612_000_000,
-    monthTokenOutput: 184_000_000,
-  },
-  {
-    id: 'PRJ-2024-CR-002',
-    name: '여신심사 에이전트 프로젝트',
-    dept: '여신지원부',
-    pmName: '박서연',
-    status: '운영 중',
-    servingAgents: 1,
-    totalAgents: 2,
-    monthCalls: 86_400,
-    monthCallsTrend: trend(404, 2800, 720),
-    monthCallsDeltaPct: 22.1,
-    dau: 178,
-    monthCost: 16_000_000,
-    budgetCost: 20_000_000,
-    sloAttainment: 99.12,
-    p95Ms: 2640,
-    sloTargetMs: 3000,
-    feedbackUpRate: 90.5,
-    fallbackCount: 28,
-    guardrailBlocks: 12,
-    policyViolations: 0,
-    piiMaskCount: 304,
-    podsCurrent: 6,
-    gpuUtilPct: 54,
-    tokenQuotaPct: 38.7,
-    tpmUtilPct: 51.2,
-    pendingApprovals: 1,
-    lastActivity: '2026-05-24 11:02',
-    primaryModel: 'onprem/qwen3-32b',
-    monthTokenInput: 28_500_000,
-    monthTokenOutput: 7_900_000,
-  },
-  {
-    id: 'PRJ-2024-CS-001',
-    name: 'CS 챗봇 코파일럿 프로젝트',
-    dept: '디지털채널부',
-    pmName: '정수민',
-    status: '운영 중',
-    servingAgents: 1,
-    totalAgents: 1,
-    monthCalls: 920_000,
-    monthCallsTrend: trend(505, 30_000, 7_400),
-    monthCallsDeltaPct: 5.8,
-    dau: 2_840,
-    monthCost: 96_000_000,
-    budgetCost: 120_000_000,
-    sloAttainment: 99.08,
-    p95Ms: 1840,
-    sloTargetMs: 2500,
-    feedbackUpRate: 86.7,
-    fallbackCount: 96,
-    guardrailBlocks: 41,
-    policyViolations: 0,
-    piiMaskCount: 2_180,
-    podsCurrent: 14,
-    gpuUtilPct: 62,
-    tokenQuotaPct: 64.2,
-    tpmUtilPct: 71.4,
-    pendingApprovals: 0,
-    lastActivity: '2026-05-24 14:55',
-    primaryModel: 'onprem/sLLM-13b',
-    monthTokenInput: 248_400_000,
-    monthTokenOutput: 78_200_000,
-  },
-  {
-    id: 'PRJ-2025-AML-001',
-    name: '자금세탁 방지 에이전트',
-    dept: '준법지원부',
-    pmName: '강민호',
-    status: '개발 중',
-    servingAgents: 0,
-    totalAgents: 1,
-    monthCalls: 0,
-    monthCallsTrend: Array(30).fill(0),
-    monthCallsDeltaPct: 0,
-    dau: 0,
-    monthCost: 0,
-    budgetCost: 2_000_000,
-    sloAttainment: 0,
-    p95Ms: 0,
-    sloTargetMs: 3000,
-    feedbackUpRate: 0,
-    fallbackCount: 0,
-    guardrailBlocks: 0,
-    policyViolations: 0,
-    piiMaskCount: 0,
-    podsCurrent: 0,
-    gpuUtilPct: 0,
+/** 문자열 → 안정 시드. 같은 과제는 새로고침해도 같은 곡선을 그린다. */
+function seedOf(s: string): number {
+  let h = 7;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100003;
+  return h + 1;
+}
+
+/** PII 발생률 — 민감도 등급별. 7일 누계 산정에 쓴다. */
+const PII_RATE_BY_SENSITIVITY: Record<number, number> = { 1: 0.002, 2: 0.006, 3: 0.012, 4: 0.02 };
+
+function buildRow(t: AdminTask): TaskUsageRow {
+  const agents = t.agentIds.map((id) => AGENT_BY_ID[id]).filter(Boolean);
+  const monthCalls = agents.reduce((a, x) => a + x.monthCalls, 0);
+  const monthTokenInput = agents.reduce((a, x) => a + x.monthTokenInput, 0);
+  const monthTokenOutput = agents.reduce((a, x) => a + x.monthTokenOutput, 0);
+  const callsWeekly = agents.reduce((a, x) => a + x.callsWeekly, 0);
+
+  // P95 는 호출량 가중 평균 — 호출이 없으면 주력 모델 기본값.
+  const p95Ms =
+    monthCalls > 0
+      ? Math.round(agents.reduce((a, x) => a + x.p95Ms * x.monthCalls, 0) / monthCalls)
+      : MODEL_P95_MS[t.primaryModel] ?? 0;
+  /*
+   * SLO 목표는 에이전트 성격에 따라 다르게 잡는다 — 배치성(일일 브리프·회의 녹취
+   * 요약)을 대화형 3초 기준으로 재면 항상 미달로 보인다.
+   *   경량 대화형(gemma) 2.5s / 일반 대화형 3s / 배치·STT 파이프라인 8s
+   */
+  const slowest = agents.reduce((a, x) => Math.max(a, x.p95Ms), 0);
+  const sloTargetMs =
+    slowest > 5000 ? 8000 : t.primaryModel === 'google/gemma-4-31B-it-assistant' ? 2500 : 3000;
+  const sloAttainment =
+    monthCalls === 0
+      ? 0
+      : Math.min(99.95, Math.max(95, 99.9 - Math.max(0, p95Ms / sloTargetMs - 0.6) * 6));
+
+  const seed = seedOf(t.id);
+  const dailyBase = monthCalls / 30;
+  const monthCallsTrend = monthCalls > 0 ? trend(seed, dailyBase, dailyBase * 0.34) : Array(30).fill(0);
+
+  // 안전 이벤트 — 7일 누계. 민감도가 높을수록 PII 탐지가 잦다.
+  const piiMaskCount = Math.round(
+    agents.reduce(
+      (a, x) => a + x.callsWeekly * (PII_RATE_BY_SENSITIVITY[x.sensitivity] ?? 0.008),
+      0,
+    ),
+  );
+  const guardrailBlocks = Math.round(callsWeekly * 0.0004);
+  const policyViolations = Math.round(callsWeekly * 0.000015);
+
+  const status: TaskUsageRow['status'] =
+    t.stage === '반려' ? '보류' : monthCalls > 0 ? '운영 중' : '개발 중';
+
+  const pendingApprovals = t.approvals.filter((a) => a.status !== '완료').length;
+
+  const hh = String(9 + (seed % 8)).padStart(2, '0');
+  const mm = String(seed % 60).padStart(2, '0');
+  const lastActivity =
+    status === '운영 중' ? `${DASHBOARD_TODAY} ${hh}:${mm}` : `${t.requestedAt} ${hh}:${mm}`;
+
+  return {
+    id: t.id,
+    name: t.name,
+    tenant: t.tenant,
+    dept: t.dept,
+    pmName: t.requestedBy,
+    stage: t.stage,
+    status,
+    namespace: t.namespace,
+
+    servingAgents: agents.filter((a) => a.serving).length,
+    totalAgents: t.agentIds.length + t.pendingAgentIds.length,
+    agentIds: [...t.agentIds, ...t.pendingAgentIds],
+
+    monthCalls,
+    monthCallsTrend,
+    monthCallsDeltaPct: +(((seed % 47) - 14) * 0.9).toFixed(1),
+    dau: Math.round(monthCalls / 30 / 6),
+
+    monthCost: 0, // assignCosts() 에서 전사 인프라비를 가중 토큰 점유율로 배분해 채운다
+    budgetCost: t.monthlyInfraBudget,
+
+    sloAttainment,
+    p95Ms,
+    sloTargetMs,
+    feedbackUpRate: monthCalls === 0 ? 0 : +(82 + (seed % 130) / 10).toFixed(1),
+    fallbackCount: Math.round(monthCalls * 0.0002),
+
+    guardrailBlocks,
+    policyViolations,
+    piiMaskCount,
+
+    gpuCards: t.gpuCards,
+    podsCurrent: t.gpuCards === 0 ? 0 : t.gpuCards * 2 + agents.length,
+    gpuUtilPct: t.gpuCards === 0 ? 0 : Math.min(96, Math.round(34 + (seed % 55))),
     tokenQuotaPct: 0,
     tpmUtilPct: 0,
-    pendingApprovals: 1,
-    lastActivity: '2026-05-22 09:18',
-    primaryModel: 'onprem/qwen3-32b',
-    monthTokenInput: 0,
-    monthTokenOutput: 0,
-  },
-];
 
-/** 모델별 PTU 단가 (월 단위, KRW). */
-export const MODEL_PTU_UNIT_PRICE: Record<string, number> = {
-  'onprem/gpt-oss-120b': 1_000_000,
-  'onprem/qwen3-32b': 800_000,
-  'onprem/sLLM-13b': 400_000,
-};
+    pendingApprovals,
+    lastActivity,
+    primaryModel: t.primaryModel,
 
-/* ───────── 토큰 사용량 헬퍼 ───────── */
-
-export interface TokenSeries {
-  /** 일자 라벨 — 30일 (오늘에서 거꾸로). */
-  days: string[];
-  /** 일별 입력 토큰 합계. */
-  inputDaily: number[];
-  /** 일별 출력 토큰 합계. */
-  outputDaily: number[];
-  /** 30일 입력 토큰 합계. */
-  totalInput: number;
-  /** 30일 출력 토큰 합계. */
-  totalOutput: number;
+    monthTokenInput,
+    monthTokenOutput,
+  };
 }
 
 /**
- * 운영 프로젝트의 일별 토큰 사용량 시계열을 합산.
- * 각 row의 monthCallsTrend를 가중치로 사용해 monthToken*을 분배.
+ * 전사 인프라 월 비용을 **가중 토큰 점유율**(출력 토큰 가중치 3)로 과제에 배분한다.
+ * 배분 규칙은 미터링 화면(`mockMetering.BILLING_RULES`)과 같은 규칙이다 —
+ * 관리자 대시보드와 정산 화면이 서로 다른 과금 모델을 말하면 그대로 리스크가 된다.
  */
-export function getDailyTokenSeries(rows: ProjectUsageRow[]): TokenSeries {
+function assignCosts(rows: TaskUsageRow[]): TaskUsageRow[] {
+  const totalInfra = getTotalInfraCost();
+  const weightOf = (r: TaskUsageRow) => r.monthTokenInput + OUTPUT_TOKEN_WEIGHT * r.monthTokenOutput;
+  const weightSum = rows.reduce((a, r) => a + weightOf(r), 0) || 1;
+  const peak = Math.max(...rows.map((r) => r.monthCalls), 1);
+
+  for (const r of rows) {
+    r.monthCost = Math.round((weightOf(r) / weightSum) * totalInfra);
+    // 쿼터·TPM 은 "전사에서 이 과제가 차지하는 비중"을 한도 대비로 환산한 값이다.
+    r.tokenQuotaPct = +Math.min(99, (weightOf(r) / weightSum) * 100 * 2.6).toFixed(1);
+    r.tpmUtilPct = r.monthCalls === 0 ? 0 : +((r.monthCalls / peak) * 88 + 6).toFixed(1);
+  }
+  return rows;
+}
+
+/** 과제별 사용 현황 — 관리자 대시보드의 기본 행 집합. */
+export const ADMIN_TASK_ROWS: TaskUsageRow[] = assignCosts(ADMIN_TASKS.map(buildRow));
+
+/* ═══════════════════════════════════════════════════════════════
+ * 4) 시계열·토큰 헬퍼
+ * ═══════════════════════════════════════════════════════════════ */
+
+export interface TokenSeries {
+  days: string[];
+  inputDaily: number[];
+  outputDaily: number[];
+  totalInput: number;
+  totalOutput: number;
+}
+
+/** 30일 라벨 (시계열 X축용). */
+export function getDailyLabels(): string[] {
+  const days: string[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(TODAY_DATE);
+    d.setDate(TODAY_DATE.getDate() - i);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    days.push(`${mm}-${dd}`);
+  }
+  return days;
+}
+
+/** 운영 과제의 일별 토큰 사용량 시계열을 합산. */
+export function getDailyTokenSeries(rows: TaskUsageRow[]): TokenSeries {
   const N = 30;
   const inputDaily = Array(N).fill(0);
   const outputDaily = Array(N).fill(0);
@@ -290,19 +549,8 @@ export function getDailyTokenSeries(rows: ProjectUsageRow[]): TokenSeries {
     }
   }
 
-  // 일자 라벨 (오늘에서 거꾸로 30일)
-  const today = new Date('2026-05-24T00:00:00');
-  const days: string[] = [];
-  for (let i = N - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    days.push(`${mm}-${dd}`);
-  }
-
   return {
-    days,
+    days: getDailyLabels(),
     inputDaily: inputDaily.map(Math.round),
     outputDaily: outputDaily.map(Math.round),
     totalInput: rows.reduce((a, r) => a + r.monthTokenInput, 0),
@@ -318,8 +566,8 @@ export interface ModelTokenSlice {
   pct: number;
 }
 
-/** primaryModel 기준으로 토큰 사용량을 그룹핑. */
-export function getModelTokenBreakdown(rows: ProjectUsageRow[]): ModelTokenSlice[] {
+/** 주력 모델 기준 토큰 사용량 그룹핑. */
+export function getModelTokenBreakdown(rows: TaskUsageRow[]): ModelTokenSlice[] {
   const map = new Map<string, { input: number; output: number }>();
   for (const r of rows) {
     if (r.monthTokenInput + r.monthTokenOutput === 0) continue;
@@ -341,146 +589,8 @@ export function getModelTokenBreakdown(rows: ProjectUsageRow[]): ModelTokenSlice
   return arr;
 }
 
-/* ───────── 모델 PTU(Provisioned Throughput Unit) ───────── */
-
-export interface ModelPtuUsage {
-  /** 모델 식별자. */
-  model: string;
-  /** 할당된 PTU 수 (LLM 게이트웨이에서 예약된 처리 용량). */
-  allocatedPtus: number;
-  /** 30일 일별 PTU 사용률(%). 100%면 할당 한도 도달. */
-  dailyUtilizationPct: number[];
-  /** 30일 평균 사용률(%). */
-  avgUtilizationPct: number;
-  /** 30일 최고 사용률(%). */
-  peakUtilizationPct: number;
-  /** 현재 시점 사용률(%). */
-  currentUtilizationPct: number;
-}
-
-/** 0~100 사이 PTU 사용률 시계열 (시드 기반). */
-function ptuSeries(seed: number, base: number, amp: number, drift = 0): number[] {
-  let s = seed;
-  const out: number[] = [];
-  for (let i = 0; i < 30; i++) {
-    s = (s * 9301 + 49297) % 233280;
-    const r = s / 233280;
-    const v =
-      base +
-      Math.sin((i / 30) * Math.PI * 2 + seed) * amp * 0.45 +
-      (r - 0.5) * amp +
-      drift * (i / 30);
-    out.push(Math.max(2, Math.min(98, +v.toFixed(1))));
-  }
-  return out;
-}
-
-function summarize(series: number[]) {
-  const avg = series.reduce((a, b) => a + b, 0) / series.length;
-  const peak = Math.max(...series);
-  return { avg: +avg.toFixed(1), peak: +peak.toFixed(1), current: series[series.length - 1] };
-}
-
-export function getModelPtuUsage(): ModelPtuUsage[] {
-  // 시드를 살짝 다르게 줘서 모델별 곡선이 구분되도록.
-  const a = ptuSeries(11, 62, 22, 8); // onprem/qwen3-32b — 평균 사용
-  const b = ptuSeries(29, 76, 18, 6); // onprem/gpt-oss-120b — 가장 압박
-  const c = ptuSeries(47, 48, 14, 4); // onprem/sLLM-13b — 여유
-
-  return [
-    {
-      model: 'onprem/gpt-oss-120b',
-      allocatedPtus: 240,
-      dailyUtilizationPct: b,
-      ...summarize(b),
-      avgUtilizationPct: summarize(b).avg,
-      peakUtilizationPct: summarize(b).peak,
-      currentUtilizationPct: summarize(b).current,
-    },
-    {
-      model: 'onprem/qwen3-32b',
-      allocatedPtus: 160,
-      dailyUtilizationPct: a,
-      ...summarize(a),
-      avgUtilizationPct: summarize(a).avg,
-      peakUtilizationPct: summarize(a).peak,
-      currentUtilizationPct: summarize(a).current,
-    },
-    {
-      model: 'onprem/sLLM-13b',
-      allocatedPtus: 100,
-      dailyUtilizationPct: c,
-      ...summarize(c),
-      avgUtilizationPct: summarize(c).avg,
-      peakUtilizationPct: summarize(c).peak,
-      currentUtilizationPct: summarize(c).current,
-    },
-  ];
-}
-
-/** 30일 라벨 (시계열 X축용). */
-export function getDailyLabels(): string[] {
-  const today = new Date('2026-05-24T00:00:00');
-  const days: string[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    days.push(`${mm}-${dd}`);
-  }
-  return days;
-}
-
-/* ───────── Aggregate 헬퍼 (KPI band 용) ───────── */
-
-export function getAdminKpis(rows: ProjectUsageRow[]) {
-  const total = rows.length;
-  const operating = rows.filter((r) => r.status === '운영 중').length;
-  const planning = rows.filter((r) => r.status === '개발 중').length;
-
-  const totalServing = rows.reduce((a, r) => a + r.servingAgents, 0);
-  const totalAgents = rows.reduce((a, r) => a + r.totalAgents, 0);
-
-  const totalCalls = rows.reduce((a, r) => a + r.monthCalls, 0);
-
-  // 가중 평균 — 호출량 가중
-  const totalWeighted = rows.reduce((a, r) => a + r.monthCalls, 0) || 1;
-  const sloWeighted =
-    rows.reduce((a, r) => a + r.sloAttainment * r.monthCalls, 0) / totalWeighted;
-
-  const totalCost = rows.reduce((a, r) => a + r.monthCost, 0);
-  const totalBudget = rows.reduce((a, r) => a + r.budgetCost, 0);
-
-  const totalSafety = rows.reduce(
-    (a, r) => a + r.guardrailBlocks + r.policyViolations,
-    0,
-  );
-  const totalPii = rows.reduce((a, r) => a + r.piiMaskCount, 0);
-
-  const totalPending = rows.reduce((a, r) => a + r.pendingApprovals, 0);
-
-  return {
-    totalProjects: total,
-    operatingProjects: operating,
-    planningProjects: planning,
-    totalServingAgents: totalServing,
-    totalAgents,
-    totalCalls,
-    sloAvg: sloWeighted,
-    totalCost,
-    totalBudget,
-    budgetUsedPct: (totalCost / Math.max(1, totalBudget)) * 100,
-    totalSafetyEvents: totalSafety,
-    totalPiiMasked: totalPii,
-    totalPendingApprovals: totalPending,
-  };
-}
-
-/* ───────── 추가 mock — 4탭 콘텐츠용 ───────── */
-
-/** 전사 30일 일별 호출량 — 전체 프로젝트 합산 시계열. */
-export function getDailyCallSeries(rows: ProjectUsageRow[]): number[] {
+/** 전사 30일 일별 호출량 — 전체 과제 합산 시계열. */
+export function getDailyCallSeries(rows: TaskUsageRow[]): number[] {
   const N = 30;
   const out = Array(N).fill(0);
   for (const r of rows) {
@@ -489,83 +599,22 @@ export function getDailyCallSeries(rows: ProjectUsageRow[]): number[] {
   return out.map(Math.round);
 }
 
-/** 모델별 월 PTU 비용 (KRW). */
-export function getModelPtuCost() {
-  const usage = getModelPtuUsage();
-  return usage.map((m) => ({
-    model: m.model,
-    ptus: m.allocatedPtus,
-    unitPrice: MODEL_PTU_UNIT_PRICE[m.model] ?? 0,
-    monthCost: m.allocatedPtus * (MODEL_PTU_UNIT_PRICE[m.model] ?? 0),
-    avgUtilizationPct: m.avgUtilizationPct,
-  }));
-}
-
-/** 전체 월 PTU 비용 합산. */
-export function getTotalPtuCost(): number {
-  return getModelPtuCost().reduce((a, m) => a + m.monthCost, 0);
-}
-
-/* ───────── 비용 탭 전용 helper ───────── */
-
-export interface CostCategory {
-  key: 'model_ptu' | 'gpu_onprem' | 'storage' | 'network' | 'observability';
-  label: string;
-  color: string;
-  monthCost: number;
-}
-
-/**
- * 인프라 비용 구성 — 모델 PTU 외 GPU 온프렘·스토리지·네트워크·관측을 합산.
- * PTU는 실 데이터, 나머지는 PTU 합 대비 정해진 비율로 추정한 mock 값.
- */
-export function getCostBreakdownByCategory(): CostCategory[] {
-  const ptu = getTotalPtuCost();
-  // PTU(모델 처리량) 외 인프라 비용은 PTU 대비 비율로 추정 — mock.
-  const gpuOnprem = Math.round(ptu * 0.18); // 온프렘 GPU 자체 운영비
-  const storage = Math.round(ptu * 0.06); // 지식 인덱스·벡터DB·아카이브
-  const network = Math.round(ptu * 0.04); // 게이트웨이 트래픽
-  const obs = Math.round(ptu * 0.03); // 관측·로깅·감사
-  return [
-    { key: 'model_ptu', label: '모델 PTU', color: '#CB2C10', monthCost: ptu },
-    { key: 'gpu_onprem', label: '온프렘 GPU', color: '#1F5BB8', monthCost: gpuOnprem },
-    { key: 'storage', label: '스토리지·벡터DB', color: '#1B8A4D', monthCost: storage },
-    { key: 'network', label: '게이트웨이 트래픽', color: '#6E3BBD', monthCost: network },
-    { key: 'observability', label: '관측·감사', color: '#6B4F2A', monthCost: obs },
-  ];
-}
-
-/**
- * 모델별 호출당 평균 비용 (KRW) — 에이전트 단위 비용 추정 시 사용.
- * 모델 PTU 단가 + 평균 토큰 길이를 1회 호출 비용으로 정규화한 mock 값.
- */
-export const MODEL_COST_PER_CALL: Record<string, number> = {
-  'onprem/gpt-oss-120b': 280,
-  'onprem/qwen3-32b': 220,
-  'onprem/sLLM-13b': 95,
-  'onprem/llama-3.3-70b': 450,
-  'google/gemma-4-31B-it-assistant': 110,
-};
-
 /**
  * 전사 30일 일별 비용 추이.
- * PTU는 고정비라 거의 평탄, 나머지(GPU·스토리지·네트워크·관측)는 사용량에 비례.
- * 사용량 가중치는 일별 호출량 series 기반.
+ * GPU 고정비는 평탄, 나머지는 사용량(일별 호출량)에 비례.
  */
-export function getDailyCostSeries(rows: ProjectUsageRow[]): {
+export function getDailyCostSeries(rows: TaskUsageRow[]): {
   days: string[];
-  fixed: number[]; // PTU 고정비
-  variable: number[]; // 변동비 (사용량 비례)
+  fixed: number[];
+  variable: number[];
   total: number[];
 } {
   const days = getDailyLabels();
-  const ptuMonth = getTotalPtuCost();
-  const fixedDaily = ptuMonth / 30;
+  const gpuMonth = getTotalGpuCost();
+  const fixedDaily = gpuMonth / 30;
   const calls = getDailyCallSeries(rows);
   const callSum = calls.reduce((a, b) => a + b, 0) || 1;
-
-  // 변동비 합계 = PTU 대비 31% (위 카테고리 비율 0.18+0.06+0.04+0.03)
-  const variableMonth = ptuMonth * 0.31;
+  const variableMonth = gpuMonth * VARIABLE_COST_RATIO;
 
   const fixed: number[] = [];
   const variable: number[] = [];
@@ -581,7 +630,6 @@ export function getDailyCostSeries(rows: ProjectUsageRow[]): {
 
 /** 시간(0~23) × 요일(0=일 ~ 6=토) 호출 히트맵 — 평균 RPS 기준. */
 export function getHourlyHeatmap(): number[][] {
-  // 24 x 7 — 그룹 운영 패턴 (평일 9~18시 피크, 주말 약함)
   const out: number[][] = [];
   for (let h = 0; h < 24; h++) {
     const row: number[] = [];
@@ -601,44 +649,120 @@ export function getHourlyHeatmap(): number[][] {
   return out;
 }
 
-/** 부서별 DAU (사용 현황 탭). */
+/* ═══════════════════════════════════════════════════════════════
+ * 5) Aggregate 헬퍼 (KPI band 용)
+ * ═══════════════════════════════════════════════════════════════ */
+
+export function getAdminKpis(rows: TaskUsageRow[]) {
+  const total = rows.length;
+  const operating = rows.filter((r) => r.status === '운영 중').length;
+  const planning = rows.filter((r) => r.status === '개발 중').length;
+
+  const totalServing = rows.reduce((a, r) => a + r.servingAgents, 0);
+  const totalAgents = rows.reduce((a, r) => a + r.totalAgents, 0);
+
+  const totalCalls = rows.reduce((a, r) => a + r.monthCalls, 0);
+
+  const totalWeighted = totalCalls || 1;
+  const sloWeighted = rows.reduce((a, r) => a + r.sloAttainment * r.monthCalls, 0) / totalWeighted;
+
+  const totalCost = rows.reduce((a, r) => a + r.monthCost, 0);
+  const totalBudget = rows.reduce((a, r) => a + r.budgetCost, 0);
+
+  const totalSafety = rows.reduce((a, r) => a + r.guardrailBlocks + r.policyViolations, 0);
+  const totalPii = rows.reduce((a, r) => a + r.piiMaskCount, 0);
+  const totalPending = rows.reduce((a, r) => a + r.pendingApprovals, 0);
+
+  return {
+    /** 과제 수 — RFP 가 쓰는 단위는 '과제'다. */
+    totalTasks: total,
+    operatingTasks: operating,
+    planningTasks: planning,
+    totalServingAgents: totalServing,
+    /** 플랫폼 전체 에이전트 수 = 카탈로그 13 + 그룹 공통 10 + 게시 대기·중지 산출물. */
+    totalAgents,
+    totalCalls,
+    sloAvg: sloWeighted,
+    totalCost,
+    totalBudget,
+    budgetUsedPct: (totalCost / Math.max(1, totalBudget)) * 100,
+    totalSafetyEvents: totalSafety,
+    totalPiiMasked: totalPii,
+    totalPendingApprovals: totalPending,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * 6) 부서·변화·활동 — 전부 과제 원장에서 파생
+ * ═══════════════════════════════════════════════════════════════ */
+
 export interface DeptUsage {
   dept: string;
+  tenant: string;
   dau: number;
-  newUsers: number; // 신규(7일)
-  returningUsers: number; // 재방문(7일)
+  newUsers: number;
+  returningUsers: number;
 }
-export const DEPT_USAGE: DeptUsage[] = [
-  { dept: '금융상담팀', dau: 4_120, newUsers: 312, returningUsers: 3_808 },
-  { dept: '디지털채널부', dau: 2_840, newUsers: 184, returningUsers: 2_656 },
-  { dept: 'PB 사업부', dau: 318, newUsers: 12, returningUsers: 306 },
-  { dept: '여신지원부', dau: 178, newUsers: 22, returningUsers: 156 },
-  { dept: '준법지원부', dau: 0, newUsers: 0, returningUsers: 0 },
-];
+
+/** 부서별 DAU — 과제 행의 dau 를 부서 단위로 합산한다. */
+export function getDeptUsage(): DeptUsage[] {
+  const map = new Map<string, DeptUsage>();
+  for (const r of ADMIN_TASK_ROWS) {
+    const key = `${r.tenant}·${r.dept}`;
+    const cur =
+      map.get(key) ?? { dept: r.dept, tenant: r.tenant, dau: 0, newUsers: 0, returningUsers: 0 };
+    cur.dau += r.dau;
+    map.set(key, cur);
+  }
+  return Array.from(map.values())
+    .map((d) => {
+      const seed = seedOf(d.tenant + d.dept);
+      const newUsers = Math.round(d.dau * (0.03 + (seed % 40) / 1000));
+      return { ...d, newUsers, returningUsers: d.dau - newUsers };
+    })
+    .sort((a, b) => b.dau - a.dau);
+}
+
+export const DEPT_USAGE: DeptUsage[] = getDeptUsage();
 
 /** 호출량 전주 대비 급증·급감 Top. */
 export interface ChangeRow {
-  projectId: string;
+  taskId: string;
   name: string;
   deltaPct: number;
   monthCalls: number;
 }
-export const TOP_SPIKES: ChangeRow[] = [
-  { projectId: 'PRJ-2024-CR-002', name: '여신심사 에이전트 프로젝트', deltaPct: 22.1, monthCalls: 86_400 },
-  { projectId: 'PRJ-2025-PB-001', name: 'PB 에이전트 프로젝트', deltaPct: 8.2, monthCalls: 12_000 },
-];
-export const TOP_DROPS: ChangeRow[] = [
-  { projectId: 'PRJ-2024-FC-001', name: '금융상담 에이전트 프로젝트', deltaPct: -3.2, monthCalls: 1_800_000 },
-];
+
+export const TOP_SPIKES: ChangeRow[] = [...ADMIN_TASK_ROWS]
+  .filter((r) => r.monthCalls > 0 && r.monthCallsDeltaPct > 0)
+  .sort((a, b) => b.monthCallsDeltaPct - a.monthCallsDeltaPct)
+  .slice(0, 3)
+  .map((r) => ({
+    taskId: r.id,
+    name: r.name,
+    deltaPct: r.monthCallsDeltaPct,
+    monthCalls: r.monthCalls,
+  }));
+
+export const TOP_DROPS: ChangeRow[] = [...ADMIN_TASK_ROWS]
+  .filter((r) => r.monthCalls > 0 && r.monthCallsDeltaPct < 0)
+  .sort((a, b) => a.monthCallsDeltaPct - b.monthCallsDeltaPct)
+  .slice(0, 3)
+  .map((r) => ({
+    taskId: r.id,
+    name: r.name,
+    deltaPct: r.monthCallsDeltaPct,
+    monthCalls: r.monthCalls,
+  }));
 
 /** 전사 활동 피드 (최근 N건). */
 export type ActivityKind =
-  | 'project_register'
+  | 'task_register'
   | 'serv_promotion'
   | 'train_deploy'
   | 'policy_violation'
   | 'incident'
-  | 'ptu_change'
+  | 'gpu_change'
   | 'audit';
 
 export interface ActivityItem {
@@ -649,98 +773,115 @@ export interface ActivityItem {
   at: string;
   href?: string;
 }
+
 export const ACTIVITY_FEED: ActivityItem[] = [
   {
-    id: 'ACT-1024',
+    id: 'ACT-1031',
     kind: 'serv_promotion',
-    title: 'PB 자산진단 v0.4.2 → 서빙계 프로모션 완료',
-    who: '박서연',
-    at: '2026-05-24 14:08',
-    href: '/projects/PRJ-2025-PB-001',
+    title: 'GRP-007 지식·상품 어시스턴트 v0.9-rc1 검증 통과 · 서빙계 프로모션 결재 상신',
+    who: '남데이터 · 경남은행 (PRJ-KN-031)',
+    at: '2026-06-03 14:08',
+    href: '/admin/tasks',
   },
   {
-    id: 'ACT-1023',
-    kind: 'ptu_change',
-    title: 'onprem/gpt-oss-120b PTU 220 → 240 증설',
+    id: 'ACT-1030',
+    kind: 'gpu_change',
+    title: 'onprem/gpt-oss-120b 서빙 GPU 30장 → 33장 증설',
     who: '김플랫 · 결재 ▶ 2단계 완료',
-    at: '2026-05-24 11:42',
+    at: '2026-06-03 11:42',
   },
   {
-    id: 'ACT-1022',
+    id: 'ACT-1029',
     kind: 'policy_violation',
-    title: '금융상담 에이전트 — 외부 추천 발화 가드레일 차단',
-    who: 'AGT-072',
-    at: '2026-05-24 10:18',
-    href: '/projects/PRJ-2024-FC-001',
+    title: 'AGT-072 외환 에이전트 — 외부 상품 추천 발화 가드레일 차단',
+    who: 'PRJ-BS-061 고객상담 자동화 과제',
+    at: '2026-06-03 10:18',
+    href: '/admin/guardrails',
   },
   {
-    id: 'ACT-1021',
-    kind: 'project_register',
-    title: '자금세탁 방지 에이전트 프로젝트 등록',
-    who: '강민호 · 준법지원부',
+    id: 'ACT-1028',
+    kind: 'train_deploy',
+    title: 'AGT-410 코드 리뷰·시큐어코딩 점검 v0.9-rc2 학습계 배포',
+    who: '한지훈 · BNK시스템 (PRJ-SY-003)',
+    at: '2026-06-02 17:20',
+    href: '/admin/services',
+  },
+  {
+    id: 'ACT-1027',
+    kind: 'task_register',
+    title: '자금세탁 방지 에이전트 과제(PRJ-GC-001) 등록 · 검토 착수',
+    who: '이도현 · 준법지원부',
     at: '2026-05-22 09:18',
-    href: '/projects/PRJ-2025-AML-001',
+    href: '/admin/tasks',
   },
   {
-    id: 'ACT-1019',
+    id: 'ACT-1026',
     kind: 'incident',
-    title: 'CS 챗봇 코파일럿 — P95 SLA 5분간 초과 (자동 복구)',
-    who: 'AGT-072',
+    title: 'AGT-621 상담 코파일럿 — P95 SLA 5분간 초과 (자동 복구)',
+    who: 'PRJ-SY-018 상담 코파일럿 과제',
     at: '2026-05-20 14:08',
   },
 ];
 
-/** PTU 변경 이력 (증설/감설). */
-export interface PtuChangeEvent {
+/** GPU 할당 변경 이력 (증설/감설). */
+export interface GpuChangeEvent {
   id: string;
   at: string;
   model: string;
+  /** 변경 전 GPU 장 수. */
   from: number;
+  /** 변경 후 GPU 장 수. */
   to: number;
   reason: string;
   approver: string;
   costDeltaKrw: number;
 }
-export const PTU_CHANGE_EVENTS: PtuChangeEvent[] = [
+
+/** 장당 월 비용 = 720h × 등급 단가. 이력의 비용 영향도 같은 식에서 나온다. */
+function gpuDelta(model: string, from: number, to: number): number {
+  return (to - from) * GPU_HOURS_PER_MONTH * (MODEL_GPU_HOUR_PRICE[model] ?? 0);
+}
+
+export const GPU_CHANGE_EVENTS: GpuChangeEvent[] = [
   {
-    id: 'PTU-EV-014',
-    at: '2026-05-24',
+    id: 'GPU-EV-014',
+    at: '2026-06-03',
     model: 'onprem/gpt-oss-120b',
-    from: 220,
-    to: 240,
-    reason: '피크 사용률 94% 도달 — 사용 현황 탭 알람 기반 증설',
+    from: 30,
+    to: 33,
+    reason: '피크 점유율 94% 도달 — 사용 현황 탭 알람 기반 증설',
     approver: '김플랫',
-    costDeltaKrw: 20_000_000,
+    costDeltaKrw: gpuDelta('onprem/gpt-oss-120b', 30, 33),
   },
   {
-    id: 'PTU-EV-013',
+    id: 'GPU-EV-013',
     at: '2026-05-18',
     model: 'onprem/qwen3-32b',
-    from: 140,
-    to: 160,
-    reason: '여신심사 에이전트 트래픽 증가 대응',
+    from: 3,
+    to: 4,
+    reason: '리스크 데일리 자동화 과제(PRJ-SC-014) 배정',
     approver: '김플랫',
-    costDeltaKrw: 16_000_000,
+    costDeltaKrw: gpuDelta('onprem/qwen3-32b', 3, 4),
   },
   {
-    id: 'PTU-EV-012',
+    id: 'GPU-EV-012',
     at: '2026-05-09',
-    model: 'onprem/sLLM-13b',
-    from: 80,
-    to: 100,
-    reason: 'CS 챗봇 코파일럿 — onprem 비중 확대 전환',
-    approver: '강민호',
-    costDeltaKrw: 8_000_000,
+    model: 'google/gemma-4-31B-it-assistant',
+    from: 3,
+    to: 4,
+    reason: '연금 상담 디지털화 과제(PRJ-SV-007) 학습계 PoC 1장 배정',
+    approver: '노운영',
+    costDeltaKrw: gpuDelta('google/gemma-4-31B-it-assistant', 3, 4),
   },
   {
-    id: 'PTU-EV-011',
+    id: 'GPU-EV-011',
     at: '2026-05-02',
     model: 'onprem/qwen3-32b',
-    from: 160,
-    to: 140,
-    reason: 'PB 프로젝트 호출 안정화 — 평균 효율 38% → 감설',
+    from: 4,
+    to: 3,
+    reason: 'PB 자산관리 과제 호출 안정화 — 평균 점유 38% → 1장 회수',
     approver: '김플랫',
-    costDeltaKrw: -16_000_000,
+    costDeltaKrw: gpuDelta('onprem/qwen3-32b', 4, 3),
   },
 ];
 
@@ -751,42 +892,48 @@ export function getSafetyEventTrend(): {
   policy: number[];
   pii: number[];
 } {
-  // 30일, 시드 기반
   const days = getDailyLabels();
   const guardrail: number[] = [];
   const policy: number[] = [];
   const pii: number[] = [];
+  // 7일 누계를 일 단위로 환산한 값을 중심으로 흔든다.
+  const grBase = ADMIN_TASK_ROWS.reduce((a, r) => a + r.guardrailBlocks, 0) / 7;
+  const piiBase = ADMIN_TASK_ROWS.reduce((a, r) => a + r.piiMaskCount, 0) / 7;
   let s = 31;
   for (let i = 0; i < 30; i++) {
     s = (s * 9301 + 49297) % 233280;
     const r = s / 233280;
-    guardrail.push(Math.max(0, Math.round(22 + Math.sin(i / 4) * 8 + (r - 0.5) * 6)));
+    guardrail.push(
+      Math.max(0, Math.round(grBase + Math.sin(i / 4) * grBase * 0.3 + (r - 0.5) * grBase * 0.25)),
+    );
     policy.push(r > 0.85 ? Math.round((r - 0.85) * 15) : 0);
-    pii.push(Math.max(0, Math.round(1100 + Math.sin(i / 6) * 250 + (r - 0.5) * 120)));
+    pii.push(
+      Math.max(0, Math.round(piiBase + Math.sin(i / 6) * piiBase * 0.22 + (r - 0.5) * piiBase * 0.12)),
+    );
   }
   return { days, guardrail, policy, pii };
 }
 
 /** 결재 분석 — 종류별 분포. */
 export interface ApprovalAnalytics {
-  category: '등록' | '학습계' | '서빙계' | '폐기' | '정책' | 'PTU';
+  category: '과제 등록' | '학습계' | '서빙계' | '폐기' | '정책' | 'GPU 증설';
   pending: number;
   done7d: number;
   rejected7d: number;
   avgLeadTimeHours: number;
 }
 export const APPROVAL_ANALYTICS: ApprovalAnalytics[] = [
-  { category: '등록', pending: 1, done7d: 4, rejected7d: 0, avgLeadTimeHours: 6.2 },
+  { category: '과제 등록', pending: 1, done7d: 4, rejected7d: 0, avgLeadTimeHours: 6.2 },
   { category: '학습계', pending: 2, done7d: 12, rejected7d: 1, avgLeadTimeHours: 4.8 },
   { category: '서빙계', pending: 3, done7d: 6, rejected7d: 2, avgLeadTimeHours: 28.4 },
   { category: '폐기', pending: 0, done7d: 1, rejected7d: 0, avgLeadTimeHours: 11.0 },
   { category: '정책', pending: 2, done7d: 3, rejected7d: 0, avgLeadTimeHours: 18.2 },
-  { category: 'PTU', pending: 0, done7d: 2, rejected7d: 0, avgLeadTimeHours: 9.6 },
+  { category: 'GPU 증설', pending: 0, done7d: 2, rejected7d: 0, avgLeadTimeHours: 9.6 },
 ];
 
-/** 레드팀·산업표준 통과 현황. */
+/** 레드팀·산업표준 통과 현황 — 과제 단위. */
 export interface CertificationRow {
-  projectId: string;
+  taskId: string;
   name: string;
   redteamPassed: boolean | null;
   industry3Axis: { axis1: boolean; axis2: boolean; axis3: boolean };
@@ -794,43 +941,43 @@ export interface CertificationRow {
 }
 export const CERTIFICATIONS: CertificationRow[] = [
   {
-    projectId: 'PRJ-2025-PB-001',
-    name: 'PB 에이전트 프로젝트',
+    taskId: 'PRJ-BS-077',
+    name: 'PB 자산관리 고도화 과제',
     redteamPassed: true,
     industry3Axis: { axis1: true, axis2: true, axis3: true },
     innovDesignationDaysLeft: 388,
   },
   {
-    projectId: 'PRJ-2024-FC-001',
-    name: '금융상담 에이전트 프로젝트',
+    taskId: 'PRJ-BS-061',
+    name: '고객상담 자동화 과제',
     redteamPassed: true,
     industry3Axis: { axis1: true, axis2: true, axis3: true },
     innovDesignationDaysLeft: 52, // 만료 임박
   },
   {
-    projectId: 'PRJ-2024-CR-002',
-    name: '여신심사 에이전트 프로젝트',
+    taskId: 'PRJ-BS-042',
+    name: '여신 디지털심사 과제',
     redteamPassed: false,
     industry3Axis: { axis1: true, axis2: true, axis3: false },
     innovDesignationDaysLeft: null,
   },
   {
-    projectId: 'PRJ-2024-CS-001',
-    name: 'CS 챗봇 코파일럿 프로젝트',
+    taskId: 'PRJ-SY-018',
+    name: '상담 코파일럿 과제',
     redteamPassed: true,
     industry3Axis: { axis1: true, axis2: true, axis3: true },
     innovDesignationDaysLeft: null,
   },
   {
-    projectId: 'PRJ-2025-AML-001',
-    name: '자금세탁 방지 에이전트',
+    taskId: 'PRJ-GC-001',
+    name: '자금세탁 방지 에이전트 과제',
     redteamPassed: null, // 아직 평가 전
     industry3Axis: { axis1: false, axis2: false, axis3: false },
     innovDesignationDaysLeft: null,
   },
 ];
 
-/** 감사 원장 — 최근 N건 (immutable). */
+/** 감사 원장 — 최근 N건. 상세 원장은 mockSecurityGovernance 가 갖는다. */
 export interface AuditLogItem {
   id: string;
   at: string;
@@ -840,36 +987,36 @@ export interface AuditLogItem {
 }
 export const AUDIT_LOG: AuditLogItem[] = [
   {
-    id: 'AUD-2026-05-24-0042',
-    at: '2026-05-24 14:08',
+    id: 'AUD-2026-06-03-0042',
+    at: '2026-06-03 14:08',
     actor: '김플랫',
     action: '관리 대시보드 진입 (MFA 인증)',
     target: '/admin',
   },
   {
-    id: 'AUD-2026-05-24-0041',
-    at: '2026-05-24 11:42',
+    id: 'AUD-2026-06-03-0041',
+    at: '2026-06-03 11:42',
     actor: '김플랫',
-    action: 'PTU 증설 결재 승인',
-    target: 'onprem/gpt-oss-120b 220→240',
+    action: 'GPU 할당 증설 결재 승인',
+    target: 'onprem/gpt-oss-120b 30장 → 33장',
   },
   {
-    id: 'AUD-2026-05-24-0039',
-    at: '2026-05-24 10:21',
-    actor: '강민호',
+    id: 'AUD-2026-06-03-0039',
+    at: '2026-06-03 10:21',
+    actor: '박거버',
     action: '정책 P-014 예외 신청 반려',
     target: 'EX-2026-014',
   },
   {
-    id: 'AUD-2026-05-23-0118',
-    at: '2026-05-23 16:55',
+    id: 'AUD-2026-06-02-0118',
+    at: '2026-06-02 16:55',
     actor: '시스템',
     action: '사번 비활성 처리 (오프보딩 자동)',
     target: 'usr_8920',
   },
   {
-    id: 'AUD-2026-05-23-0094',
-    at: '2026-05-23 11:08',
+    id: 'AUD-2026-06-02-0094',
+    at: '2026-06-02 11:08',
     actor: '박서연',
     action: 'Agent 권한 묶음 변경',
     target: 'AGT-204 · 개발 → 운영',
@@ -877,139 +1024,112 @@ export const AUDIT_LOG: AuditLogItem[] = [
   {
     id: 'AUD-2026-05-22-0212',
     at: '2026-05-22 09:18',
-    actor: '강민호',
-    action: '프로젝트 신규 등록',
-    target: 'PRJ-2025-AML-001',
+    actor: '이도현',
+    action: '과제 신규 등록',
+    target: 'PRJ-GC-001',
   },
 ];
 
-/* ───────── K8s 네임스페이스 단위 인프라 자원 ───────── */
+/* ═══════════════════════════════════════════════════════════════
+ * 7) Namespace — tenants.ts 의 11개가 정본
+ *
+ * 예전 버전은 `pb-agent` / `fc-agent` 처럼 **과제 이름을 그대로 딴 9개**를
+ * 나열해 계열사 Namespace 가 하나도 드러나지 않았다. 1막 랜딩이 각인시키는
+ * "계열사 10 + 그룹 공통 1 = 11 Namespace" 서사와 테넌트 격리(SEC-001)가
+ * 그 지점에서 무너진다. 여기서는 tenants.ts 의 11개를 그대로 쓰고, 과제
+ * 워크로드는 **계열사 Namespace 안의 Deployment** 로 내려 놓는다.
+ * ═══════════════════════════════════════════════════════════════ */
 
 export type NamespaceCategory =
-  | 'project'
-  | 'system'
+  | 'affiliate'
+  | 'group'
   | 'gateway'
   | 'monitoring'
-  | 'devops'
-  | 'platform';
+  | 'platform'
+  | 'system';
 
 export interface NamespaceUsage {
   name: string;
   category: NamespaceCategory;
-  /** 한 줄 설명. */
+  /** 계열사 Namespace 면 계열사명. 플랫폼 공통이면 undefined. */
+  tenant?: string;
   description: string;
-  /** Pod 상태별 수. */
   pods: { running: number; pending: number; failed: number };
-  /** CPU 사용/한도 (millicores 단위 사용 — 표시 시 m 또는 cores). */
   cpuUsedM: number;
   cpuLimitM: number;
-  /** Memory 사용/한도 (MiB). */
   memUsedMiB: number;
   memLimitMiB: number;
-  /** 네트워크 in/out (MB/s). */
   netRxMBps: number;
   netTxMBps: number;
-  /** 서비스 수. */
   services: number;
-  /** 마지막 배포. */
   lastDeploy: string;
+  /** 이 Namespace 에서 수행 중인 과제 수. */
+  taskCount: number;
+  /** 배정 GPU 장 수. */
+  gpuCards: number;
 }
 
 export const CATEGORY_LABEL: Record<NamespaceCategory, string> = {
-  project: '프로젝트',
-  system: '시스템',
+  affiliate: '계열사',
+  group: '그룹 공통',
   gateway: '게이트웨이',
   monitoring: '관제',
-  devops: '개발도구',
   platform: '플랫폼',
+  system: '시스템',
 };
 
 export const CATEGORY_COLOR: Record<NamespaceCategory, string> = {
-  project: '#1B8A4D',
-  system: '#6B4F2A',
+  affiliate: '#1B8A4D',
+  group: '#CB2C10',
   gateway: '#1F5BB8',
   monitoring: '#C9760F',
-  devops: '#CB2C10',
   platform: '#777777',
+  system: '#6B4F2A',
 };
 
-export const NAMESPACES: NamespaceUsage[] = [
-  // ─── 프로젝트 네임스페이스 (train + serv 합쳐서 1개) ───
-  {
-    name: 'pb-agent',
-    category: 'project',
-    description: 'PB 에이전트 프로젝트 (학습계 + 서빙계) · 담당 김플랫',
-    pods: { running: 5, pending: 0, failed: 0 },
-    cpuUsedM: 3_200,
-    cpuLimitM: 8_000,
-    memUsedMiB: 14_400,
-    memLimitMiB: 24_576,
-    netRxMBps: 12.4,
-    netTxMBps: 6.8,
-    services: 4,
-    lastDeploy: '2026-05-24 14:08',
-  },
-  {
-    name: 'fc-agent',
-    category: 'project',
-    description: '금융상담 에이전트 프로젝트 · 담당 한지수',
-    pods: { running: 24, pending: 1, failed: 0 },
-    cpuUsedM: 18_400,
-    cpuLimitM: 32_000,
-    memUsedMiB: 62_800,
-    memLimitMiB: 81_920,
-    netRxMBps: 142.6,
-    netTxMBps: 78.4,
-    services: 10,
-    lastDeploy: '2026-05-24 14:48',
-  },
-  {
-    name: 'cr-agent',
-    category: 'project',
-    description: '여신심사 에이전트 프로젝트 · 담당 박서연',
-    pods: { running: 8, pending: 0, failed: 0 },
-    cpuUsedM: 5_400,
-    cpuLimitM: 12_000,
-    memUsedMiB: 18_400,
-    memLimitMiB: 32_768,
-    netRxMBps: 22.4,
-    netTxMBps: 12.1,
-    services: 5,
-    lastDeploy: '2026-05-24 11:02',
-  },
-  {
-    name: 'cs-agent',
-    category: 'project',
-    description: 'CS 챗봇 코파일럿 프로젝트 · 담당 정수민',
-    pods: { running: 18, pending: 0, failed: 0 },
-    cpuUsedM: 12_800,
-    cpuLimitM: 24_000,
-    memUsedMiB: 42_400,
-    memLimitMiB: 65_536,
-    netRxMBps: 96.4,
-    netTxMBps: 48.2,
-    services: 8,
-    lastDeploy: '2026-05-24 14:55',
-  },
-  {
-    name: 'aml-agent',
-    category: 'project',
-    description: '자금세탁 방지 에이전트 (개발 중) · 담당 강민호',
-    pods: { running: 2, pending: 0, failed: 1 },
-    cpuUsedM: 800,
-    cpuLimitM: 4_000,
-    memUsedMiB: 2_400,
-    memLimitMiB: 8_192,
-    netRxMBps: 1.2,
-    netTxMBps: 0.4,
-    services: 1,
-    lastDeploy: '2026-05-22 09:18',
-  },
-  // ─── 플랫폼 공통 네임스페이스 ───
+/** 계열사·그룹 공통 Namespace 11개 — tenants.ts 에서 파생, 자원은 과제 원장에서 합산. */
+const TENANT_NAMESPACES: NamespaceUsage[] = TENANTS.map((t) => {
+  const rows = ADMIN_TASK_ROWS.filter((r) => r.namespace === t.namespace);
+  const gpuCards = rows.reduce((a, r) => a + r.gpuCards, 0);
+  const seed = seedOf(t.namespace);
+  // 자체 과제가 없는 계열사도 Namespace 는 존재한다 — 포털 프록시·SSO 브로커가 뜬다.
+  const running = 2 + rows.reduce((a, r) => a + r.podsCurrent, 0);
+  const calls = rows.reduce((a, r) => a + r.monthCalls, 0);
+  return {
+    name: t.namespace,
+    category: (t.kind === 'group' ? 'group' : 'affiliate') as NamespaceCategory,
+    tenant: t.name,
+    description:
+      rows.length > 0
+        ? `${t.name} · 과제 ${rows.length}건 (학습계 + 서빙계) · GPU ${gpuCards}장`
+        : `${t.name} · 자체 과제 없음 — 그룹 공통 자산 이용 (포털 프록시 · ${t.idp})`,
+    pods: {
+      running,
+      pending: rows.some((r) => r.status === '개발 중') ? 1 : 0,
+      failed: t.namespace === 'ns-group-common' ? 1 : 0,
+    },
+    cpuUsedM: 400 + running * 620 + (seed % 400),
+    cpuLimitM: 2_000 + running * 1_400,
+    memUsedMiB: 1_200 + running * 1_850 + (seed % 900),
+    memLimitMiB: 4_096 + running * 3_600,
+    netRxMBps: +(2 + calls / 40_000).toFixed(1),
+    netTxMBps: +(1 + calls / 78_000).toFixed(1),
+    services: Math.max(1, rows.reduce((a, r) => a + r.totalAgents, 0) + 1),
+    lastDeploy:
+      rows.length > 0
+        ? `${DASHBOARD_TODAY} ${String(9 + (seed % 9)).padStart(2, '0')}:${String(seed % 60).padStart(2, '0')}`
+        : '2026-04-22 10:00',
+    taskCount: rows.length,
+    gpuCards,
+  };
+});
+
+/** 플랫폼 공통 Namespace — 11개 테넌트 Namespace 위에 깔리는 공용 계층. */
+const PLATFORM_NAMESPACES: NamespaceUsage[] = [
   {
     name: 'aip-gateway',
     category: 'gateway',
-    description: 'LLM Gateway · PTU 라우터 · 가드레일',
+    description: 'LLM Gateway · 모델 라우터 · 가드레일 · PII 마스킹 (전 테넌트 공용)',
     pods: { running: 14, pending: 0, failed: 0 },
     cpuUsedM: 12_800,
     cpuLimitM: 20_000,
@@ -1018,7 +1138,9 @@ export const NAMESPACES: NamespaceUsage[] = [
     netRxMBps: 412.4,
     netTxMBps: 388.2,
     services: 8,
-    lastDeploy: '2026-05-24 11:42',
+    lastDeploy: '2026-06-03 11:42',
+    taskCount: 0,
+    gpuCards: 0,
   },
   {
     name: 'aip-mon',
@@ -1033,11 +1155,13 @@ export const NAMESPACES: NamespaceUsage[] = [
     netTxMBps: 12.1,
     services: 10,
     lastDeploy: '2026-05-20 09:18',
+    taskCount: 0,
+    gpuCards: 0,
   },
   {
     name: 'ingress-nginx',
     category: 'platform',
-    description: '외부 트래픽 진입점 (Ingress + cert-manager)',
+    description: '공동존 진입점 (Ingress + cert-manager) · 계열사 내부망과 격리',
     pods: { running: 3, pending: 0, failed: 0 },
     cpuUsedM: 800,
     cpuLimitM: 2_000,
@@ -1047,6 +1171,8 @@ export const NAMESPACES: NamespaceUsage[] = [
     netTxMBps: 412.2,
     services: 2,
     lastDeploy: '2026-05-10 14:00',
+    taskCount: 0,
+    gpuCards: 0,
   },
   {
     name: 'kube-system',
@@ -1061,8 +1187,15 @@ export const NAMESPACES: NamespaceUsage[] = [
     netTxMBps: 3.1,
     services: 8,
     lastDeploy: '2026-04-22 10:00',
+    taskCount: 0,
+    gpuCards: 0,
   },
 ];
+
+export const NAMESPACES: NamespaceUsage[] = [...TENANT_NAMESPACES, ...PLATFORM_NAMESPACES];
+
+/** 테넌트 Namespace 만 — 11개(계열사 10 + 그룹 공통 1). */
+export const TENANT_NAMESPACE_LIST: NamespaceUsage[] = TENANT_NAMESPACES;
 
 /** K8s Deployment 단위 워크로드. */
 export type DeploymentStatus = 'Healthy' | 'Updating' | 'Degraded' | 'Failed';
@@ -1076,50 +1209,67 @@ export interface Deployment {
   imageTag: string;
   age: string;
   status: DeploymentStatus;
+  /** 어느 과제의 워크로드인가. 플랫폼 공용이면 undefined. */
+  taskId?: string;
 }
 
 export const DEPLOYMENTS: Deployment[] = [
-  // === 시스템 네임스페이스 ===
-  // aip-gateway
+  /* ── 플랫폼 공통 ── */
   { namespace: 'aip-gateway', name: 'gateway-router', replicasReady: 4, replicasDesired: 4, image: 'aip/gateway-router', imageTag: 'v2.4.1', age: '12d', status: 'Healthy' },
   { namespace: 'aip-gateway', name: 'guardrail-engine', replicasReady: 3, replicasDesired: 3, image: 'aip/guardrail', imageTag: 'v1.8.2', age: '8d', status: 'Healthy' },
-  { namespace: 'aip-gateway', name: 'ptu-balancer', replicasReady: 3, replicasDesired: 3, image: 'aip/ptu-balancer', imageTag: 'v0.9.4', age: '5d', status: 'Healthy' },
+  { namespace: 'aip-gateway', name: 'gpu-slot-scheduler', replicasReady: 3, replicasDesired: 3, image: 'aip/gpu-slot-scheduler', imageTag: 'v0.9.4', age: '5d', status: 'Healthy' },
   { namespace: 'aip-gateway', name: 'rate-limiter', replicasReady: 2, replicasDesired: 2, image: 'aip/rate-limiter', imageTag: 'v1.2.0', age: '21d', status: 'Healthy' },
   { namespace: 'aip-gateway', name: 'pii-mask-sidecar', replicasReady: 2, replicasDesired: 2, image: 'aip/pii-mask', imageTag: 'v0.6.1', age: '5d', status: 'Healthy' },
-  // aip-mon
   { namespace: 'aip-mon', name: 'prometheus', replicasReady: 1, replicasDesired: 1, image: 'prom/prometheus', imageTag: 'v2.51', age: '45d', status: 'Healthy' },
   { namespace: 'aip-mon', name: 'grafana', replicasReady: 1, replicasDesired: 1, image: 'grafana/grafana', imageTag: '10.4.2', age: '45d', status: 'Healthy' },
   { namespace: 'aip-mon', name: 'loki', replicasReady: 1, replicasDesired: 1, image: 'grafana/loki', imageTag: '3.0.0', age: '45d', status: 'Healthy' },
   { namespace: 'aip-mon', name: 'alertmanager', replicasReady: 1, replicasDesired: 1, image: 'prom/alertmanager', imageTag: 'v0.27', age: '45d', status: 'Healthy' },
   { namespace: 'aip-mon', name: 'node-exporter', replicasReady: 14, replicasDesired: 14, image: 'prom/node-exporter', imageTag: 'v1.8.1', age: '45d', status: 'Healthy' },
-  // ingress-nginx
   { namespace: 'ingress-nginx', name: 'ingress-nginx-controller', replicasReady: 3, replicasDesired: 3, image: 'ingress-nginx', imageTag: 'v1.10.1', age: '62d', status: 'Healthy' },
-  // kube-system
   { namespace: 'kube-system', name: 'coredns', replicasReady: 2, replicasDesired: 2, image: 'k8s/coredns', imageTag: '1.11.1', age: '180d', status: 'Healthy' },
   { namespace: 'kube-system', name: 'kube-proxy', replicasReady: 14, replicasDesired: 14, image: 'k8s/kube-proxy', imageTag: 'v1.29.4', age: '180d', status: 'Healthy' },
   { namespace: 'kube-system', name: 'calico-node', replicasReady: 14, replicasDesired: 14, image: 'calico/node', imageTag: 'v3.27.3', age: '180d', status: 'Healthy' },
   { namespace: 'kube-system', name: 'csi-nfs-driver', replicasReady: 14, replicasDesired: 14, image: 'k8s/csi-nfs', imageTag: 'v4.6.0', age: '120d', status: 'Healthy' },
-  // === 프로젝트 네임스페이스 ===
-  // pb-agent
-  { namespace: 'pb-agent', name: 'pb-agent-serv', replicasReady: 3, replicasDesired: 3, image: 'aip/pb-agent', imageTag: 'v0.4.2-serv', age: '4d', status: 'Healthy' },
-  { namespace: 'pb-agent', name: 'pb-agent-train', replicasReady: 2, replicasDesired: 2, image: 'aip/pb-agent', imageTag: 'v0.4.2-train', age: '4d', status: 'Healthy' },
-  // fc-agent
-  { namespace: 'fc-agent', name: 'fc-agent-serv', replicasReady: 12, replicasDesired: 12, image: 'aip/fc-agent', imageTag: 'v3.2.1-serv', age: '6d', status: 'Healthy' },
-  { namespace: 'fc-agent', name: 'fc-agent-train', replicasReady: 5, replicasDesired: 6, image: 'aip/fc-agent', imageTag: 'v3.3.0-train', age: '1d', status: 'Updating' },
-  { namespace: 'fc-agent', name: 'fc-rag-builder', replicasReady: 4, replicasDesired: 4, image: 'aip/rag-builder', imageTag: 'v2.1.0', age: '14d', status: 'Healthy' },
-  { namespace: 'fc-agent', name: 'fc-eval-runner', replicasReady: 2, replicasDesired: 2, image: 'aip/eval-runner', imageTag: 'v1.4.0', age: '6d', status: 'Healthy' },
-  // cr-agent
-  { namespace: 'cr-agent', name: 'cr-agent-serv', replicasReady: 4, replicasDesired: 4, image: 'aip/cr-agent', imageTag: 'v0.8.3-serv', age: '7d', status: 'Healthy' },
-  { namespace: 'cr-agent', name: 'cr-agent-train', replicasReady: 2, replicasDesired: 2, image: 'aip/cr-agent', imageTag: 'v0.8.3-train', age: '7d', status: 'Healthy' },
-  { namespace: 'cr-agent', name: 'cr-doc-extract', replicasReady: 2, replicasDesired: 2, image: 'aip/doc-extract', imageTag: 'v1.0.0', age: '14d', status: 'Healthy' },
-  // cs-agent
-  { namespace: 'cs-agent', name: 'cs-agent-serv', replicasReady: 8, replicasDesired: 8, image: 'aip/cs-agent', imageTag: 'v2.1.4-serv', age: '3d', status: 'Healthy' },
-  { namespace: 'cs-agent', name: 'cs-agent-train', replicasReady: 4, replicasDesired: 4, image: 'aip/cs-agent', imageTag: 'v2.1.4-train', age: '3d', status: 'Healthy' },
-  { namespace: 'cs-agent', name: 'cs-eval-runner', replicasReady: 4, replicasDesired: 4, image: 'aip/eval-runner', imageTag: 'v1.4.0', age: '6d', status: 'Healthy' },
-  { namespace: 'cs-agent', name: 'cs-feedback-loop', replicasReady: 2, replicasDesired: 2, image: 'aip/feedback-loop', imageTag: 'v0.3.1', age: '12d', status: 'Healthy' },
-  // aml-agent (개발 중)
-  { namespace: 'aml-agent', name: 'aml-agent-train', replicasReady: 2, replicasDesired: 3, image: 'aip/aml-agent', imageTag: 'v0.1.0-dev', age: '2d', status: 'Updating' },
-  { namespace: 'aml-agent', name: 'aml-eval-runner', replicasReady: 0, replicasDesired: 1, image: 'aip/eval-runner', imageTag: 'v1.4.0', age: '2d', status: 'Failed' },
+
+  /* ── 부산은행 (ns-bank-bs) ── */
+  { namespace: 'ns-bank-bs', name: 'bs-credit-agent-serv', replicasReady: 4, replicasDesired: 4, image: 'aip/credit-agent', imageTag: 'v2.1.3-serv', age: '7d', status: 'Healthy', taskId: 'PRJ-BS-042' },
+  { namespace: 'ns-bank-bs', name: 'bs-credit-doc-extract', replicasReady: 2, replicasDesired: 2, image: 'aip/doc-extract', imageTag: 'v1.0.0', age: '14d', status: 'Healthy', taskId: 'PRJ-BS-042' },
+  { namespace: 'ns-bank-bs', name: 'bs-consult-agent-serv', replicasReady: 12, replicasDesired: 12, image: 'aip/consult-agent', imageTag: 'v3.2.1-serv', age: '6d', status: 'Healthy', taskId: 'PRJ-BS-061' },
+  { namespace: 'ns-bank-bs', name: 'bs-consult-agent-train', replicasReady: 5, replicasDesired: 6, image: 'aip/consult-agent', imageTag: 'v3.3.0-train', age: '1d', status: 'Updating', taskId: 'PRJ-BS-061' },
+  { namespace: 'ns-bank-bs', name: 'bs-pb-agent-serv', replicasReady: 3, replicasDesired: 3, image: 'aip/pb-agent', imageTag: 'v0.4.2-serv', age: '4d', status: 'Healthy', taskId: 'PRJ-BS-077' },
+  { namespace: 'ns-bank-bs', name: 'bs-policy-agent-serv', replicasReady: 6, replicasDesired: 6, image: 'aip/policy-agent', imageTag: 'v3.0.0-serv', age: '9d', status: 'Healthy', taskId: 'PRJ-BS-088' },
+  { namespace: 'ns-bank-bs', name: 'bs-rag-builder', replicasReady: 4, replicasDesired: 4, image: 'aip/rag-builder', imageTag: 'v2.1.0', age: '14d', status: 'Healthy', taskId: 'PRJ-BS-088' },
+
+  /* ── 경남은행 (ns-bank-kn) ── */
+  { namespace: 'ns-bank-kn', name: 'kn-fx-agent-serv', replicasReady: 3, replicasDesired: 3, image: 'aip/fx-agent', imageTag: 'v1.6.0-serv', age: '31d', status: 'Healthy', taskId: 'PRJ-KN-009' },
+  { namespace: 'ns-bank-kn', name: 'kn-card-agent-serv', replicasReady: 4, replicasDesired: 4, image: 'aip/card-agent', imageTag: 'v1.2.4-serv', age: '11d', status: 'Healthy', taskId: 'PRJ-KN-022' },
+  { namespace: 'ns-bank-kn', name: 'kn-knowledge-agent-train', replicasReady: 2, replicasDesired: 3, image: 'aip/knowledge-agent', imageTag: 'v0.9-rc1-train', age: '2d', status: 'Updating', taskId: 'PRJ-KN-031' },
+
+  /* ── BNK캐피탈 (ns-capital) ── */
+  { namespace: 'ns-capital', name: 'cp-adreview-agent-serv', replicasReady: 2, replicasDesired: 2, image: 'aip/adreview-agent', imageTag: 'v1.4.0-serv', age: '16d', status: 'Healthy', taskId: 'PRJ-CP-007' },
+  { namespace: 'ns-capital', name: 'cp-claim-agent-train', replicasReady: 2, replicasDesired: 2, image: 'aip/claim-agent', imageTag: 'v0.7.1-train', age: '5d', status: 'Healthy', taskId: 'PRJ-CP-012' },
+
+  /* ── BNK투자증권 · BNK저축은행 ── */
+  { namespace: 'ns-securities', name: 'sc-risk-agent-serv', replicasReady: 2, replicasDesired: 2, image: 'aip/risk-agent', imageTag: 'v1.1.0-serv', age: '19d', status: 'Healthy', taskId: 'PRJ-SC-014' },
+  { namespace: 'ns-savings', name: 'sv-pension-agent-train', replicasReady: 1, replicasDesired: 2, image: 'aip/pension-agent', imageTag: 'v0.3.0-train', age: '3d', status: 'Updating', taskId: 'PRJ-SV-007' },
+
+  /* ── BNK시스템 (ns-system) ── */
+  { namespace: 'ns-system', name: 'sy-groupware-agent-serv', replicasReady: 6, replicasDesired: 6, image: 'aip/groupware-agent', imageTag: 'v2.2.0-serv', age: '22d', status: 'Healthy', taskId: 'PRJ-SY-021' },
+  { namespace: 'ns-system', name: 'sy-meeting-agent-serv', replicasReady: 8, replicasDesired: 8, image: 'aip/meeting-agent', imageTag: 'v2.5.1-serv', age: '8d', status: 'Healthy', taskId: 'PRJ-SY-021' },
+  { namespace: 'ns-system', name: 'sy-navigator-agent-train', replicasReady: 2, replicasDesired: 2, image: 'aip/navigator-agent', imageTag: 'v0.2.0-train', age: '4d', status: 'Healthy', taskId: 'PRJ-SY-021' },
+  { namespace: 'ns-system', name: 'sy-copilot-agent-serv', replicasReady: 4, replicasDesired: 4, image: 'aip/copilot-agent', imageTag: 'v2.1.4-serv', age: '3d', status: 'Healthy', taskId: 'PRJ-SY-018' },
+  { namespace: 'ns-system', name: 'sy-codereview-agent-test', replicasReady: 1, replicasDesired: 2, image: 'aip/codereview-agent', imageTag: 'v0.9-rc2', age: '1d', status: 'Updating', taskId: 'PRJ-SY-003' },
+
+  /* ── 그룹 공통 (ns-group-common) ── */
+  { namespace: 'ns-group-common', name: 'gc-aml-agent-train', replicasReady: 2, replicasDesired: 3, image: 'aip/aml-agent', imageTag: 'v0.1.0-dev', age: '2d', status: 'Updating', taskId: 'PRJ-GC-001' },
+  { namespace: 'ns-group-common', name: 'gc-eval-runner', replicasReady: 0, replicasDesired: 1, image: 'aip/eval-runner', imageTag: 'v1.4.0', age: '2d', status: 'Failed', taskId: 'PRJ-GC-001' },
+  { namespace: 'ns-group-common', name: 'gc-portal-gateway', replicasReady: 2, replicasDesired: 2, image: 'aip/portal-gateway', imageTag: 'v1.9.0', age: '30d', status: 'Healthy' },
+
+  /* ── 자체 과제가 없는 계열사 — Namespace 는 존재한다(SEC-001 테넌트 격리) ── */
+  { namespace: 'ns-am', name: 'am-portal-proxy', replicasReady: 2, replicasDesired: 2, image: 'aip/portal-proxy', imageTag: 'v1.9.0', age: '30d', status: 'Healthy' },
+  { namespace: 'ns-vc', name: 'vc-portal-proxy', replicasReady: 2, replicasDesired: 2, image: 'aip/portal-proxy', imageTag: 'v1.9.0', age: '30d', status: 'Healthy' },
+  { namespace: 'ns-ci', name: 'ci-portal-proxy', replicasReady: 2, replicasDesired: 2, image: 'aip/portal-proxy', imageTag: 'v1.9.0', age: '30d', status: 'Healthy' },
+  { namespace: 'ns-lns', name: 'lns-portal-proxy', replicasReady: 2, replicasDesired: 2, image: 'aip/portal-proxy', imageTag: 'v1.9.0', age: '30d', status: 'Healthy' },
 ];
 
 /** 클러스터 24h CPU·Memory 사용률 시계열. */
@@ -1136,34 +1286,32 @@ export function getClusterUtilSeries(): { cpu: number[]; memory: number[]; hours
     const businessHr = h >= 9 && h <= 18;
     const base = businessHr ? 62 : 38;
     cpu.push(Math.max(15, Math.min(92, Math.round(base + Math.sin(h / 4) * 8 + (r - 0.5) * 14))));
-    memory.push(Math.max(35, Math.min(88, Math.round(base + 12 + Math.sin(h / 5) * 6 + (r2 - 0.5) * 10))));
+    memory.push(
+      Math.max(35, Math.min(88, Math.round(base + 12 + Math.sin(h / 5) * 6 + (r2 - 0.5) * 10))),
+    );
     hours.push(`${String(h).padStart(2, '0')}시`);
   }
   return { cpu, memory, hours };
 }
 
-/** 프로젝트별 안전 이벤트(PII + 가드레일 차단) 30일 시계열. */
-export interface ProjectSafetySeries {
-  projectId: string;
+/** 과제별 안전 이벤트(PII + 가드레일 차단) 30일 시계열. */
+export interface TaskSafetySeries {
+  taskId: string;
   name: string;
-  /** 30일 일별 PII 마스킹 건수. */
   piiDaily: number[];
-  /** 30일 일별 가드레일 차단 건수. */
   guardrailDaily: number[];
-  /** 합산 (시각화에 사용). */
   totalDaily: number[];
   color: string;
 }
-export function getProjectSafetySeries(rows: ProjectUsageRow[]): ProjectSafetySeries[] {
-  const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+export function getTaskSafetySeries(rows: TaskUsageRow[]): TaskSafetySeries[] {
+  const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A', '#0E7C8A', '#8A1C6B'];
   return rows
     .filter((r) => r.guardrailBlocks + r.piiMaskCount > 0)
     .map((r, i) => {
-      let s = (r.id.charCodeAt(0) + r.id.charCodeAt(r.id.length - 1)) * 23 + i * 11 + 1;
+      let s = seedOf(r.id) + i * 11;
       const piiDaily: number[] = [];
       const guardrailDaily: number[] = [];
       const totalDaily: number[] = [];
-      // 7일 누적값을 30일에 분포
       const piiBase = r.piiMaskCount / 7;
       const grBase = r.guardrailBlocks / 7;
       const piiAmp = Math.max(piiBase * 0.25, 5);
@@ -1173,14 +1321,20 @@ export function getProjectSafetySeries(rows: ProjectUsageRow[]): ProjectSafetySe
         const r2 = s / 233280;
         s = (s * 9301 + 49297) % 233280;
         const r3 = s / 233280;
-        const pii = Math.max(0, Math.round(piiBase + Math.sin(d / 5 + i) * piiAmp * 0.5 + (r2 - 0.5) * piiAmp));
-        const gr = Math.max(0, Math.round(grBase + Math.sin(d / 4 + i + 1) * grAmp * 0.5 + (r3 - 0.5) * grAmp));
+        const pii = Math.max(
+          0,
+          Math.round(piiBase + Math.sin(d / 5 + i) * piiAmp * 0.5 + (r2 - 0.5) * piiAmp),
+        );
+        const gr = Math.max(
+          0,
+          Math.round(grBase + Math.sin(d / 4 + i + 1) * grAmp * 0.5 + (r3 - 0.5) * grAmp),
+        );
         piiDaily.push(pii);
         guardrailDaily.push(gr);
         totalDaily.push(pii + gr);
       }
       return {
-        projectId: r.id,
+        taskId: r.id,
         name: r.name,
         piiDaily,
         guardrailDaily,
@@ -1196,10 +1350,11 @@ export type PiiAction = 'mask' | 'block' | 'off';
 export interface AgentPiiPolicy {
   agentId: string;
   agentName: string;
-  projectId: string;
-  projectName: string;
+  /** 소속 과제 — 과제 원장 ID. */
+  taskId: string;
+  taskName: string;
   items: Record<string, PiiAction>;
-  /** 7일 누계 발생 건수. */
+  /** 7일 누계 발생 건수 — 에이전트 실측 호출 × 민감도 발생률. */
   count7d: number;
 }
 
@@ -1214,66 +1369,53 @@ export const PII_CATEGORIES: { code: string; label: string }[] = [
   { code: 'DRV', label: '운전면허' },
 ];
 
-export const AGENT_PII_POLICIES: AgentPiiPolicy[] = [
-  {
-    agentId: 'AGT-204',
-    agentName: 'PB 자산진단 어시스턴트',
-    projectId: 'PRJ-2025-PB-001',
-    projectName: 'PB 에이전트 프로젝트',
-    count7d: 218,
-    items: { RRN: 'block', ACCT: 'mask', CARD: 'off', PHONE: 'mask', EMAIL: 'off', ADDR: 'mask', PASS: 'off', DRV: 'off' },
-  },
-  {
-    agentId: 'AGT-411',
-    agentName: '컴플라이언스 자문 챗봇',
-    projectId: 'PRJ-118',
-    projectName: '컴플라이언스 자문 챗봇',
-    count7d: 4220,
-    items: { RRN: 'block', ACCT: 'mask', CARD: 'mask', PHONE: 'mask', EMAIL: 'mask', ADDR: 'mask', PASS: 'mask', DRV: 'mask' },
-  },
-  {
-    agentId: 'AGT-512',
-    agentName: '비대면 여신 사전심사 보조',
-    projectId: 'PRJ-204',
-    projectName: '디지털여신 보조 에이전트',
-    count7d: 304,
-    items: { RRN: 'block', ACCT: 'mask', CARD: 'off', PHONE: 'mask', EMAIL: 'off', ADDR: 'mask', PASS: 'off', DRV: 'mask' },
-  },
-  {
-    agentId: 'AGT-621',
-    agentName: 'CS 챗봇 코파일럿',
-    projectId: 'PRJ-2024-CS-001',
-    projectName: 'CS 챗봇 코파일럿 프로젝트',
-    count7d: 2180,
-    items: { RRN: 'block', ACCT: 'mask', CARD: 'mask', PHONE: 'mask', EMAIL: 'mask', ADDR: 'mask', PASS: 'off', DRV: 'off' },
-  },
-  {
-    agentId: 'AGT-701',
-    agentName: '자금세탁 방지 에이전트',
-    projectId: 'PRJ-2025-AML-001',
-    projectName: '자금세탁 방지 에이전트',
-    count7d: 0,
-    items: { RRN: 'block', ACCT: 'block', CARD: 'mask', PHONE: 'mask', EMAIL: 'off', ADDR: 'off', PASS: 'block', DRV: 'off' },
-  },
+/** 정책 세트 — 발생 건수는 에이전트 실측에서 파생하고, 정책만 손으로 정의한다. */
+const PII_POLICY_ITEMS: { agentId: string; taskId: string; items: Record<string, PiiAction> }[] = [
+  { agentId: 'AGT-204', taskId: 'PRJ-BS-077', items: { RRN: 'block', ACCT: 'mask', CARD: 'off', PHONE: 'mask', EMAIL: 'off', ADDR: 'mask', PASS: 'off', DRV: 'off' } },
+  { agentId: 'AGT-411', taskId: 'PRJ-BS-042', items: { RRN: 'block', ACCT: 'mask', CARD: 'mask', PHONE: 'mask', EMAIL: 'mask', ADDR: 'mask', PASS: 'mask', DRV: 'mask' } },
+  { agentId: 'AGT-512', taskId: 'PRJ-BS-042', items: { RRN: 'block', ACCT: 'mask', CARD: 'off', PHONE: 'mask', EMAIL: 'off', ADDR: 'mask', PASS: 'off', DRV: 'mask' } },
+  { agentId: 'AGT-301', taskId: 'PRJ-BS-061', items: { RRN: 'block', ACCT: 'mask', CARD: 'mask', PHONE: 'mask', EMAIL: 'off', ADDR: 'mask', PASS: 'off', DRV: 'off' } },
+  { agentId: 'GRP-005', taskId: 'PRJ-BS-061', items: { RRN: 'block', ACCT: 'mask', CARD: 'mask', PHONE: 'mask', EMAIL: 'mask', ADDR: 'mask', PASS: 'off', DRV: 'off' } },
+  { agentId: 'AGT-621', taskId: 'PRJ-SY-018', items: { RRN: 'block', ACCT: 'mask', CARD: 'mask', PHONE: 'mask', EMAIL: 'mask', ADDR: 'mask', PASS: 'off', DRV: 'off' } },
+  { agentId: 'AGT-701', taskId: 'PRJ-GC-001', items: { RRN: 'block', ACCT: 'block', CARD: 'mask', PHONE: 'mask', EMAIL: 'off', ADDR: 'off', PASS: 'block', DRV: 'off' } },
 ];
 
-/** 프로젝트별 일별 DAU 30일 시계열. */
-export interface ProjectDauSeries {
-  projectId: string;
+const TASK_NAME_BY_ID: Record<string, string> = ADMIN_TASKS.reduce(
+  (acc, t) => ({ ...acc, [t.id]: t.name }),
+  {} as Record<string, string>,
+);
+
+export const AGENT_PII_POLICIES: AgentPiiPolicy[] = PII_POLICY_ITEMS.map((p) => {
+  const agent = AGENT_BY_ID[p.agentId];
+  return {
+    agentId: p.agentId,
+    agentName: agent?.name ?? p.agentId,
+    taskId: p.taskId,
+    taskName: TASK_NAME_BY_ID[p.taskId] ?? p.taskId,
+    items: p.items,
+    count7d: agent
+      ? Math.round(agent.callsWeekly * (PII_RATE_BY_SENSITIVITY[agent.sensitivity] ?? 0.008))
+      : 0,
+  };
+});
+
+/** 과제별 일별 DAU 30일 시계열. */
+export interface TaskDauSeries {
+  taskId: string;
   name: string;
   daily: number[];
   color: string;
 }
-export function getProjectDauSeries(rows: ProjectUsageRow[]): ProjectDauSeries[] {
-  const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
+export function getTaskDauSeries(rows: TaskUsageRow[]): TaskDauSeries[] {
+  const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A', '#0E7C8A', '#8A1C6B'];
   return rows
     .filter((r) => r.dau > 0)
     .map((r, i) => {
-      let s = (r.id.charCodeAt(0) + r.id.charCodeAt(r.id.length - 1)) * 17 + i * 7 + 1;
+      let s = seedOf(r.id) + i * 7;
       const daily: number[] = [];
       const base = r.dau;
       const amp = Math.max(base * 0.22, 8);
-      const drift = base * 0.08; // 30일 동안 약간 증가 추세
+      const drift = base * 0.08;
       for (let d = 0; d < 30; d++) {
         s = (s * 9301 + 49297) % 233280;
         const r2 = s / 233280;
@@ -1284,71 +1426,92 @@ export function getProjectDauSeries(rows: ProjectUsageRow[]): ProjectDauSeries[]
           drift * (d / 30);
         daily.push(Math.max(0, Math.round(v)));
       }
-      return { projectId: r.id, name: r.name, daily, color: palette[i % palette.length] };
+      return { taskId: r.id, name: r.name, daily, color: palette[i % palette.length] };
     })
     .sort((a, b) => b.daily[b.daily.length - 1] - a.daily[a.daily.length - 1]);
 }
 
-/**
- * 계열사별 토큰 사용량 30일 시계열.
+/* ═══════════════════════════════════════════════════════════════
+ * 8) 계열사 축 — 그룹 공통 자산 사용량까지 배분한 뒤 집계
  *
- * 입력·출력을 나눠 갖는다 — Chargeback(화면 11)은 둘의 단가가 달라
- * 합산만으로는 정산이 되지 않는다(LSM-010·ONM-005). 기존 차트가 쓰던
- * `daily`·`total` 은 두 값의 합이므로 호출부를 바꾸지 않아도 된다.
- */
+ * 계열사 전용 에이전트는 그 계열사에 100% 귀속되고, **그룹 공통 운영영역**에
+ * 배포된 자산(GRP-* 10종 + 그룹 공통 소속 AGT-701)은 10개 계열사가 함께 쓰므로
+ * **임직원 수 비율**로 나눈다. 이렇게 해야 자체 과제가 없는 계열사
+ * (자산운용·벤처투자·신용정보·엘앤에스)도 사용량과 정산액을 갖는다 —
+ * 실제로 그들은 그룹 공통 어시스턴트를 쓴다.
+ * ═══════════════════════════════════════════════════════════════ */
+
+const HEADCOUNT_TOTAL = AFFILIATES.reduce((a, t) => a + (AFFILIATE_HEADCOUNT[t.name] ?? 0), 0);
+
 export interface ConglomerateTokenSeries {
   name: string;
-  /** 30일 일별 토큰 사용량 (입력+출력, 단위: tokens). */
+  /** 30일 일별 토큰 사용량 (입력+출력). */
   daily: number[];
-  /** 30일 합산 (입력+출력). */
   total: number;
-  /** 30일 합산 — 입력 토큰. */
   inputTotal: number;
-  /** 30일 합산 — 출력 토큰. */
   outputTotal: number;
   color: string;
+  /** 자체 제작 주관 에이전트 수. */
+  ownedAgents: number;
+  /** 그룹 공통 운영영역에서 함께 쓰는 에이전트 수. */
+  sharedAgents: number;
 }
+
+const TENANT_COLOR: Record<string, string> = {
+  부산은행: '#CB2C10',
+  경남은행: '#1F5BB8',
+  BNK투자증권: '#1B8A4D',
+  BNK캐피탈: '#6E3BBD',
+  BNK저축은행: '#C9760F',
+  BNK시스템: '#6B4F2A',
+  BNK자산운용: '#0E7C8A',
+  BNK신용정보: '#8A1C6B',
+  BNK벤처투자: '#3F6212',
+  BNK엘앤에스: '#7A5C1E',
+};
 
 export function getConglomerateTokenSeries(): ConglomerateTokenSeries[] {
   const N = 30;
-  // 계열사 10개 전량. `outRatio` = 출력 토큰 비중 — 업무 성격에 따라 다르다
-  // (상담 요약은 출력이 길고, 조회·분류는 입력이 길다).
-  const config = [
-    { name: '부산은행', base: 42_000_000, amp: 8_000_000, drift: 3_000_000, color: '#CB2C10', seed: 11, outRatio: 0.32 },
-    { name: '경남은행', base: 24_000_000, amp: 5_000_000, drift: 1_500_000, color: '#1F5BB8', seed: 23, outRatio: 0.30 },
-    { name: 'BNK투자증권', base: 12_000_000, amp: 3_000_000, drift: 800_000, color: '#1B8A4D', seed: 31, outRatio: 0.37 },
-    { name: 'BNK캐피탈', base: 6_000_000, amp: 1_400_000, drift: 400_000, color: '#6E3BBD', seed: 43, outRatio: 0.28 },
-    { name: 'BNK저축은행', base: 2_400_000, amp: 600_000, drift: 200_000, color: '#C9760F', seed: 53, outRatio: 0.26 },
-    { name: 'BNK시스템', base: 3_100_000, amp: 700_000, drift: 240_000, color: '#6B4F2A', seed: 67, outRatio: 0.22 },
-    { name: 'BNK자산운용', base: 1_450_000, amp: 380_000, drift: 120_000, color: '#0E7C8A', seed: 71, outRatio: 0.35 },
-    { name: 'BNK신용정보', base: 980_000, amp: 240_000, drift: 70_000, color: '#8A1C6B', seed: 83, outRatio: 0.24 },
-    { name: 'BNK벤처투자', base: 420_000, amp: 110_000, drift: 40_000, color: '#3F6212', seed: 89, outRatio: 0.39 },
-    { name: 'BNK엘앤에스', base: 310_000, amp: 80_000, drift: 26_000, color: '#7A5C1E', seed: 97, outRatio: 0.20 },
-  ];
-  return config.map((c) => {
-    let s = c.seed;
-    const daily: number[] = [];
+  const shared = PLATFORM_AGENTS.filter((a) => a.groupShared);
+  const sharedInput = shared.reduce((a, x) => a + x.monthTokenInput, 0);
+  const sharedOutput = shared.reduce((a, x) => a + x.monthTokenOutput, 0);
+
+  return AFFILIATES.map((t) => {
+    const own = PLATFORM_AGENTS.filter((a) => !a.groupShared && a.tenant === t.name);
+    const share = (AFFILIATE_HEADCOUNT[t.name] ?? 0) / (HEADCOUNT_TOTAL || 1);
+
+    const inputTotal = Math.round(
+      own.reduce((a, x) => a + x.monthTokenInput, 0) + sharedInput * share,
+    );
+    const outputTotal = Math.round(
+      own.reduce((a, x) => a + x.monthTokenOutput, 0) + sharedOutput * share,
+    );
+    const total = inputTotal + outputTotal;
+
+    // 월 합계를 30일에 뿌린다 — 합은 total 과 정확히 같게 맞춘다(정산 총액 불변).
+    let s = seedOf(t.name);
+    const raw: number[] = [];
     for (let i = 0; i < N; i++) {
       s = (s * 9301 + 49297) % 233280;
       const r = s / 233280;
-      const v =
-        c.base +
-        Math.sin((i / N) * Math.PI * 2 + c.seed) * c.amp * 0.45 +
-        (r - 0.5) * c.amp +
-        c.drift * (i / N);
-      daily.push(Math.max(0, Math.round(v)));
+      raw.push(
+        Math.max(0.1, 1 + Math.sin((i / N) * Math.PI * 2 + (s % 7)) * 0.16 + (r - 0.5) * 0.22 + (i / N) * 0.12),
+      );
     }
-    const total = daily.reduce((a, b) => a + b, 0);
-    const outputTotal = Math.round(total * c.outRatio);
+    const rawSum = raw.reduce((a, b) => a + b, 0) || 1;
+    const daily = raw.map((v) => Math.round((v / rawSum) * total));
+
     return {
-      name: c.name,
+      name: t.name,
       daily,
       total,
-      inputTotal: total - outputTotal,
+      inputTotal,
       outputTotal,
-      color: c.color,
+      color: TENANT_COLOR[t.name] ?? '#777777',
+      ownedAgents: own.length,
+      sharedAgents: shared.length,
     };
-  });
+  }).sort((a, b) => b.total - a.total);
 }
 
 /** on-prem GPU 자원 점유율 시계열 (30일). */
@@ -1363,48 +1526,38 @@ export function getOnpremGpuUtilSeries(): number[] {
   return out;
 }
 
-/* ───────── 계열사·에이전트 단위 비용 ───────── */
-
 export interface ConglomerateCostRow {
   name: string;
   color: string;
   monthTokens: number;
   monthCost: number;
   pct: number;
+  /** 자체 제작 주관 에이전트 수. */
   agentCount: number;
+  /** 그룹 공통 운영영역 공용 에이전트 수. */
+  sharedAgentCount: number;
 }
 
 /**
- * 계열사별 월 비용 — 토큰 점유율 기반 분배.
- * 전사 인프라 합계(= PTU 고정비 × 1.31) × 토큰 점유율.
+ * 계열사별 월 비용 — 가중 토큰 점유율 기반 분배(출력 토큰 가중치 3).
+ * 배분 대상 총액은 `getTotalInfraCost()` 이며, 미터링 화면이 이 함수를 단일
+ * 출처로 그대로 읽는다.
  */
 export function getCostByConglomerate(): ConglomerateCostRow[] {
   const series = getConglomerateTokenSeries();
+  const weightOf = (s: ConglomerateTokenSeries) => s.inputTotal + OUTPUT_TOKEN_WEIGHT * s.outputTotal;
+  const weightSum = series.reduce((a, s) => a + weightOf(s), 0) || 1;
   const totalTokens = series.reduce((a, s) => a + s.total, 0) || 1;
-  const totalCost = getTotalPtuCost() * 1.31; // PTU + 변동비
-
-  // 카탈로그에서 계열사별 운영·실행 중 에이전트 수 계산은 mockCatalogAgents 의존이라
-  // 여기선 시드 기반 추정치로만 채움 (소비처에서 더 정확히 덮어쓸 수 있음).
-  const agentCountByTenant: Record<string, number> = {
-    부산은행: 14,
-    경남은행: 9,
-    BNK투자증권: 6,
-    BNK캐피탈: 5,
-    BNK저축은행: 3,
-    BNK시스템: 4,
-    BNK자산운용: 2,
-    BNK신용정보: 2,
-    BNK벤처투자: 1,
-    BNK엘앤에스: 1,
-  };
+  const totalCost = getTotalInfraCost();
 
   return series.map((s) => ({
     name: s.name,
     color: s.color,
     monthTokens: s.total,
-    monthCost: Math.round((s.total / totalTokens) * totalCost),
+    monthCost: Math.round((weightOf(s) / weightSum) * totalCost),
     pct: (s.total / totalTokens) * 100,
-    agentCount: agentCountByTenant[s.name] ?? 0,
+    agentCount: s.ownedAgents,
+    sharedAgentCount: s.sharedAgents,
   }));
 }
 
@@ -1412,38 +1565,125 @@ export interface AgentCostRow {
   id: string;
   name: string;
   tenant: string;
-  projectId: string;
-  projectName: string;
+  /** 소속 과제. */
+  taskId: string;
+  taskName: string;
   mainModel: string;
-  state: '운영 중' | '실행 중' | '계획' | '보류';
+  state: '운영 중' | '검증 중';
   monthCalls: number;
   monthCost: number;
   costPerCall: number;
 }
 
 /**
- * 에이전트별 월 비용 — `callsWeekly × 4.3 × 모델별 호출 단가`.
- * 계획 상태(0 호출)는 제외. 비용 내림차순.
+ * 에이전트별 월 비용 — 계열사 축과 **같은 총액**을 가중 토큰 점유율로 나눈다.
+ * (예전에는 '호출당 단가 × 호출 수'라는 다른 식을 써서 계열사 합계와 어긋났다)
  */
 export function getCostByAgent(): AgentCostRow[] {
-  return MOCK_CATALOG_AGENTS
-    .filter((a) => a.callsWeekly > 0)
+  const live = PLATFORM_AGENTS.filter((a) => a.monthCalls > 0);
+  const weightOf = (a: PlatformAgent) => a.monthTokenInput + OUTPUT_TOKEN_WEIGHT * a.monthTokenOutput;
+  const weightSum = live.reduce((x, a) => x + weightOf(a), 0) || 1;
+  const totalCost = getTotalInfraCost();
+
+  return live
     .map((a) => {
-      const unit = MODEL_COST_PER_CALL[a.mainModel] ?? 200;
-      const monthCalls = Math.round(a.callsWeekly * 4.3);
-      const monthCost = Math.round(monthCalls * unit);
+      const task = ADMIN_TASKS.find((t) => t.agentIds.includes(a.id));
+      const monthCost = Math.round((weightOf(a) / weightSum) * totalCost);
       return {
         id: a.id,
         name: a.name,
         tenant: a.tenant,
-        projectId: a.projectId,
-        projectName: a.projectName,
-        mainModel: a.mainModel,
-        state: a.state,
-        monthCalls,
+        taskId: task?.id ?? '—',
+        taskName: task?.name ?? '미배정',
+        mainModel: a.model,
+        state: (a.serving ? '운영 중' : '검증 중') as '운영 중' | '검증 중',
+        monthCalls: a.monthCalls,
         monthCost,
-        costPerCall: unit,
+        costPerCall: Math.round(monthCost / a.monthCalls),
       };
     })
     .sort((a, b) => b.monthCost - a.monthCost);
+}
+
+/**
+ * 미터링 화면(AGB-010 에이전트별 미터링)이 쓰는 **전수 기준선**.
+ * 호출이 발생한 모든 에이전트를 넘긴다 — 미터링 표가 "Top N" 없이 9행만
+ * 보여 주면 바로 위 계열사 표의 합계와 어긋난 것처럼 읽힌다.
+ */
+export function getMeteringAgentBase() {
+  return PLATFORM_AGENTS.filter((a) => a.monthCalls > 0)
+    .map((a) => {
+      const task = ADMIN_TASKS.find((t) => t.agentIds.includes(a.id));
+      const seed = seedOf(a.id);
+      return {
+        agentId: a.id,
+        name: a.name,
+        tenant: a.tenant,
+        groupShared: a.groupShared,
+        taskId: task?.id ?? '—',
+        calls: a.monthCalls,
+        inputTokens: a.monthTokenInput,
+        outputTokens: a.monthTokenOutput,
+        deltaPct: +(((seed % 51) - 16) * 0.85).toFixed(1),
+      };
+    })
+    .sort((a, b) => b.calls - a.calls);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * 10) 대시보드 Export — RFP 2-1 [34] "(Export 기능 포함)"
+ *
+ * 시연 환경에서 실제 브라우저 다운로드를 트리거하는 것은 위험하므로
+ * **화면 안에서** 형식·대상 범위·생성 결과를 보여 주는 방식으로 요건을
+ * 드러낸다. 행 수·용량은 실제 데이터에서 계산한다.
+ * ═══════════════════════════════════════════════════════════════ */
+
+export type ExportFormat = 'XLSX' | 'CSV' | 'PDF';
+export const EXPORT_FORMATS: ExportFormat[] = ['XLSX', 'CSV', 'PDF'];
+
+export interface ExportScopeDef {
+  key: string;
+  label: string;
+  /** 이 범위가 담는 행 수. */
+  rowCount: number;
+  sheet: string;
+}
+
+export function getExportScopes(): ExportScopeDef[] {
+  return [
+    { key: 'tasks', label: '과제별 사용 현황', rowCount: ADMIN_TASK_ROWS.length, sheet: '01_과제사용현황' },
+    { key: 'agents', label: '에이전트별 호출·비용', rowCount: getCostByAgent().length, sheet: '02_에이전트비용' },
+    { key: 'conglomerate', label: '계열사별 토큰·정산액', rowCount: getCostByConglomerate().length, sheet: '03_계열사정산' },
+    { key: 'gpu', label: '모델별 GPU 할당·점유', rowCount: getModelGpuAllocation().length, sheet: '04_GPU할당' },
+    { key: 'namespace', label: 'Namespace 자원 현황', rowCount: NAMESPACES.length, sheet: '05_네임스페이스' },
+    { key: 'daily', label: '30일 일별 호출·비용', rowCount: 30, sheet: '06_일별추이' },
+  ];
+}
+
+export interface ExportResult {
+  fileName: string;
+  format: ExportFormat;
+  rowCount: number;
+  sheets: string[];
+  /** 추정 용량(KB) — 행 수 기반. */
+  sizeKb: number;
+  generatedAt: string;
+  /** 감사 원장에 남는 항목 ID. */
+  auditId: string;
+}
+
+/** 선택한 범위로 내보내기 결과를 구성한다(파일 생성 없이 결과만 계산). */
+export function buildExportResult(format: ExportFormat, scopeKeys: string[]): ExportResult {
+  const scopes = getExportScopes().filter((s) => scopeKeys.includes(s.key));
+  const rowCount = scopes.reduce((a, s) => a + s.rowCount, 0);
+  const perRowKb = format === 'PDF' ? 1.8 : format === 'XLSX' ? 0.9 : 0.4;
+  return {
+    fileName: `BNK_AI플랫폼_사용현황_${DASHBOARD_TODAY.replace(/-/g, '')}.${format.toLowerCase()}`,
+    format,
+    rowCount,
+    sheets: scopes.map((s) => s.sheet),
+    sizeKb: Math.max(12, Math.round(rowCount * perRowKb + (format === 'PDF' ? 240 : 18))),
+    generatedAt: `${DASHBOARD_TODAY} 14:12:0${scopes.length % 10}`,
+    auditId: `AUD-${DASHBOARD_TODAY}-EXP${String(rowCount % 1000).padStart(3, '0')}`,
+  };
 }

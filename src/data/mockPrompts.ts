@@ -53,7 +53,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
     usedBy: ['GRP-001 규정·책무 어시스턴트', 'SRC-301 규정검색_컴플라이언스'],
     versions: [
       {
-        ver: 'v3', at: '2026-01-06 14:20', by: '박거버', status: 'serving',
+        ver: 'v3', at: '2026-06-01 14:20', by: '박거버', status: 'serving',
         changeNote: '단서 조항 누락 금지 규칙을 출력 형식에 명시',
         body: `당신은 규정 조항 요약기입니다. 검색된 조항 원문을 실무자 언어로 요약합니다.
 
@@ -67,7 +67,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
 - 요약 과정에서 의무·금지 표현("하여야 한다", "할 수 없다")의 강도를 바꾸지 않는다.`,
       },
       {
-        ver: 'v2', at: '2025-12-18 10:05', by: '박거버', status: 'archived',
+        ver: 'v2', at: '2026-05-13 10:05', by: '박거버', status: 'archived',
         changeNote: '개정 전후 비교 줄 추가',
         body: `당신은 규정 조항 요약기입니다. 검색된 조항 원문을 실무자 언어로 요약합니다.
 
@@ -79,7 +79,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
 - 조항 번호를 추정해 쓰지 않는다.`,
       },
       {
-        ver: 'v1', at: '2025-11-02 09:40', by: '박거버', status: 'archived',
+        ver: 'v1', at: '2026-03-28 09:40', by: '박거버', status: 'archived',
         changeNote: '최초 등록',
         body: `당신은 규정 조항 요약기입니다. 검색된 조항 원문을 실무자 언어로 3줄 요약합니다. 조항 번호를 함께 인용합니다.`,
       },
@@ -91,7 +91,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
     usedBy: ['AGT-204 PB 자산진단 어시스턴트'],
     versions: [
       {
-        ver: 'v2', at: '2026-01-05 16:44', by: '정오너', status: 'serving',
+        ver: 'v2', at: '2026-05-31 16:44', by: '정오너', status: 'serving',
         changeNote: '계좌번호 부분 마스킹 → 전체 삭제로 강화',
         body: `당신은 상담 이력 요약기입니다. 상담 로그에서 개인정보를 제거하고 상담 의도·처리 결과만 남깁니다.
 
@@ -103,7 +103,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
 - 상담 의도 1줄 / 처리 결과 1줄 / 후속 조치 필요 시 1줄`,
       },
       {
-        ver: 'v1', at: '2025-12-10 11:20', by: '정오너', status: 'archived',
+        ver: 'v1', at: '2026-05-05 11:20', by: '정오너', status: 'archived',
         changeNote: '최초 등록',
         body: `상담 로그에서 개인정보를 마스킹하고 상담 의도·처리 결과만 남겨 요약합니다.`,
       },
@@ -115,7 +115,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
     usedBy: ['AGT-512 비대면 여신 사전심사 보조'],
     versions: [
       {
-        ver: 'v1', at: '2026-01-04 09:12', by: '조디비', status: 'serving',
+        ver: 'v1', at: '2026-05-30 09:12', by: '조디비', status: 'serving',
         changeNote: '최초 등록',
         body: `재무 지표와 담보 정보를 받아 심사 의견 **초안**을 작성합니다.
 
@@ -131,7 +131,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
     usedBy: ['AGT-602 카드 분실신고 응대 봇', 'AGT-621 CS 챗봇 코파일럿'],
     versions: [
       {
-        ver: 'v2', at: '2026-01-03 13:30', by: '윤참여', status: 'serving',
+        ver: 'v2', at: '2026-05-29 13:30', by: '정우진', status: 'serving',
         changeNote: '수익률 단정 표현 필터 추가',
         body: `초안 응대문을 금융 표준 문체로 교정합니다.
 
@@ -141,7 +141,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
 - 고객 호칭은 "고객님"으로 통일한다.`,
       },
       {
-        ver: 'v1', at: '2025-12-01 10:00', by: '윤참여', status: 'archived',
+        ver: 'v1', at: '2026-04-26 10:00', by: '정우진', status: 'archived',
         changeNote: '최초 등록',
         body: `초안 응대문을 금융 표준 문체로 교정합니다. 단정·확약 표현을 걸러냅니다.`,
       },
@@ -153,7 +153,7 @@ export const PROMPT_TEMPLATES_SEED: PromptTemplate[] = [
     usedBy: [],
     versions: [
       {
-        ver: 'v1', at: '2025-12-29 15:50', by: '강개발', status: 'serving',
+        ver: 'v1', at: '2026-05-24 15:50', by: '이서연', status: 'serving',
         changeNote: '최초 등록',
         body: `서술형 문단을 개조식 보고 형식으로 바꿉니다. 원문에 없는 사실을 추가하지 않습니다.`,
       },

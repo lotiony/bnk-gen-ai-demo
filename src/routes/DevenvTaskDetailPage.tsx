@@ -1,10 +1,26 @@
+/**
+ * 개발환경 과제 상세 — RFP: ONM-008 개발 환경(Coder · CI · CD) 제공.
+ *
+ * 진입 경로는 AI Studio 「개발환경」(`/studio/devenv/:taskId`) 하나다. 옛 프로젝트
+ * 딥링크(`/projects/:projectId/tasks/devenv/:taskId`)는 App 라우트에서 이 경로로
+ * 접었으므로, 브레드크럼도 프로젝트가 아니라 AI Studio 계층을 쓴다.
+ *
+ * ⚠️ 외부 도구 버튼에 실제 `href` 를 달지 않는다. 시연장은 폐쇄망이라
+ *    `*.aip.group.local` 로 이동하면 DNS 실패 화면이 뜨고 데모가 끊긴다.
+ *    어느 도구·주소로 연결되는지는 화면에 그대로 적되, 이동은 하지 않는다.
+ */
 import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
+import { useWorkCrumb } from '@/lib/crumbs';
 import { findDevenvTask, DEVENV_LABEL, type DevenvTask } from '@/data/mockDevenvTasks';
 import { ToolModal, VSCodeMock, JenkinsMock, ArgocdMock } from '@/components/devenv/ToolMocks';
+
+/** AI Studio 개발환경 목록 — 되돌아가기·과제 미존재 처리의 공통 목적지. */
+const DEVENV_LIST_PATH = '/studio/devenv';
 
 const STATE_TONE: Record<string, string> = {
   '실행 중': 'bg-ok-bg text-ok border-ok-border',
@@ -26,8 +42,20 @@ export default function DevenvTaskDetailPage() {
   const task = taskId ? findDevenvTask(taskId) : undefined;
   const [modalOpen, setModalOpen] = useState(false);
 
+  /**
+   * 상위 계층은 경로 기반 조립기(`crumbs.ts`)를 따르고, 그 아래에 개발환경 목록과
+   * 과제명을 얹는다. `/studio/…` 에서는 `홈 › AI Studio › 개발환경 › 과제`가 된다.
+   * 훅이므로 아래 조기 반환보다 먼저 호출한다.
+   */
+  const crumbBase = useWorkCrumb('개발환경', pid);
+  const crumbItems = [
+    ...crumbBase.slice(0, -1),
+    { label: '개발환경', to: DEVENV_LIST_PATH },
+    { label: task?.name ?? '과제를 찾을 수 없음' },
+  ];
+
   if (!task) {
-    return <Navigate to={`/projects/${pid}`} replace />;
+    return <Navigate to={DEVENV_LIST_PATH} replace />;
   }
 
   const stateTone = STATE_TONE[task.state] ?? STATE_TONE['정지'];
@@ -36,14 +64,7 @@ export default function DevenvTaskDetailPage() {
 
   return (
     <div className="max-w-[1360px] mx-auto px-8 pt-3.5 pb-14">
-      <Crumb
-        items={[
-          { label: '홈', to: '/' },
-          { label: '프로젝트', to: '/projects' },
-          { label: 'PB 에이전트 프로젝트', to: `/projects/${pid}` },
-          { label: task.name },
-        ]}
-      />
+      <Crumb items={crumbItems} />
 
       {/* Header */}
       <div className="card px-6 py-5 mb-3.5">
@@ -104,8 +125,8 @@ export default function DevenvTaskDetailPage() {
       {task.kind === 'argocd' && <ArgocdBody task={task} onOpenUi={open} />}
 
       <div className="mt-3.5">
-        <Link to={`/projects/${pid}`}>
-          <Button>← 프로젝트로</Button>
+        <Link to={DEVENV_LIST_PATH}>
+          <Button>← 개발환경 목록으로</Button>
         </Link>
       </div>
 
@@ -150,7 +171,7 @@ function CoderBody({ task, onOpenIde }: { task: DevenvTask; onOpenIde: () => voi
       <CoderLinkBtn
         icon="📓"
         label="Jupyter"
-        href="https://ide.aip.group.local/@박서연/workspace/apps/jupyter/"
+        url="https://ide.aip.group.local/@박서연/workspace/apps/jupyter/"
       />
       <div className="ml-auto text-[10.5px] text-ink-mid font-semibold tabular-nums">
         ide.aip.group.local/@박서연/workspace
@@ -159,16 +180,24 @@ function CoderBody({ task, onOpenIde }: { task: DevenvTask; onOpenIde: () => voi
   );
 }
 
+/**
+ * 도구 바로가기 버튼.
+ *
+ * `url` 은 **표시용**이다 — 앵커로 걸지 않는다. 폐쇄망 시연장에서 실제로 이동하면
+ * DNS 실패 화면으로 떨어져 데모가 끊긴다. 대신 어느 주소로 연결되는지를
+ * 툴팁·토스트로 그대로 보여 준다(RFP ONM-008 개발 환경 연동 표기는 유지).
+ */
 function CoderLinkBtn({
   icon,
   label,
-  href,
+  url,
   onClick,
   primary,
 }: {
   icon: string;
   label: string;
-  href?: string;
+  /** 연동 대상 주소 — 표시 전용. */
+  url?: string;
   onClick?: () => void;
   primary?: boolean;
 }) {
@@ -178,26 +207,30 @@ function CoderLinkBtn({
       ? 'bg-ink text-white border-ink hover:bg-ink-dark'
       : 'bg-white text-ink-dark border-line hover:border-brand-dark',
   );
-  const content = (
-    <>
+
+  const handleClick =
+    onClick ??
+    (() =>
+      toast(
+        `${label} 로 연결됩니다`,
+        `${url ?? '-'}\n` +
+          '시연 환경(폐쇄망)에서는 외부 창으로 이동하지 않고 플랫폼 화면 안에서만 확인합니다.',
+        'info',
+      ));
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title={url}
+      className={className}
+    >
       <span aria-hidden>{icon}</span>
       {label}
       <span aria-hidden className="text-[9px] opacity-70">
         ↗
       </span>
-    </>
-  );
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} className={className}>
-        {content}
-      </button>
-    );
-  }
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
-      {content}
-    </a>
+    </button>
   );
 }
 
@@ -210,12 +243,12 @@ function JenkinsBody({ task, onOpenConsole }: { task: DevenvTask; onOpenConsole:
       <CoderLinkBtn
         icon="📊"
         label="Blue Ocean"
-        href="https://ci.aip.group.local/blue/organizations/jenkins/"
+        url="https://ci.aip.group.local/blue/organizations/jenkins/"
       />
       <CoderLinkBtn
         icon="🔌"
         label="Webhook 설정"
-        href="https://ci.aip.group.local/configure"
+        url="https://ci.aip.group.local/configure"
       />
       <div className="ml-auto text-[10.5px] text-ink-mid font-semibold tabular-nums">
         ci.aip.group.local
@@ -233,12 +266,12 @@ function ArgocdBody({ task, onOpenUi }: { task: DevenvTask; onOpenUi: () => void
       <CoderLinkBtn
         icon="📦"
         label="Git 저장소"
-        href="https://git.aip.group.local/aip/pb-agent-deploy"
+        url="https://git.aip.group.local/aip/pb-agent-deploy"
       />
       <CoderLinkBtn
         icon="🔁"
         label="Webhook"
-        href="https://cd.aip.group.local/settings/repos"
+        url="https://cd.aip.group.local/settings/repos"
       />
       <div className="ml-auto text-[10.5px] text-ink-mid font-semibold tabular-nums">
         cd.aip.group.local

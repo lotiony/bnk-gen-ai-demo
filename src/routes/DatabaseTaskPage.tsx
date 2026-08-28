@@ -7,7 +7,12 @@ import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
 import SidebarCard from '@/components/projectForm/SidebarCard';
 
-type TabId = 'schema' | 'account' | 'load' | 'connector';
+/*
+ * RFP: EDA-002(필수) — 계열사 데이터 활용 시 규제 준수(개인정보보호법·신용정보법)
+ *      점검 및 결재 절차. `request`(테이블 생성 요청서 · DPIA/암호화/망구간 명시)와
+ *      `approval`(규제 준수 체크리스트 + 결재선)이 그 근거 화면이다.
+ */
+type TabId = 'request' | 'schema' | 'account' | 'load' | 'connector' | 'approval';
 
 /* ---------------- Mock ---------------- */
 
@@ -184,10 +189,12 @@ export default function DatabaseTaskPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-0 border-b border-line mb-3.5 -mt-1">
+        <TabButton active={tab === 'request'} onClick={() => setTab('request')}>요청서</TabButton>
         <TabButton active={tab === 'account'} onClick={() => setTab('account')}>계정</TabButton>
         <TabButton active={tab === 'schema'} onClick={() => setTab('schema')}>테이블</TabButton>
         <TabButton active={tab === 'load'} onClick={() => setTab('load')}>데이터 적재</TabButton>
         <TabButton active={tab === 'connector'} onClick={() => setTab('connector')}>연결</TabButton>
+        <TabButton active={tab === 'approval'} onClick={() => setTab('approval')}>규제 준수 · 결재</TabButton>
         <span className="flex-1" />
         <Link
           to={returnPath}
@@ -197,12 +204,16 @@ export default function DatabaseTaskPage() {
         </Link>
       </div>
 
+      {/* 요청서 — 확정 스키마 기준 테이블 생성 신청(DPIA·암호화·망구간·보존기간 명시) */}
+      {tab === 'request' && <RequestTab tables={savedTables} />}
       {tab === 'schema' && (
         <SchemaTab tables={tables} setTables={setTables} savedTables={savedTables} setSavedTables={setSavedTables} />
       )}
       {tab === 'account' && <AccountTab accounts={accounts} setAccounts={setAccounts} />}
       {tab === 'load' && <LoadTab tables={savedTables} />}
       {tab === 'connector' && <ConnectorTab />}
+      {/* 규제 준수 · 결재 — EDA-002 체크리스트(DPIA·암호화/마스킹·망분리·감사로그·보존파기) + 결재선 */}
+      {tab === 'approval' && <ApprovalTab />}
     </div>
   );
 }

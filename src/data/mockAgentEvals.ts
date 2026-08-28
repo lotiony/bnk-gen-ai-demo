@@ -1,3 +1,12 @@
+/**
+ * 에이전트 평가(회귀·품질) mock.
+ *
+ * 시각 규약은 `mockAgentDeploys.ts` 상단 주석의 배포 게이트 축을 따른다 —
+ * 커밋/태그 → 학습계 배포 → **평가** → 레드팀 → 결재 → 서빙계 승격.
+ * 날짜를 옮길 때는 deploys · redteam 과 같은 오프셋으로 함께 옮긴다.
+ *
+ * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
+ */
 export interface AgentVersion {
   version: string;
   releasedAt: string;
@@ -56,10 +65,10 @@ export interface LangfuseProject {
 /** agentId → 버전 목록. */
 export const AGENT_VERSIONS: Record<string, AgentVersion[]> = {
   'AGT-204': [
-    { version: 'v4.2', releasedAt: '2026-05-19', isCurrent: true, note: '응답 형식 JSON 강제 · 환각 사례 8건 패치' },
-    { version: 'v4.1', releasedAt: '2026-05-12', isCurrent: false, note: 'PII 마스킹 룰 보강 · 주민번호 패턴 추가' },
-    { version: 'v4.0', releasedAt: '2026-04-28', isCurrent: false, note: '시스템 프롬프트 전면 개편 · few-shot 5개 도입' },
-    { version: 'v3.5', releasedAt: '2026-04-10', isCurrent: false, note: '응답 길이 제한 1024 토큰으로 조정' },
+    { version: 'v4.2', releasedAt: '2026-05-29', isCurrent: true, note: '응답 형식 JSON 강제 · 환각 사례 8건 패치' },
+    { version: 'v4.1', releasedAt: '2026-05-22', isCurrent: false, note: 'PII 마스킹 룰 보강 · 주민번호 패턴 추가' },
+    { version: 'v4.0', releasedAt: '2026-05-08', isCurrent: false, note: '시스템 프롬프트 전면 개편 · few-shot 5개 도입' },
+    { version: 'v3.5', releasedAt: '2026-04-20', isCurrent: false, note: '응답 길이 제한 1024 토큰으로 조정' },
   ],
 };
 
@@ -70,7 +79,7 @@ export const TEST_SETS: Record<string, TestSet[]> = {
       name: 'PB 자산진단 베이스라인 v3',
       caseCount: 120,
       owner: '박서연',
-      updatedAt: '2026-05-18',
+      updatedAt: '2026-05-21',
       langfuseDatasetUrl: 'https://trace.aip.group.local/project/aip-pb-advisor/datasets/ds-baseline-v3',
     },
     {
@@ -78,7 +87,7 @@ export const TEST_SETS: Record<string, TestSet[]> = {
       name: 'PB 자산진단 베이스라인 v2',
       caseCount: 92,
       owner: '박서연',
-      updatedAt: '2026-04-05',
+      updatedAt: '2026-04-15',
       langfuseDatasetUrl: 'https://trace.aip.group.local/project/aip-pb-advisor/datasets/ds-baseline-v2',
     },
   ],
@@ -89,13 +98,19 @@ export const LANGFUSE_PROJECTS: Record<string, LangfuseProject> = {
     url: 'https://trace.aip.group.local/project/aip-pb-advisor',
     name: 'aip-pb-advisor',
     traceCount: 1842,
-    lastSyncedAt: '2026-05-20 18:32',
+    lastSyncedAt: '2026-06-02 18:32',
     /** 평가 이력 영역에서 "자세히" 진입 — experiments 목록으로 점프. */
     runUrl: 'https://trace.aip.group.local/project/aip-pb-advisor/experiments',
   },
 };
 
-/** agentId → 평가 이력 (최신순). */
+/**
+ * agentId → 평가 이력 (**최신순** — 배열 순서가 곧 화면 순서다).
+ *
+ * 각 run 의 `ranAt` 은 해당 버전의 **학습계 배포 이후**여야 한다.
+ * 배포 게이트 서사(mockAgentDeploys 상단 주석 참조)가 시각으로 성립해야 하므로
+ * 평가가 태그·배포보다 앞선 시각을 갖지 않게 유지한다.
+ */
 export const EVAL_RUNS: Record<string, EvalRun[]> = {
   'AGT-204': [
     {
@@ -103,7 +118,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       agentId: 'AGT-204',
       version: 'v4.2',
       testSetId: 'ts-baseline-v3',
-      ranAt: '2026-05-19 17:48',
+      ranAt: '2026-05-29 18:02',
       ranBy: '박서연',
       passRate: 94.2,
       totalCases: 120,
@@ -119,7 +134,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       agentId: 'AGT-204',
       version: 'v4.2',
       testSetId: 'ts-baseline-v2',
-      ranAt: '2026-05-19 18:02',
+      ranAt: '2026-05-29 17:48',
       ranBy: '박서연',
       passRate: 96.7,
       totalCases: 92,
@@ -135,7 +150,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       agentId: 'AGT-204',
       version: 'v4.1',
       testSetId: 'ts-baseline-v3',
-      ranAt: '2026-05-18 11:24',
+      ranAt: '2026-05-22 17:34',
       ranBy: '박서연',
       passRate: 92.5,
       totalCases: 120,
@@ -150,7 +165,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       agentId: 'AGT-204',
       version: 'v4.1',
       testSetId: 'ts-baseline-v2',
-      ranAt: '2026-05-12 16:10',
+      ranAt: '2026-05-22 17:10',
       ranBy: '박서연',
       passRate: 95.6,
       totalCases: 92,
@@ -166,7 +181,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       agentId: 'AGT-204',
       version: 'v4.0',
       testSetId: 'ts-baseline-v2',
-      ranAt: '2026-04-28 11:42',
+      ranAt: '2026-05-08 14:42',
       ranBy: '박서연',
       passRate: 93.9,
       totalCases: 92,
@@ -182,7 +197,7 @@ export const EVAL_RUNS: Record<string, EvalRun[]> = {
       agentId: 'AGT-204',
       version: 'v3.5',
       testSetId: 'ts-baseline-v2',
-      ranAt: '2026-04-10 09:30',
+      ranAt: '2026-04-20 11:20',
       ranBy: '박서연',
       passRate: 88.1,
       totalCases: 92,

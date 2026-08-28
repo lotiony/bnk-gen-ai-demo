@@ -31,6 +31,7 @@ export type PersonaId =
   | 'operator'
   // 부산은행
   | 'project_owner'
+  | 'agent_lead'
   | 'agent_dev'
   | 'modeler'
   | 'data_dev'
@@ -155,6 +156,30 @@ export const PERSONAS: Persona[] = [
     tenant: '부산은행',
     canSwitchTenant: false,
     hint: '소속 계열사 과제 전권 · 배포 기안',
+  },
+  {
+    /*
+     * 박서연은 이 저장소에서 **가장 많이 등장하는 인물**이다 — AGT-204·205·411 의
+     * 소유자이고, 배포 기안·평가 실행·레드팀 신청·PII 정책 변경 신청이 전부
+     * 이 이름으로 남아 있다(31개 파일 · 79회). 그런데 정작 인물 정본인 이 파일에
+     * 정의가 없어서, "인물은 mockPersonas 가 정본" 이라는 규칙이 스스로 깨져
+     * 있었다. 그래서 편입한다.
+     *
+     * 소속은 부산은행 디지털혁신부다 — 그가 만든 자산이 전부 부산은행 Namespace
+     * 이고(`mockCatalogAgents`), 부산은행의 AI 주관 부서가 디지털혁신부이기
+     * 때문이다(`mockGovernanceAdmin.STAGE_OWNERS`). 계열사 계정이므로
+     * `canSwitchTenant: false` 다.
+     */
+    id: 'agent_lead',
+    role: '에이전트 개발자',
+    rfpRole: '에이전트 개발자',
+    name: '박서연',
+    initial: '박',
+    dept: '부산은행 · 디지털혁신부',
+    group: '개발자',
+    tenant: '부산은행',
+    canSwitchTenant: false,
+    hint: 'PB 에이전트 소유자 · 배포/평가/레드팀 기안',
   },
   {
     id: 'agent_dev',

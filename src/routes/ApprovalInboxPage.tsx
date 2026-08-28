@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { approvals } from '@/data/mockApprovals';
+import { approvals, useApprovalRevision } from '@/data/mockApprovals';
 import StatusPill from '@/components/ui/StatusPill';
 import Crumb from '@/components/ui/Crumb';
 import { cn } from '@/lib/utils';
@@ -16,10 +16,13 @@ const APPR_CHIP: Record<string, { cls: string; label: string }> = {
   table: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '테이블 생성' },
   account: { cls: 'bg-bad-bg text-bad border-bad-border', label: '계정 생성' },
   redteam: { cls: 'bg-warn-bg text-bad border-bad-border', label: '레드팀 신청' },
+  // RFP 1.3.2 "관리자 승인 절차 기반 배포·공유 범위 통제" — 마켓플레이스에서 올라온 승격 결재.
+  promote: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '공유범위 승격' },
 };
 
 export default function ApprovalInboxPage() {
   useDeployApprovals(); // 배포 결재 스토어 변경 구독 (목록 갱신)
+  useApprovalRevision(); // 일반 결재 스토어(승격 상신·승인·반려) 변경 구독
   const visible = getVisibleApprovals(useCurrentPersona());
   const mine = visible.filter((a) => a.mine);
   const others = visible.filter((a) => !a.mine && a.state === 'pending');
@@ -63,7 +66,10 @@ function Section({
       </h3>
       <div className="flex flex-col gap-1.5">
         {items.map((a) => {
-          const chip = APPR_CHIP[a.category];
+          const chip = APPR_CHIP[a.category] ?? {
+            cls: 'bg-surface text-ink-mid border-line-soft',
+            label: '결재',
+          };
           return (
             <Link
               key={a.id}

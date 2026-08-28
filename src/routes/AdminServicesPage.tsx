@@ -17,9 +17,11 @@ import {
   PUBLISH_TONE,
   DEPLOY_TONE,
   SHARE_SCOPES,
+  OPERATING_AREAS,
   type ServiceItem,
   type PublishState,
   type ShareScope,
+  type OperatingArea,
 } from '@/data/mockServiceRegistry';
 
 type Tab = 'publish' | 'deploy' | 'scope';
@@ -42,6 +44,25 @@ export default function AdminServicesPage() {
   const setScope = (id: string, scope: ShareScope) => {
     setItems((arr) => arr.map((it) => (it.id === id ? { ...it, shareScope: scope } : it)));
     toast('공개·공유 범위를 변경했습니다 — 감사 원장에 기록됩니다');
+  };
+
+  /**
+   * RFP 2-1 [41] "그룹 공통서비스 및 계열사 전용서비스의 **운영영역 분리 및 관리** 기능".
+   * 예전에는 select 가 controlled 인데 onChange 가 토스트만 띄워 선택하는 순간
+   * 원래 값으로 되돌아갔다 — 제안서 캡처 대상 화면에서 요건이 동작하지 않는 셈이었다.
+   * 공개범위(setScope)와 같은 방식으로 실제 상태를 바꾼다.
+   */
+  const setOperatingArea = (id: string, area: OperatingArea) => {
+    setItems((arr) =>
+      arr.map((it) => {
+        if (it.id !== id || it.operatingArea === area) return it;
+        // 계열사 전용으로 내리면 공개범위가 '그룹 전체'로 남을 수 없다 — 같이 좁힌다.
+        const nextScope: ShareScope =
+          area === '계열사 전용 운영영역' && it.shareScope === '그룹 전체' ? '계열사' : it.shareScope;
+        return { ...it, operatingArea: area, shareScope: nextScope };
+      }),
+    );
+    toast(`${area}으로 이관했습니다 — 서빙 트래픽 재라우팅 · 감사 원장에 기록됩니다`);
   };
 
   return (
@@ -141,11 +162,12 @@ export default function AdminServicesPage() {
               </div>
               <select
                 value={it.operatingArea}
-                onChange={() => toast('운영영역 변경은 서빙 트래픽 재라우팅을 동반합니다 — 감사 원장에 기록됩니다')}
+                onChange={(e) => setOperatingArea(it.id, e.target.value as OperatingArea)}
                 className="py-1 px-2 border border-line rounded text-[11px] bg-white font-semibold"
               >
-                <option>그룹 공통 운영영역</option>
-                <option>계열사 전용 운영영역</option>
+                {OPERATING_AREAS.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
               </select>
               <select
                 value={it.shareScope}

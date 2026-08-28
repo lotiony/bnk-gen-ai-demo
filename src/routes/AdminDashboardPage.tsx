@@ -4,19 +4,27 @@ import KpiCard from '@/components/ui/KpiCard';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import {
-  ADMIN_PROJECT_ROWS,
+  ADMIN_TASK_ROWS,
+  PLATFORM_AGENTS,
+  DASHBOARD_TODAY,
+  getTotalAllocatedGpus,
+  getExportScopes,
+  buildExportResult,
+  EXPORT_FORMATS,
+  type ExportFormat,
+  type ExportResult,
   getAdminKpis,
-  getModelPtuUsage,
+  getModelGpuAllocation,
   getDailyLabels,
   getDailyCallSeries,
-  getModelPtuCost,
-  getTotalPtuCost,
+  getModelGpuCost,
+  getTotalGpuCost,
   getCostBreakdownByCategory,
   getDailyCostSeries,
   getCostByConglomerate,
   getCostByAgent,
-  PTU_CHANGE_EVENTS,
-  type PtuChangeEvent,
+  GPU_CHANGE_EVENTS,
+  type GpuChangeEvent,
   type ConglomerateCostRow,
   type AgentCostRow,
   DEPT_USAGE,
@@ -25,21 +33,23 @@ import {
   ACTIVITY_FEED,
   APPROVAL_ANALYTICS,
   getConglomerateTokenSeries,
-  getProjectDauSeries,
-  getProjectSafetySeries,
+  getTaskDauSeries,
+  getTaskSafetySeries,
   PII_CATEGORIES,
   AGENT_PII_POLICIES,
   NAMESPACES,
+  TENANT_NAMESPACE_LIST,
   CATEGORY_COLOR,
+  CATEGORY_LABEL,
   DEPLOYMENTS,
-  type ProjectUsageRow,
-  type ModelPtuUsage,
+  type TaskUsageRow,
+  type ModelGpuAllocation,
   type ActivityItem,
   type ActivityKind,
   type ChangeRow,
   type ConglomerateTokenSeries,
-  type ProjectDauSeries,
-  type ProjectSafetySeries,
+  type TaskDauSeries,
+  type TaskSafetySeries,
   type PiiAction,
   type NamespaceUsage,
   type NamespaceCategory,
@@ -79,15 +89,17 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 /**
- * 플랫폼 관리자 대시보드 — 계열사(부산은행) 내 모든 프로젝트의 사용 현황을
- * 4개 탭(개요·사용 현황·PTU·자원·안전·거버넌스)으로 분할해 한 레이어 위에서 본다.
+ * 플랫폼 관리자 대시보드 — 그룹 11개 Namespace 전 과제의 사용 현황을
+ * 탭(개요·사용 현황·모델·자원·GPU·안전·비용)으로 분할해 한 레이어 위에서 본다.
  *
- * 비용 모델: 모든 비용은 PTU(Provisioned Throughput Unit) 기반.
- *   월 비용 = 약정 PTU 수 × 모델별 월 단가 (사실상 고정비).
+ * 비용 모델: 공동존 On-Premise BareMetal 기준. 월 고정비 = 배정 GPU 장 수 ×
+ *   720 GPU-hour × 등급 단가. 이 고정비를 가중 토큰 점유율로 계열사·과제에
+ *   배분한다 — 미터링 화면(ONM-005)의 정산 규칙과 같은 모델이다.
  */
 export default function AdminDashboardPage() {
   const [tab, setTab] = useState<TabId>('overview');
-  const rows = ADMIN_PROJECT_ROWS;
+  const [exportOpen, setExportOpen] = useState(false);
+  const rows = ADMIN_TASK_ROWS;
 
   return (
     <>
@@ -95,22 +107,32 @@ export default function AdminDashboardPage() {
       <div className="card px-6 py-5 mb-3.5 flex items-start justify-between gap-6">
         <div>
           <div className="text-[11px] text-ink-mid font-bold tracking-[0.3px] mb-1">
-            플랫폼 관리자 대시보드 · 계열사{' '}
-            <span className="text-ink-dark">부산은행</span>
+            플랫폼 관리자 대시보드 · 그룹 11개 Namespace 전체
           </div>
           <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">
             사용 현황 대시보드
           </h1>
           <div className="text-[12px] text-ink-mid mt-1.5">
-            {rows.length}개 프로젝트의 트래픽·자원·품질·안전 메트릭을 한 화면에서 비교
+            {rows.length}개 과제 · 에이전트 {PLATFORM_AGENTS.length}종의 트래픽·자원·품질·안전
+            메트릭을 한 화면에서 비교 · 기준일 {DASHBOARD_TODAY}
           </div>
         </div>
         <button
           type="button"
-          onClick={() => toast('현재 탭 데이터를 XLSX 로 내보냈습니다')}
-          className="h-8 px-3 border border-line rounded text-[11.5px] font-extrabold text-ink-dark bg-white hover:border-brand-dark hover:text-brand flex-shrink-0"
+          onClick={() => setExportOpen((v) => !v)}
+          className={cn(
+            'h-8 px-3 border rounded text-[11.5px] font-extrabold flex-shrink-0',
+            exportOpen
+              ? 'bg-brand border-brand-dark text-white'
+              : 'border-line text-ink-dark bg-white hover:border-brand-dark hover:text-brand',
+          )}
         >⇩ Export</button>
       </div>
+
+      {/* RFP 2-1 [34] 원문이 "(Export 기능 포함)" 을 명시한다. 시연 중 실제 브라우저
+          다운로드를 트리거하는 건 위험하므로, 형식 선택 · 대상 범위 · 생성 완료를
+          화면 안에서 보여 주는 방식으로 요건을 드러낸다. */}
+      {exportOpen && <ExportPanel onClose={() => setExportOpen(false)} />}
 
       {/* Tab nav */}
       <nav className="card px-1 mb-3.5 sticky top-[98px] z-20 flex items-center bg-white shadow-[0_2px_4px_-2px_rgba(0,0,0,0.08)]">
@@ -146,20 +168,174 @@ export default function AdminDashboardPage() {
 }
 
 /* =====================================================================
+ * 0) Export 패널 — RFP 2-1 [34] "(Export 기능 포함)"
+ *
+ * 형식(XLSX·CSV·PDF) 선택, 대상 범위 다중 선택, 생성 결과(파일명·시트·행 수·
+ * 용량·감사 항목 ID)를 화면 안에서 보여 준다. 행 수는 실제 데이터에서 계산해
+ * 오므로 화면에 뜬 표와 내보낸 결과가 어긋나지 않는다.
+ * ===================================================================== */
+
+function ExportPanel({ onClose }: { onClose: () => void }) {
+  const scopes = useMemo(() => getExportScopes(), []);
+  const [format, setFormat] = useState<ExportFormat>('XLSX');
+  const [picked, setPicked] = useState<string[]>(scopes.map((s) => s.key));
+  const [result, setResult] = useState<ExportResult | null>(null);
+
+  const toggle = (key: string) => {
+    setResult(null);
+    setPicked((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
+
+  const totalRows = scopes.filter((s) => picked.includes(s.key)).reduce((a, s) => a + s.rowCount, 0);
+
+  return (
+    <div className="card px-5 py-4 mb-3.5 border-brand-dark">
+      <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
+        <div>
+          <h3 className="text-[14px] font-extrabold text-ink">대시보드 데이터 내보내기</h3>
+          <div className="text-[10.5px] text-ink-mid mt-0.5">
+            형식과 대상 범위를 고르면 산출물이 생성되어 문서함에 적재된다 · 내보내기 행위는
+            감사 원장에 기록된다
+          </div>
+        </div>
+        <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
+          2-1 [34] Export
+        </span>
+      </div>
+
+      <div className="grid grid-cols-[180px_1fr_300px] gap-4">
+        {/* 형식 */}
+        <div>
+          <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
+            형식
+          </div>
+          <div className="flex flex-col gap-1">
+            {EXPORT_FORMATS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => {
+                  setFormat(f);
+                  setResult(null);
+                }}
+                className={cn(
+                  'text-left px-2.5 py-1.5 rounded border text-[11.5px] font-extrabold',
+                  format === f
+                    ? 'bg-brand-bg border-brand-dark text-ink'
+                    : 'bg-white border-line text-ink-dark hover:border-brand-dark',
+                )}
+              >
+                {f}
+                <span className="ml-1.5 text-[10px] font-semibold text-ink-mid">
+                  {f === 'XLSX' ? '시트 분리' : f === 'CSV' ? '단일 표' : '보고서 서식'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 범위 */}
+        <div>
+          <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
+            대상 범위 · {picked.length}/{scopes.length} 선택 · {totalRows.toLocaleString()}행
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            {scopes.map((s) => {
+              const on = picked.includes(s.key);
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => toggle(s.key)}
+                  className={cn(
+                    'flex items-center gap-2 px-2.5 py-1.5 rounded border text-[11.5px] text-left',
+                    on ? 'bg-brand-bg border-brand-dark' : 'bg-white border-line hover:border-brand-dark',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-[14px] h-[14px] rounded-sm border flex items-center justify-center text-[9px] font-extrabold flex-shrink-0',
+                      on ? 'bg-brand border-brand-dark text-white' : 'bg-white border-line text-transparent',
+                    )}
+                  >✓</span>
+                  <span className="font-bold text-ink-dark flex-1 truncate">{s.label}</span>
+                  <span className="text-[10px] text-ink-mid font-semibold tabular-nums">
+                    {s.rowCount}행
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 실행 · 결과 */}
+        <div className="border-l border-line-soft pl-4">
+          <div className="text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] mb-1.5">
+            생성 결과
+          </div>
+          {result ? (
+            <div className="border border-ok-border bg-ok-bg rounded px-3 py-2.5">
+              <div className="text-[11.5px] font-extrabold text-ok mb-1">✓ 생성 완료</div>
+              <div className="text-[11px] font-mono font-bold text-ink-dark break-all mb-1.5">
+                {result.fileName}
+              </div>
+              <ul className="text-[10.5px] text-ink-dark font-semibold space-y-0.5 tabular-nums">
+                <li>시트 {result.sheets.length}개 · {result.rowCount.toLocaleString()}행</li>
+                <li>용량 약 {result.sizeKb.toLocaleString()} KB</li>
+                <li>생성 {result.generatedAt}</li>
+                <li className="text-ink-mid">감사 항목 {result.auditId}</li>
+              </ul>
+              <div className="mt-1.5 text-[10px] text-ink-mid font-semibold leading-snug">
+                {result.sheets.join(' · ')}
+              </div>
+            </div>
+          ) : (
+            <div className="border border-line-soft bg-surface-soft rounded px-3 py-2.5 text-[10.5px] text-ink-mid font-semibold leading-snug">
+              범위를 고르고 <b className="text-ink-dark">내보내기</b>를 누르면 산출물 명세가 여기
+              표시된다. 파일은 그룹 공통 문서함에 적재되며 다운로드 권한은 요청자 본인으로
+              한정된다.
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 mt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-1.5 px-2.5 border border-line rounded text-[11.5px] font-extrabold text-ink-dark hover:border-brand-dark"
+            >닫기</button>
+            <button
+              type="button"
+              disabled={picked.length === 0}
+              onClick={() => {
+                setResult(buildExportResult(format, picked));
+                toast(`${format} 산출물을 생성했습니다 — 감사 원장에 기록됩니다`);
+              }}
+              className={cn(
+                'flex-1 py-1.5 rounded text-[11.5px] font-extrabold border',
+                picked.length === 0
+                  ? 'bg-surface border-line text-ink-light cursor-not-allowed'
+                  : 'bg-brand border-brand-dark text-white hover:bg-brand-dark',
+              )}
+            >내보내기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
  * 1) 개요 탭 — 전반적 큰 그림 (홈 화면 톤)
  * ===================================================================== */
 
-function OverviewTab({ rows }: { rows: ProjectUsageRow[] }) {
+function OverviewTab({ rows }: { rows: TaskUsageRow[] }) {
   const kpis = useMemo(() => getAdminKpis(rows), [rows]);
   const callSeries = useMemo(() => getDailyCallSeries(rows), [rows]);
   const dayLabels = useMemo(() => getDailyLabels(), []);
-  const totalPtus = useMemo(
-    () => getModelPtuUsage().reduce((a, m) => a + m.allocatedPtus, 0),
-    [],
-  );
-  const ptuCost = useMemo(() => getTotalPtuCost(), []);
-  const avgPtuEfficiency = useMemo(() => {
-    const u = getModelPtuUsage();
+  // 배정 GPU 장 수는 과제 원장 합계가 정본이다 — 자원 정책 화면과 같은 숫자여야 한다.
+  const totalGpus = useMemo(() => getTotalAllocatedGpus(), []);
+  const gpuCost = useMemo(() => getTotalGpuCost(), []);
+  const avgGpuUtilization = useMemo(() => {
+    const u = getModelGpuAllocation();
     return u.reduce((a, m) => a + m.avgUtilizationPct, 0) / u.length;
   }, []);
   const totalMau = useMemo(() => DEPT_USAGE.reduce((a, d) => a + d.dau * 2.5, 0), []);
@@ -201,10 +377,10 @@ function OverviewTab({ rows }: { rows: ProjectUsageRow[] }) {
       {/* KPI 6장 */}
       <div className="grid grid-cols-6 gap-3">
         <KpiCard
-          label="프로젝트"
-          value={`${kpis.totalProjects}`}
+          label="과제"
+          value={`${kpis.totalTasks}`}
           unit="건"
-          sub={`운영 중 ${kpis.operatingProjects} · 개발 중 ${kpis.planningProjects}`}
+          sub={`운영 중 ${kpis.operatingTasks} · 개발 중 ${kpis.planningTasks}`}
           tone="ok"
         />
         <KpiCard
@@ -228,10 +404,10 @@ function OverviewTab({ rows }: { rows: ProjectUsageRow[] }) {
           tone="ok"
         />
         <KpiCard
-          label="월 PTU 비용"
-          value={`₩${fmtKRW(ptuCost)}`}
-          sub={`${totalPtus} PTU 약정 · 효율 평균 ${avgPtuEfficiency.toFixed(0)}%`}
-          tone={ptuCost > kpis.totalBudget * 0.9 ? 'bad' : 'ok'}
+          label="월 GPU 고정비"
+          value={`₩${fmtKRW(gpuCost)}`}
+          sub={`GPU ${totalGpus}장 배정 · 평균 점유 ${avgGpuUtilization.toFixed(0)}%`}
+          tone={gpuCost > kpis.totalBudget * 0.9 ? 'bad' : 'ok'}
         />
         <KpiCard
           label="안전 이벤트 (7일)"
@@ -262,10 +438,10 @@ function OverviewTab({ rows }: { rows: ProjectUsageRow[] }) {
         <BigLineChart series={callSeries} days={dayLabels} unit="calls" />
       </div>
 
-      {/* Top 5 프로젝트 미니 카드 */}
+      {/* Top 5 과제 미니 카드 */}
       <div>
         <div className="flex items-baseline justify-between mb-2.5">
-          <h3 className="text-[14px] font-extrabold text-ink">호출량 Top 5 프로젝트</h3>
+          <h3 className="text-[14px] font-extrabold text-ink">호출량 Top 5 과제</h3>
           <span className="text-[11px] text-ink-mid">월 호출 기준 · 사용 현황 탭에서 전체 보기</span>
         </div>
         <div className="grid grid-cols-5 gap-3">
@@ -295,14 +471,14 @@ function OverviewTab({ rows }: { rows: ProjectUsageRow[] }) {
 
         <SignalCard
           title="SLO 주의"
-          subtitle="P95 목표 충족률 낮은 프로젝트"
+          subtitle="P95 목표 충족률 낮은 과제"
           tone="warn"
           metric={`${sloIssues.length}건`}
         >
           <ul className="text-[11.5px] space-y-1">
             {sloIssues.map((r) => (
               <li key={r.id} className="flex items-center gap-2">
-                <Link to={`/projects/${r.id}`} className="flex-1 truncate text-ink-dark hover:text-info font-bold">
+                <Link to="/admin/tasks" className="flex-1 truncate text-ink-dark hover:text-info font-bold">
                   {r.name}
                 </Link>
                 <span
@@ -327,7 +503,7 @@ function OverviewTab({ rows }: { rows: ProjectUsageRow[] }) {
           <ul className="text-[11.5px] space-y-1">
             {safetyIssues.map((r) => (
               <li key={r.id} className="flex items-center gap-2">
-                <Link to={`/projects/${r.id}`} className="flex-1 truncate text-ink-dark hover:text-info font-bold">
+                <Link to="/admin/tasks" className="flex-1 truncate text-ink-dark hover:text-info font-bold">
                   {r.name}
                 </Link>
                 <span
@@ -360,10 +536,10 @@ function OverviewTab({ rows }: { rows: ProjectUsageRow[] }) {
   );
 }
 
-function Top5Card({ row }: { row: ProjectUsageRow }) {
+function Top5Card({ row }: { row: TaskUsageRow }) {
   return (
     <Link
-      to={`/projects/${row.id}`}
+      to="/admin/tasks"
       className="card px-3.5 py-3 hover:border-brand-dark transition-colors block"
     >
       <div className="text-[10.5px] text-ink-mid font-bold mb-1.5 truncate">
@@ -419,12 +595,12 @@ function SignalCard({
 
 function ActivityRow({ item }: { item: ActivityItem }) {
   const kindStyle: Record<ActivityKind, { label: string; cls: string }> = {
-    project_register: { label: '등록', cls: 'bg-brand-tint text-brand border-brand-tint' },
+    task_register: { label: '등록', cls: 'bg-brand-tint text-brand border-brand-tint' },
     train_deploy: { label: '학습계', cls: 'bg-info-bg text-info border-info-border' },
     serv_promotion: { label: '서빙계', cls: 'bg-ok-bg text-ok border-ok-border' },
     policy_violation: { label: '정책', cls: 'bg-warn-bg text-warn border-warn-border' },
     incident: { label: '인시던트', cls: 'bg-bad-bg text-bad border-bad-border' },
-    ptu_change: { label: 'PTU', cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border' },
+    gpu_change: { label: 'GPU', cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border' },
     audit: { label: '감사', cls: 'bg-surface text-ink-mid border-line-soft' },
   };
   const k = kindStyle[item.kind];
@@ -456,10 +632,10 @@ function ActivityRow({ item }: { item: ActivityItem }) {
 
 type SortKey = 'name' | 'calls' | 'slo' | 'safety' | 'resource';
 
-function UsageTab({ rows }: { rows: ProjectUsageRow[] }) {
+function UsageTab({ rows }: { rows: TaskUsageRow[] }) {
   const [sort, setSort] = useState<SortKey>('calls');
   const tokenSeries = useMemo(() => getConglomerateTokenSeries(), []);
-  const dauSeries = useMemo(() => getProjectDauSeries(rows), [rows]);
+  const dauSeries = useMemo(() => getTaskDauSeries(rows), [rows]);
 
   const sortedRows = useMemo(() => {
     const arr = [...rows];
@@ -498,7 +674,13 @@ function UsageTab({ rows }: { rows: ProjectUsageRow[] }) {
       {/* 비교 테이블 */}
       <div className="card">
         <div className="px-5 py-3.5 flex items-baseline justify-between border-b border-line-soft gap-3 flex-wrap">
-          <h2 className="text-[15px] font-extrabold text-ink">프로젝트별 사용 현황</h2>
+          <div>
+            <h2 className="text-[15px] font-extrabold text-ink">과제별 사용 현황</h2>
+            <div className="text-[10.5px] text-ink-mid mt-0.5">
+              모든 수치는 과제에 소속된 에이전트의 실측 합계다 — 과제 원장(과제 관리 화면)과
+              같은 ID·같은 이름을 쓴다
+            </div>
+          </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-ink-mid font-semibold">정렬</span>
@@ -514,13 +696,13 @@ function UsageTab({ rows }: { rows: ProjectUsageRow[] }) {
                 <option value="name">이름순</option>
               </select>
             </div>
-            <GrafanaLink panel="project-usage" />
+            <GrafanaLink panel="task-usage" />
           </div>
         </div>
         <table className="w-full text-[12px]">
           <thead>
             <tr className="text-[10.5px] uppercase tracking-[0.3px] text-ink-mid border-b border-line bg-surface-soft/40">
-              <th className="text-left font-bold py-2.5 px-4">프로젝트 · PM</th>
+              <th className="text-left font-bold py-2.5 px-4">과제 · 담당</th>
               <th className="text-right font-bold py-2.5 px-2 w-[120px]">월 호출</th>
               <th className="text-right font-bold py-2.5 px-2 w-[110px]">SLO</th>
               <th className="text-right font-bold py-2.5 px-2 w-[120px]">안전 (7일)</th>
@@ -530,7 +712,7 @@ function UsageTab({ rows }: { rows: ProjectUsageRow[] }) {
           </thead>
           <tbody>
             {sortedRows.map((r) => (
-              <ProjectRow key={r.id} row={r} />
+              <TaskRow key={r.id} row={r} />
             ))}
           </tbody>
         </table>
@@ -548,26 +730,26 @@ function UsageTab({ rows }: { rows: ProjectUsageRow[] }) {
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3 gap-2 flex-wrap">
             <div>
-              <h3 className="text-[14px] font-extrabold text-ink">프로젝트별 사용자 추이</h3>
+              <h3 className="text-[14px] font-extrabold text-ink">과제별 사용자 추이</h3>
               <div className="text-[10.5px] text-ink-mid mt-0.5">최근 30일 일별 DAU</div>
             </div>
-            <GrafanaLink panel="project-dau-trend" />
+            <GrafanaLink panel="task-dau-trend" />
           </div>
-          <ProjectDauChart series={dauSeries} />
+          <TaskDauChart series={dauSeries} />
         </div>
       </div>
 
-      {/* 프로젝트별 토큰 사용량 (막대) + Top Spikes / Drops */}
+      {/* 과제별 토큰 사용량 (막대) + Top Spikes / Drops */}
       <div className="grid grid-cols-[1.6fr_1fr] gap-3.5">
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3 gap-2">
-            <h3 className="text-[14px] font-extrabold text-ink">프로젝트별 토큰 사용량</h3>
+            <h3 className="text-[14px] font-extrabold text-ink">과제별 토큰 사용량</h3>
             <div className="flex items-baseline gap-2">
               <span className="text-[10.5px] text-ink-mid">30일 합산 · 입력 + 출력</span>
-              <GrafanaLink panel="project-token" />
+              <GrafanaLink panel="task-token" />
             </div>
           </div>
-          <ProjectTokenBarChart rows={rows} />
+          <TaskTokenBarChart rows={rows} />
         </div>
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3 gap-2">
@@ -580,13 +762,13 @@ function UsageTab({ rows }: { rows: ProjectUsageRow[] }) {
           <div className="text-[10.5px] font-extrabold text-ok mb-1.5">▲ 급증</div>
           <ul className="space-y-1 mb-3">
             {TOP_SPIKES.map((r) => (
-              <ChangeRowItem key={r.projectId} row={r} />
+              <ChangeRowItem key={r.taskId} row={r} />
             ))}
           </ul>
           <div className="text-[10.5px] font-extrabold text-bad mb-1.5">▼ 급감</div>
           <ul className="space-y-1">
             {TOP_DROPS.map((r) => (
-              <ChangeRowItem key={r.projectId} row={r} />
+              <ChangeRowItem key={r.taskId} row={r} />
             ))}
           </ul>
         </div>
@@ -621,7 +803,7 @@ function UsageTab({ rows }: { rows: ProjectUsageRow[] }) {
   );
 }
 
-function ProjectRow({ row }: { row: ProjectUsageRow }) {
+function TaskRow({ row }: { row: TaskUsageRow }) {
   const sloTone =
     row.status !== '운영 중'
       ? 'text-ink-light'
@@ -650,7 +832,7 @@ function ProjectRow({ row }: { row: ProjectUsageRow }) {
   return (
     <tr className="border-b border-line-soft last:border-0 hover:bg-surface-soft/40">
       <td className="py-2.5 px-4">
-        <Link to={`/projects/${row.id}`} className="block hover:text-info">
+        <Link to="/admin/tasks" className="block hover:text-info">
           <div className="flex items-center gap-1.5">
             <span
               className={cn(
@@ -666,7 +848,11 @@ function ProjectRow({ row }: { row: ProjectUsageRow }) {
             )}
           </div>
           <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
-            PM <b className="text-ink-dark">{row.pmName}</b> · {row.dept}
+            {row.tenant} · {row.dept} · 담당 <b className="text-ink-dark">{row.pmName}</b>
+          </div>
+          {/* 호출·토큰·비용은 아래 에이전트들의 실측 합계다 — 근거를 화면에 남긴다. */}
+          <div className="text-[9.5px] text-ink-light font-mono font-semibold mt-0.5">
+            {row.namespace} · {row.agentIds.length > 0 ? row.agentIds.join(' · ') : '산출물 미배정'}
           </div>
         </Link>
       </td>
@@ -719,7 +905,7 @@ function ShareCard({
 }: {
   title: string;
   subtitle: string;
-  data: (ProjectUsageRow & { pct: number })[];
+  data: (TaskUsageRow & { pct: number })[];
   unit: 'calls' | 'cost';
   grafanaPanel?: string;
 }) {
@@ -773,7 +959,7 @@ function ChangeRowItem({ row }: { row: ChangeRow }) {
   return (
     <li>
       <Link
-        to={`/projects/${row.projectId}`}
+        to="/admin/tasks"
         className="grid grid-cols-[1fr_auto] gap-2 items-center py-1.5 px-2 rounded hover:bg-surface-soft text-[11.5px]"
       >
         <div className="min-w-0">
@@ -790,13 +976,13 @@ function ChangeRowItem({ row }: { row: ChangeRow }) {
   );
 }
 
-/** 프로젝트별 토큰 사용량 — 30일 합산 stack 막대(입력/출력). */
-function ProjectTokenBarChart({ rows }: { rows: ProjectUsageRow[] }) {
+/** 과제별 토큰 사용량 — 30일 합산 stack 막대(입력/출력). */
+function TaskTokenBarChart({ rows }: { rows: TaskUsageRow[] }) {
   const data = rows
     .filter((r) => r.monthTokenInput + r.monthTokenOutput > 0)
     .map((r) => ({
       name: r.name,
-      shortName: r.name.replace(' 에이전트 프로젝트', '').replace(' 프로젝트', ''),
+      shortName: r.name.replace(' 과제', ''),
       input: r.monthTokenInput,
       output: r.monthTokenOutput,
       total: r.monthTokenInput + r.monthTokenOutput,
@@ -943,8 +1129,8 @@ function ConglomerateTokenChart({ series }: { series: ConglomerateTokenSeries[] 
   );
 }
 
-/** 프로젝트별 사용자(DAU) 30일 추이 라인 차트 — 카드 1/2 사이즈. */
-function ProjectDauChart({ series }: { series: ProjectDauSeries[] }) {
+/** 과제별 사용자(DAU) 30일 추이 라인 차트 — 카드 1/2 사이즈. */
+function TaskDauChart({ series }: { series: TaskDauSeries[] }) {
   const N = series[0]?.daily.length ?? 30;
   const W = 540;
   const H = 200;
@@ -985,7 +1171,7 @@ function ProjectDauChart({ series }: { series: ProjectDauSeries[] }) {
           );
         })}
         {series.map((s) => (
-          <g key={s.projectId}>
+          <g key={s.taskId}>
             <path d={pathOf(s.daily)} fill="none" stroke={s.color} strokeWidth={1.5} />
             <circle cx={xs(s.daily.length - 1)} cy={ys(s.daily[s.daily.length - 1])} r={2.5} fill={s.color} />
           </g>
@@ -999,7 +1185,7 @@ function ProjectDauChart({ series }: { series: ProjectDauSeries[] }) {
       {/* 범례 — 최신 DAU 내림차순 */}
       <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10.5px]">
         {series.map((s) => (
-          <li key={s.projectId} className="flex items-center gap-1.5 min-w-0">
+          <li key={s.taskId} className="flex items-center gap-1.5 min-w-0">
             <span
               className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
               style={{ backgroundColor: s.color }}
@@ -1031,73 +1217,74 @@ function GrafanaLink({ panel }: { panel: string }) {
 }
 
 /* =====================================================================
- * 3) PTU·자원 탭
+ * 3) 모델 서빙 GPU 탭
  * ===================================================================== */
 
-const PTU_COLORS = [
+const GPU_COLORS = [
   { stroke: '#1F5BB8', dot: 'bg-info' },
   { stroke: '#CB2C10', dot: 'bg-brand-dark' },
   { stroke: '#1B8A4D', dot: 'bg-ok' },
 ];
 
-function ResourceTab({ rows }: { rows: ProjectUsageRow[] }) {
-  const ptuUsage = useMemo(() => getModelPtuUsage(), []);
-  const ptuCost = useMemo(() => getModelPtuCost(), []);
+function ResourceTab({ rows }: { rows: TaskUsageRow[] }) {
+  const gpuUsage = useMemo(() => getModelGpuAllocation(), []);
+  const gpuCost = useMemo(() => getModelGpuCost(), []);
   const dayLabels = useMemo(() => getDailyLabels(), []);
-  const totalPtuCost = useMemo(() => getTotalPtuCost(), []);
+  const totalGpuCost = useMemo(() => getTotalGpuCost(), []);
 
   return (
     <section className="space-y-3.5">
-      {/* PTU 사용률 추이 + 할당 현황 */}
+      {/* GPU 점유율 추이 + 할당 현황 */}
       <div className="grid grid-cols-[1.7fr_1fr] gap-3.5">
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
             <div>
-              <h3 className="text-[14px] font-extrabold text-ink">PTU 사용률 추이 · 모델별</h3>
+              <h3 className="text-[14px] font-extrabold text-ink">GPU 점유율 추이 · 모델별</h3>
               <div className="text-[10.5px] text-ink-mid mt-0.5">
-                Provisioned Throughput Unit · 할당 한도 대비 실 사용률(%) · 최근 30일
+                배정 GPU 장 수 대비 실 점유율(%) · 최근 30일
               </div>
             </div>
             <div className="flex items-center gap-3 text-[11.5px]">
-              {ptuUsage.map((m, i) => (
+              {gpuUsage.map((m, i) => (
                 <span key={m.model} className="inline-flex items-center gap-1">
-                  <span className={cn('inline-block w-2 h-2 rounded-sm', PTU_COLORS[i % 3].dot)} />
+                  <span className={cn('inline-block w-2 h-2 rounded-sm', GPU_COLORS[i % 3].dot)} />
                   <span className="font-mono text-[10.5px] text-ink-dark">{m.model}</span>
                 </span>
               ))}
             </div>
           </div>
-          <ModelPtuChart series={ptuUsage} days={dayLabels} />
+          <ModelGpuChart series={gpuUsage} days={dayLabels} />
         </div>
-        <ModelPtuCard models={ptuUsage} />
+        <ModelGpuCard models={gpuUsage} />
       </div>
 
-      {/* 월 PTU 비용 + PTU 효율 */}
+      {/* 월 GPU 비용 + 점유 효율 */}
       <div className="grid grid-cols-[1.4fr_1fr] gap-3.5">
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3">
             <div>
-              <h3 className="text-[14px] font-extrabold text-ink">월 PTU 비용 · 모델별</h3>
+              <h3 className="text-[14px] font-extrabold text-ink">월 GPU 비용 · 모델별</h3>
               <div className="text-[10.5px] text-ink-mid mt-0.5">
-                약정 PTU × 모델별 월 단가 · 사실상 고정비
+                배정 GPU-hour × 등급별 시간 단가 · On-Prem 고정비
               </div>
             </div>
             <span className="text-[15px] font-extrabold text-ink tabular-nums">
-              ₩{fmtKRW(totalPtuCost)}
+              ₩{fmtKRW(totalGpuCost)}
             </span>
           </div>
           <table className="w-full text-[12px]">
             <thead>
               <tr className="text-[10.5px] uppercase tracking-[0.3px] text-ink-mid border-b border-line">
                 <th className="text-left font-bold py-2">모델</th>
-                <th className="text-right font-bold py-2 w-[80px]">PTU</th>
-                <th className="text-right font-bold py-2 w-[130px]">PTU 단가</th>
+                <th className="text-right font-bold py-2 w-[70px]">GPU</th>
+                <th className="text-right font-bold py-2 w-[110px]">GPU-hour</th>
+                <th className="text-right font-bold py-2 w-[120px]">시간 단가</th>
                 <th className="text-right font-bold py-2 w-[140px]">월 비용</th>
                 <th className="text-right font-bold py-2 w-[90px]">효율</th>
               </tr>
             </thead>
             <tbody>
-              {ptuCost.map((m, i) => {
+              {gpuCost.map((m, i) => {
                 const tone =
                   m.avgUtilizationPct < 40
                     ? 'text-bad'
@@ -1114,11 +1301,12 @@ function ResourceTab({ rows }: { rows: ProjectUsageRow[] }) {
                   <tr key={m.model} className="border-b border-line-soft last:border-0">
                     <td className="py-2 font-mono text-[11.5px] text-ink-dark">
                       <span
-                        className={cn('inline-block w-2.5 h-2.5 rounded-sm mr-1.5', PTU_COLORS[i % 3].dot)}
+                        className={cn('inline-block w-2.5 h-2.5 rounded-sm mr-1.5', GPU_COLORS[i % 3].dot)}
                       />
                       {m.model}
                     </td>
-                    <td className="py-2 text-right tabular-nums font-extrabold text-ink">{m.ptus}</td>
+                    <td className="py-2 text-right tabular-nums font-extrabold text-ink">{m.gpus}장</td>
+                    <td className="py-2 text-right tabular-nums text-ink-mid">{m.gpuHours.toLocaleString()}h</td>
                     <td className="py-2 text-right tabular-nums text-ink-mid">
                       ₩{fmtKRW(m.unitPrice)}
                     </td>
@@ -1138,10 +1326,10 @@ function ResourceTab({ rows }: { rows: ProjectUsageRow[] }) {
 
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3 gap-2">
-            <h3 className="text-[14px] font-extrabold text-ink">모델별 PTU 점유 — 프로젝트</h3>
-            <span className="text-[10.5px] text-ink-mid">어느 프로젝트가 어느 모델 PTU를 쓰는지</span>
+            <h3 className="text-[14px] font-extrabold text-ink">모델별 GPU 점유 — 과제</h3>
+            <span className="text-[10.5px] text-ink-mid">어느 과제가 어느 모델 GPU 풀을 쓰는지</span>
           </div>
-          <PtuByModelList rows={rows} ptuUsage={ptuUsage} />
+          <GpuByModelList rows={rows} gpuUsage={gpuUsage} />
         </div>
       </div>
 
@@ -1149,16 +1337,16 @@ function ResourceTab({ rows }: { rows: ProjectUsageRow[] }) {
   );
 }
 
-/** 모델별로 그룹핑된 PTU 점유 — 프로젝트가 어느 모델 PTU를 쓰는지 보임. */
-function PtuByModelList({
+/** 모델별로 그룹핑된 GPU 점유 — 과제가 어느 모델 GPU 풀을 쓰는지 보임. */
+function GpuByModelList({
   rows,
-  ptuUsage,
+  gpuUsage,
 }: {
-  rows: ProjectUsageRow[];
-  ptuUsage: ModelPtuUsage[];
+  rows: TaskUsageRow[];
+  gpuUsage: ModelGpuAllocation[];
 }) {
   const palette = ['#CB2C10', '#1F5BB8', '#1B8A4D', '#6E3BBD', '#C9760F', '#6B4F2A'];
-  const groups = ptuUsage.map((m, mi) => {
+  const groups = gpuUsage.map((m, mi) => {
     const projects = rows
       .filter((r) => r.primaryModel === m.model && r.monthTokenInput + r.monthTokenOutput > 0)
       .map((r, i) => ({
@@ -1172,7 +1360,7 @@ function PtuByModelList({
     return {
       model: m.model,
       modelIdx: mi,
-      allocatedPtus: m.allocatedPtus,
+      allocatedGpus: m.allocatedGpus,
       avgUtil: m.avgUtilizationPct,
       projects: projects.map((p) => ({
         ...p,
@@ -1186,11 +1374,11 @@ function PtuByModelList({
         <li key={g.model}>
           <div className="flex items-baseline justify-between gap-2 mb-1.5">
             <div className="flex items-baseline gap-1.5">
-              <span className={cn('inline-block w-2 h-2 rounded-sm', PTU_COLORS[g.modelIdx % 3].dot)} />
+              <span className={cn('inline-block w-2 h-2 rounded-sm', GPU_COLORS[g.modelIdx % 3].dot)} />
               <span className="font-mono text-[11.5px] text-ink-dark font-extrabold">{g.model}</span>
             </div>
             <span className="text-[10.5px] text-ink-mid font-semibold tabular-nums">
-              {g.allocatedPtus} PTU · 평균 효율 {g.avgUtil.toFixed(0)}%
+              GPU {g.allocatedGpus}장 · 평균 점유 {g.avgUtil.toFixed(0)}%
             </span>
           </div>
           {/* 그룹 내 stack bar */}
@@ -1222,7 +1410,7 @@ function PtuByModelList({
               </ul>
             </>
           ) : (
-            <div className="text-[10.5px] text-ink-light italic">점유 프로젝트 없음</div>
+            <div className="text-[10.5px] text-ink-light italic">점유 과제 없음</div>
           )}
         </li>
       ))}
@@ -1230,7 +1418,7 @@ function PtuByModelList({
   );
 }
 
-function ModelPtuChart({ series, days }: { series: ModelPtuUsage[]; days: string[] }) {
+function ModelGpuChart({ series, days }: { series: ModelGpuAllocation[]; days: string[] }) {
   const W = 660;
   const H = 200;
   const padL = 32;
@@ -1266,12 +1454,12 @@ function ModelPtuChart({ series, days }: { series: ModelPtuUsage[]; days: string
         <line x1={padL} x2={W - padR} y1={ys(75)} y2={ys(75)} stroke="#F4D89F" strokeWidth={1} strokeDasharray="4 3" />
         {series.map((m, mi) => (
           <g key={m.model}>
-            <path d={pathOf(m.dailyUtilizationPct)} fill="none" stroke={PTU_COLORS[mi % 3].stroke} strokeWidth={1.7} />
+            <path d={pathOf(m.dailyUtilizationPct)} fill="none" stroke={GPU_COLORS[mi % 3].stroke} strokeWidth={1.7} />
             <circle
               cx={xs(m.dailyUtilizationPct.length - 1)}
               cy={ys(m.dailyUtilizationPct[m.dailyUtilizationPct.length - 1])}
               r={2.6}
-              fill={PTU_COLORS[mi % 3].stroke}
+              fill={GPU_COLORS[mi % 3].stroke}
             />
           </g>
         ))}
@@ -1284,7 +1472,7 @@ function ModelPtuChart({ series, days }: { series: ModelPtuUsage[]; days: string
       <div className="flex items-center gap-3 mt-1 text-[10px] text-ink-light font-semibold">
         <span>
           <span className="inline-block w-3 border-t border-dashed border-bad-border mr-1 align-middle" />
-          100% 할당 한도
+          100% 배정 한도
         </span>
         <span>
           <span className="inline-block w-3 border-t border-dashed border-warn-border mr-1 align-middle" />
@@ -1295,17 +1483,17 @@ function ModelPtuChart({ series, days }: { series: ModelPtuUsage[]; days: string
   );
 }
 
-function ModelPtuCard({ models }: { models: ModelPtuUsage[] }) {
-  const totalPtus = models.reduce((a, m) => a + m.allocatedPtus, 0);
+function ModelGpuCard({ models }: { models: ModelGpuAllocation[] }) {
+  const totalGpus = models.reduce((a, m) => a + m.allocatedGpus, 0);
   return (
     <div className="card px-5 py-4">
       <div className="flex items-baseline justify-between mb-3 gap-2">
         <div>
-          <h3 className="text-[14px] font-extrabold text-ink">PTU 할당 현황</h3>
-          <div className="text-[10.5px] text-ink-mid mt-0.5">모델별 예약 용량 · 평균 / 피크 사용률</div>
+          <h3 className="text-[14px] font-extrabold text-ink">GPU 할당 현황</h3>
+          <div className="text-[10.5px] text-ink-mid mt-0.5">모델별 배정 장 수 · 평균 / 피크 점유율</div>
         </div>
         <span className="text-[11px] text-ink-mid">
-          총 <b className="text-ink-dark tabular-nums">{totalPtus}</b> PTU
+          총 <b className="text-ink-dark tabular-nums">{totalGpus}</b> 장
         </span>
       </div>
       <ul className="space-y-2.5">
@@ -1314,9 +1502,9 @@ function ModelPtuCard({ models }: { models: ModelPtuUsage[] }) {
           return (
             <li key={m.model}>
               <div className="flex items-center gap-2 mb-1">
-                <span className={cn('inline-block w-2.5 h-2.5 rounded-sm', PTU_COLORS[i % 3].dot)} />
+                <span className={cn('inline-block w-2.5 h-2.5 rounded-sm', GPU_COLORS[i % 3].dot)} />
                 <span className="font-mono text-[11px] text-ink-dark flex-1 truncate">{m.model}</span>
-                <span className="text-[10.5px] text-ink-mid font-semibold tabular-nums">{m.allocatedPtus} PTU</span>
+                <span className="text-[10.5px] text-ink-mid font-semibold tabular-nums">{m.allocatedGpus}장 · {m.gpuHoursMonth.toLocaleString()}h</span>
               </div>
               <div className="flex items-baseline gap-2 pl-[18px]">
                 <span className={cn('text-[16px] font-extrabold tabular-nums', tone)}>
@@ -1359,12 +1547,12 @@ function InfraTab() {
       <div className="card p-4">
         <div className="flex items-baseline gap-2 mb-2.5">
           <h2 className="text-[14px] font-extrabold text-ink">자원 정책</h2>
-          <span className="text-[10.5px] text-ink-mid font-semibold">계열사·프로젝트별 GPU/CPU 상한을 관리한다</span>
+          <span className="text-[10.5px] text-ink-mid font-semibold">계열사·과제별 GPU/CPU 상한을 관리한다</span>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {[
             { label: '계열사 GPU 상한', v: '기본 8장 / 계열사', edit: true },
-            { label: '프로젝트 GPU 상한', v: '기본 4장 / 프로젝트', edit: true },
+            { label: '과제 GPU 상한', v: '기본 4장 / 과제', edit: true },
             { label: '유휴 자원 회수', v: '72시간 미사용 시 자동 회수', edit: true },
             { label: '긴급 증설 승인', v: '플랫폼 관리자 단독 승인', edit: false },
           ].map((p) => (
@@ -1390,22 +1578,22 @@ function InfraTab() {
           subtitle="게이트웨이 · 관제 · 플랫폼 · 시스템 네임스페이스"
           deployments={DEPLOYMENTS.filter((d) =>
             namespaces.some(
-              (n) => n.name === d.namespace && n.category !== 'project',
+              (n) => n.name === d.namespace && n.category !== 'affiliate' && n.category !== 'group',
             ),
           )}
           namespaces={namespaces}
           panel="system-deployments"
         />
         <DeploymentTable
-          title="프로젝트별 자원 상태 — Deployments"
-          subtitle="서빙계 · 학습계 워크로드 (네임스페이스별 그룹)"
+          title="계열사 Namespace 워크로드 — Deployments"
+          subtitle="11개 테넌트 Namespace 안의 서빙계 · 학습계 워크로드"
           deployments={DEPLOYMENTS.filter((d) =>
             namespaces.some(
-              (n) => n.name === d.namespace && n.category === 'project',
+              (n) => n.name === d.namespace && (n.category === 'affiliate' || n.category === 'group'),
             ),
           )}
           namespaces={namespaces}
-          panel="project-deployments"
+          panel="tenant-deployments"
         />
       </div>
 
@@ -1413,9 +1601,12 @@ function InfraTab() {
       <div className="card">
         <div className="px-5 py-3.5 flex items-baseline justify-between border-b border-line-soft">
           <div>
-            <h2 className="text-[15px] font-extrabold text-ink">네임스페이스</h2>
+            <h2 className="text-[15px] font-extrabold text-ink">Namespace</h2>
             <div className="text-[10.5px] text-ink-mid mt-0.5">
-              플랫폼 전사 K8s 네임스페이스 단위 자원 사용 현황
+              계열사 {TENANT_NAMESPACE_LIST.filter((n) => n.category === 'affiliate').length} +
+              그룹 공통 1 = <b className="text-ink-dark">
+              {TENANT_NAMESPACE_LIST.length}개 테넌트 Namespace</b> 로 격리(SEC-001) ·
+              그 위에 플랫폼 공통 {NAMESPACES.length - TENANT_NAMESPACE_LIST.length}개가 깔린다
             </div>
           </div>
           <GrafanaLink panel="k8s-namespaces" />
@@ -1702,6 +1893,14 @@ function NamespaceRow({ ns }: { ns: NamespaceUsage }) {
             style={{ background: CATEGORY_COLOR[ns.category] }}
           />
           <span className="font-mono text-[11.5px] text-ink-dark font-extrabold">{ns.name}</span>
+          <span className="pill bg-surface-soft text-ink-mid border border-line-soft text-[9px]">
+            {CATEGORY_LABEL[ns.category]}
+          </span>
+          {ns.gpuCards > 0 && (
+            <span className="pill bg-brand-tint text-brand border border-brand-tint text-[9px]">
+              GPU {ns.gpuCards}장 · 과제 {ns.taskCount}
+            </span>
+          )}
         </div>
         <div className="text-[10px] text-ink-mid font-semibold mt-0.5 truncate" title={ns.description}>
           {ns.description}
@@ -1757,8 +1956,8 @@ function NamespaceRow({ ns }: { ns: NamespaceUsage }) {
  * 4) 안전·거버넌스 탭
  * ===================================================================== */
 
-function GovernanceTab({ rows }: { rows: ProjectUsageRow[] }) {
-  const safetySeries = useMemo(() => getProjectSafetySeries(rows), [rows]);
+function GovernanceTab({ rows }: { rows: TaskUsageRow[] }) {
+  const safetySeries = useMemo(() => getTaskSafetySeries(rows), [rows]);
   const dayLabels = useMemo(() => getDailyLabels(), []);
   const [trendMode, setTrendMode] = useState<'total' | 'pii' | 'guardrail'>('total');
 
@@ -1775,12 +1974,12 @@ function GovernanceTab({ rows }: { rows: ProjectUsageRow[] }) {
 
   return (
     <section className="space-y-3.5">
-      {/* 안전 이벤트 추이(프로젝트별 라인) + Top */}
+      {/* 안전 이벤트 추이(과제별 라인) + Top */}
       <div className="grid grid-cols-[1.7fr_1fr] gap-3.5">
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
             <div>
-              <h3 className="text-[14px] font-extrabold text-ink">안전 이벤트 30일 추이 · 프로젝트별</h3>
+              <h3 className="text-[14px] font-extrabold text-ink">안전 이벤트 30일 추이 · 과제별</h3>
               <div className="text-[10.5px] text-ink-mid mt-0.5">
                 PII 마스킹 + 가드레일 차단 — 차단 건수 일별
               </div>
@@ -1806,7 +2005,7 @@ function GovernanceTab({ rows }: { rows: ProjectUsageRow[] }) {
               <GrafanaLink panel="safety-trend" />
             </div>
           </div>
-          <ProjectSafetyChart series={safetySeries} days={dayLabels} mode={trendMode} />
+          <TaskSafetyChart series={safetySeries} days={dayLabels} mode={trendMode} />
         </div>
 
         <div className="card px-5 py-4">
@@ -1823,7 +2022,7 @@ function GovernanceTab({ rows }: { rows: ProjectUsageRow[] }) {
               return (
                 <li key={r.id}>
                   <Link
-                    to={`/projects/${r.id}`}
+                    to="/admin/tasks"
                     className="grid grid-cols-[1fr_auto] gap-2 items-center py-1.5 px-2 rounded hover:bg-surface-soft"
                   >
                     <div className="min-w-0">
@@ -1873,13 +2072,13 @@ function GovernanceTab({ rows }: { rows: ProjectUsageRow[] }) {
   );
 }
 
-/** 프로젝트별 안전 이벤트 30일 추이 라인 차트. */
-function ProjectSafetyChart({
+/** 과제별 안전 이벤트 30일 추이 라인 차트. */
+function TaskSafetyChart({
   series,
   days,
   mode,
 }: {
-  series: ProjectSafetySeries[];
+  series: TaskSafetySeries[];
   days: string[];
   mode: 'total' | 'pii' | 'guardrail';
 }) {
@@ -1892,7 +2091,7 @@ function ProjectSafetyChart({
   const padB = 22;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
-  const pick = (s: ProjectSafetySeries) =>
+  const pick = (s: TaskSafetySeries) =>
     mode === 'pii' ? s.piiDaily : mode === 'guardrail' ? s.guardrailDaily : s.totalDaily;
   const max = Math.max(...series.flatMap((s) => pick(s)), 1) * 1.08;
   const xs = (i: number) => padL + (i / (N - 1)) * innerW;
@@ -1918,7 +2117,7 @@ function ProjectSafetyChart({
         {series.map((s) => {
           const arr = pick(s);
           return (
-            <g key={s.projectId}>
+            <g key={s.taskId}>
               <path d={pathOf(arr)} fill="none" stroke={s.color} strokeWidth={1.6} />
               <circle cx={xs(arr.length - 1)} cy={ys(arr[arr.length - 1])} r={2.6} fill={s.color} />
             </g>
@@ -1934,7 +2133,7 @@ function ProjectSafetyChart({
         {series.map((s) => {
           const arr = pick(s);
           return (
-            <li key={s.projectId} className="flex items-center gap-1.5 min-w-0">
+            <li key={s.taskId} className="flex items-center gap-1.5 min-w-0">
               <span
                 className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
                 style={{ backgroundColor: s.color }}
@@ -1963,7 +2162,7 @@ function AgentPiiMatrix() {
         <thead>
           <tr className="text-[10.5px] uppercase tracking-[0.3px] text-ink-mid border-b border-line bg-surface-soft/40">
             <th className="text-left font-bold py-2.5 px-3 w-[230px]">에이전트</th>
-            <th className="text-left font-bold py-2.5 px-2 w-[180px]">소속 프로젝트</th>
+            <th className="text-left font-bold py-2.5 px-2 w-[180px]">소속 과제</th>
             {PII_CATEGORIES.map((cat) => (
               <th key={cat.code} className="text-center font-bold py-2.5 px-1">
                 {cat.label}
@@ -1980,8 +2179,8 @@ function AgentPiiMatrix() {
                 <div className="text-[12px] font-extrabold text-ink truncate">{p.agentName}</div>
               </td>
               <td className="py-2.5 px-2">
-                <Link to={`/projects/${p.projectId}`} className="text-[11px] text-ink-dark hover:text-info">
-                  {p.projectName}
+                <Link to="/admin/tasks" className="text-[11px] text-ink-dark hover:text-info">
+                  {p.taskName}
                 </Link>
               </td>
               {PII_CATEGORIES.map((cat) => (
@@ -3024,10 +3223,10 @@ function BigLineChart({
  * 7) 비용 탭 — 어디에 얼마, 효율은 어떤지, 무엇이 바뀌었는지
  * ===================================================================== */
 
-function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
+function CostTab({ rows }: { rows: TaskUsageRow[] }) {
   const kpis = useMemo(() => getAdminKpis(rows), [rows]);
-  const ptuCost = useMemo(() => getTotalPtuCost(), []);
-  const ptuByModel = useMemo(() => getModelPtuCost(), []);
+  const gpuCost = useMemo(() => getTotalGpuCost(), []);
+  const gpuByModel = useMemo(() => getModelGpuCost(), []);
   const categories = useMemo(() => getCostBreakdownByCategory(), []);
   const totalInfraCost = useMemo(
     () => categories.reduce((a, c) => a + c.monthCost, 0),
@@ -3038,15 +3237,15 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
   const conglomerateCost = useMemo(() => getCostByConglomerate(), []);
   const agentCost = useMemo(() => getCostByAgent(), []);
   const avgUtil = useMemo(
-    () => ptuByModel.reduce((a, m) => a + m.avgUtilizationPct, 0) / Math.max(1, ptuByModel.length),
-    [ptuByModel],
+    () => gpuByModel.reduce((a, m) => a + m.avgUtilizationPct, 0) / Math.max(1, gpuByModel.length),
+    [gpuByModel],
   );
   const wastedModels = useMemo(
-    () => ptuByModel.filter((m) => m.avgUtilizationPct < 40),
-    [ptuByModel],
+    () => gpuByModel.filter((m) => m.avgUtilizationPct < 40),
+    [gpuByModel],
   );
 
-  // 호출당/토큰당 비용 효율 — 운영 중 프로젝트 기준
+  // 호출당/토큰당 비용 효율 — 운영 중 과제 기준
   const efficiency = useMemo(() => {
     return rows
       .filter((r) => r.status === '운영 중' && r.monthCalls > 0 && r.monthCost > 0)
@@ -3085,7 +3284,7 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
         <KpiCard
           label="이번 달 비용"
           value={`₩${fmtKRW(kpis.totalCost)}`}
-          sub="모델 PTU + 인프라 합산"
+          sub="모델 서빙 GPU + 인프라 합산"
           tone={kpis.budgetUsedPct >= 90 ? 'bad' : 'ok'}
         />
         <KpiCard
@@ -3108,15 +3307,15 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
           tone="ok"
         />
         <KpiCard
-          label="평균 PTU 효율"
+          label="평균 GPU 점유율"
           value={`${avgUtil.toFixed(0)}`}
           unit="%"
-          sub={`낭비 ${wastedModels.length}건 · 검토 ${ptuByModel.filter((m) => m.avgUtilizationPct >= 40 && m.avgUtilizationPct < 70).length}건`}
+          sub={`낭비 ${wastedModels.length}건 · 검토 ${gpuByModel.filter((m) => m.avgUtilizationPct >= 40 && m.avgUtilizationPct < 70).length}건`}
           tone={avgUtil < 60 ? 'warn' : 'ok'}
         />
         <KpiCard
-          label="PTU 비중"
-          value={`${((ptuCost / Math.max(1, totalInfraCost)) * 100).toFixed(0)}`}
+          label="서빙 GPU 비중"
+          value={`${((gpuCost / Math.max(1, totalInfraCost)) * 100).toFixed(0)}`}
           unit="%"
           sub={`인프라 합계 대비`}
           tone="ok"
@@ -3129,13 +3328,13 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
           <div>
             <h3 className="text-[14px] font-extrabold text-ink">30일 일별 비용 추이</h3>
             <div className="text-[10.5px] text-ink-mid mt-0.5">
-              PTU 고정비 + 사용량 비례 변동비 분리 표시
+              GPU 고정비 + 사용량 비례 변동비 분리 표시
             </div>
           </div>
           <div className="flex items-center gap-3 text-[11px]">
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-2.5 h-2.5 rounded-sm bg-brand-dark" />
-              <span className="text-ink-dark font-bold">PTU 고정비</span>
+              <span className="text-ink-dark font-bold">GPU 고정비</span>
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-2.5 h-2.5 rounded-sm bg-info" />
@@ -3153,21 +3352,21 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
       {/* 에이전트별 비용 */}
       <AgentCostCard rows={agentCost} />
 
-      {/* 프로젝트별 예산 vs 실사용 */}
+      {/* 과제별 예산 vs 실사용 */}
       <div className="card">
         <div className="px-5 py-3 border-b border-line-soft flex items-baseline justify-between">
           <div>
-            <h2 className="text-[14px] font-extrabold text-ink">프로젝트별 예산 vs 실사용</h2>
+            <h2 className="text-[14px] font-extrabold text-ink">과제별 예산 vs 실사용</h2>
             <div className="text-[10.5px] text-ink-mid mt-0.5">
               실사용 비율 내림차순 · 90% 초과는 적색
             </div>
           </div>
-          <GrafanaLink panel="project-cost-vs-budget" />
+          <GrafanaLink panel="task-cost-vs-budget" />
         </div>
         <table className="w-full text-[12px]">
           <thead>
             <tr className="text-[10.5px] uppercase tracking-[0.3px] text-ink-mid border-b border-line bg-surface-soft/40">
-              <th className="text-left font-bold py-2.5 px-4">프로젝트 · PM</th>
+              <th className="text-left font-bold py-2.5 px-4">과제 · 담당</th>
               <th className="text-right font-bold py-2.5 px-2 w-[120px]">월 비용</th>
               <th className="text-right font-bold py-2.5 px-2 w-[120px]">월 예산</th>
               <th className="text-left font-bold py-2.5 px-4 w-[260px]">사용률</th>
@@ -3184,7 +3383,7 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
               return (
                 <tr key={r.id} className="border-b border-line-soft last:border-0 hover:bg-surface-soft/40">
                   <td className="py-2.5 px-4">
-                    <Link to={`/projects/${r.id}`} className="block hover:text-info">
+                    <Link to="/admin/tasks" className="block hover:text-info">
                       <div className="flex items-center gap-1.5">
                         <span
                           className={cn(
@@ -3241,7 +3440,7 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
         </table>
       </div>
 
-      {/* 효율 Top/Bottom + PTU 변경 이력 */}
+      {/* 효율 Top/Bottom + GPU 할당 변경 이력 */}
       <div className="grid grid-cols-[1fr_1fr_1.1fr] gap-3.5">
         <EfficiencyCard
           title="호출당 비용 — 효율 Top"
@@ -3258,7 +3457,7 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
         <div className="card px-5 py-4">
           <div className="flex items-baseline justify-between mb-3">
             <div>
-              <h3 className="text-[14px] font-extrabold text-ink">PTU 변경 이력</h3>
+              <h3 className="text-[14px] font-extrabold text-ink">GPU 할당 변경 이력</h3>
               <div className="text-[10.5px] text-ink-mid mt-0.5">증설·감설 · 비용 영향</div>
             </div>
             <Link to="/approvals" className="text-[10.5px] font-extrabold text-info hover:underline">
@@ -3266,8 +3465,8 @@ function CostTab({ rows }: { rows: ProjectUsageRow[] }) {
             </Link>
           </div>
           <ul className="space-y-2">
-            {PTU_CHANGE_EVENTS.map((e) => (
-              <PtuChangeRow key={e.id} ev={e} />
+            {GPU_CHANGE_EVENTS.map((e) => (
+              <GpuChangeRow key={e.id} ev={e} />
             ))}
           </ul>
         </div>
@@ -3457,7 +3656,7 @@ function AgentCostCard({ rows }: { rows: AgentCostRow[] }) {
       <table className="w-full text-[12px]">
         <thead>
           <tr className="text-[10.5px] uppercase tracking-[0.3px] text-ink-mid border-b border-line bg-surface-soft/40">
-            <th className="text-left font-bold py-2.5 px-4">에이전트 · 프로젝트</th>
+            <th className="text-left font-bold py-2.5 px-4">에이전트 · 과제</th>
             <th className="text-left font-bold py-2.5 px-2 w-[110px]">계열사</th>
             <th className="text-left font-bold py-2.5 px-2 w-[200px]">주력 모델</th>
             <th className="text-right font-bold py-2.5 px-2 w-[110px]">월 호출</th>
@@ -3487,7 +3686,7 @@ function AgentCostCard({ rows }: { rows: AgentCostRow[] }) {
                     <span className="text-[10px] text-ink-mid font-mono">{r.id}</span>
                   </div>
                   <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5 truncate">
-                    {r.projectName}
+                    {r.taskName}
                   </div>
                 </td>
                 <td className="py-2.5 px-2">
@@ -3553,7 +3752,7 @@ function EfficiencyCard({
           rows.map((r) => (
             <li key={r.id}>
               <Link
-                to={`/projects/${r.id}`}
+                to="/admin/tasks"
                 className="grid grid-cols-[1fr_auto] gap-2 items-center py-1.5 px-2 rounded hover:bg-surface-soft text-[11.5px]"
               >
                 <div className="min-w-0">
@@ -3579,7 +3778,7 @@ function EfficiencyCard({
   );
 }
 
-function PtuChangeRow({ ev }: { ev: PtuChangeEvent }) {
+function GpuChangeRow({ ev }: { ev: GpuChangeEvent }) {
   const up = ev.to > ev.from;
   return (
     <li className="grid grid-cols-[64px_1fr_auto] gap-2 items-center py-1.5 px-2 rounded hover:bg-surface-soft text-[11.5px]">
@@ -3598,7 +3797,7 @@ function PtuChangeRow({ ev }: { ev: PtuChangeEvent }) {
           {ev.model}
         </div>
         <div className="text-[10.5px] text-ink-mid font-semibold tabular-nums">
-          {ev.from} → {ev.to} PTU · {ev.at} · {ev.approver}
+          GPU {ev.from}장 → {ev.to}장 · {ev.at} · {ev.approver}
         </div>
       </div>
       <span

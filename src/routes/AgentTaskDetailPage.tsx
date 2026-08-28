@@ -54,7 +54,7 @@ import {
   type TraceSpan,
 } from '@/data/mockAgentTrace';
 
-type TabId = 'develop' | 'deploy' | 'ops' | 'eval' | 'trace';
+type TabId = 'develop' | 'deploy' | 'ops' | 'eval' | 'governance' | 'trace';
 
 const STATE_TONE: Record<string, string> = {
   '운영 중': 'bg-ok-bg text-ok border-ok-border',
@@ -142,6 +142,10 @@ export default function AgentTaskDetailPage() {
         <TabBtn active={tab === 'eval'} onClick={() => setTab('eval')}>
           평가
         </TabBtn>
+        {/* SEC-002(가드레일·PII 마스킹) · SEC-008(프롬프트·파일 비식별화) 근거 화면 */}
+        <TabBtn active={tab === 'governance'} onClick={() => setTab('governance')}>
+          거버넌스 · PII
+        </TabBtn>
         <TabBtn active={tab === 'trace'} onClick={() => setTab('trace')}>
           실행 Trace
         </TabBtn>
@@ -218,6 +222,12 @@ export default function AgentTaskDetailPage() {
           )}
         </section>
       )}
+
+      {/*
+        거버넌스 · PII — SEC-002(가드레일 · 민감정보 마스킹) · SEC-008(프롬프트 ·
+        첨부파일 비식별화). 정책 요약 + PII 필터링 대시보드 + 마스킹 항목 관리(결재 연동).
+      */}
+      {tab === 'governance' && <GovernanceTab task={task} />}
 
       <div className="mt-3.5">
         <Link to={`/projects/${pid}`}>
