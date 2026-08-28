@@ -115,7 +115,8 @@ export default function SearchPipelineTaskPage() {
     [selectedIdx],
   );
   // Public LLM(외부) rerank 선택 여부. 공동존 On-Prem 모델은 해당 없음.
-  // RFP ONM-007 권고 — 향후 망분리 완화 시를 가정한 통제 흐름을 보인다.
+  // 사업 전제는 공동존 On-Prem 전용 — 향후 망분리 완화 시를 가정한 통제 흐름을 보인다.
+  // (ONM-007 은 MSA·HA 설계 요건이라 여기와 무관하다. 근거 화면은 /admin/platform)
   const usesPublicLLM = rerankModel.startsWith('public/');
 
   // 필수 충족 판정

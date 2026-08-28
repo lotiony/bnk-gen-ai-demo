@@ -960,7 +960,33 @@ function DeployTab({ agentId }: { agentId: string }) {
                 </td>
                 <td className="py-2 px-2.5 border-b border-line-soft text-right">
                   {h.status === 'active' ? (
-                    <button className="text-[11px] font-bold text-bad hover:underline">↶ 롤백</button>
+                    <button
+                      onClick={() => {
+                        // 되돌릴 대상 = 이 활성 배포 바로 앞의 교체된 기록.
+                        // 없으면 되돌릴 곳이 없으므로 버튼을 비활성으로 둔다.
+                        const prev = history.find(
+                          (x) => x.status === 'replaced' && x.tagName !== h.tagName,
+                        );
+                        if (!prev) return;
+                        const msg =
+                          `학습계 배포를 롤백합니다.\n\n` +
+                          `현재: ${h.tagName} (${h.deployedAt})\n` +
+                          `→ 복귀: ${prev.tagName} (${prev.deployedAt} · ${prev.deployedBy})\n\n` +
+                          `학습계 트래픽이 ${prev.tagName}로 되돌아가며 감사 원장에 기록됩니다. 계속하시겠습니까?`;
+                        if (window.confirm(msg)) {
+                          toast(`${prev.tagName}로 롤백 진행 (목업)`);
+                        }
+                      }}
+                      disabled={!history.some((x) => x.status === 'replaced' && x.tagName !== h.tagName)}
+                      title={
+                        history.some((x) => x.status === 'replaced' && x.tagName !== h.tagName)
+                          ? '직전 버전으로 되돌립니다'
+                          : '되돌릴 이전 배포가 없습니다'
+                      }
+                      className="text-[11px] font-bold text-bad hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+                    >
+                      ↶ 롤백
+                    </button>
                   ) : (
                     <span className="text-ink-light text-[11px]">—</span>
                   )}

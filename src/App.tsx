@@ -55,6 +55,7 @@ import AdminContentPage from './routes/AdminContentPage';
 import AdminFeaturedAgentsPage from './routes/AdminFeaturedAgentsPage';
 import AdminGatewayPage from './routes/AdminGatewayPage';
 import AdminVectorStorePage from './routes/AdminVectorStorePage';
+import AdminPlatformPage from './routes/AdminPlatformPage';
 
 function PersonaGate({ children }: { children: React.ReactNode }) {
   const persona = useCurrentPersona();
@@ -258,6 +259,7 @@ export default function App() {
           <Route path="gateway" element={<AdminGatewayPage />} />
           {/* RAG-005 Vector DB 연동·독립성 */}
           <Route path="vector-store" element={<AdminVectorStorePage />} />
+          <Route path="platform" element={<AdminPlatformPage />} />
         </Route>
         {/* AI 거버넌스 포탈 — RFP 2-3 "AI플랫폼 포탈 내 별도 기능" · 독립 셸 */}
         <Route path="/governance" element={<GovernanceLayout />}>

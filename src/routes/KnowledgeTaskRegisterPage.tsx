@@ -21,10 +21,13 @@ type TaskType = (typeof TASK_TYPES)[number]['id'];
  * 인프라 선택지.
  *
  * 본 사업은 공동존 상면 On-Premise 전용이므로 실제 선택지는 하나다.
- * Public LLM 은 RFP 권고 항목(ONM-007 — 향후 망분리 규제 완화 대비
- * Public/Hybrid Cloud 전환 용이성)을 화면으로 보이기 위해 비활성 상태로
- * 노출한다. 선택 시 비용 결재 + 혁신금융서비스 지정 서류가 자동으로
- * 결재선에 묶이는 통제 구조까지 함께 보여준다.
+ * Public LLM 은 **사업 전제(공동존 On-Prem 전용)** 를 화면에서 못박기 위해
+ * 비활성 상태로 노출한다. 선택 시 비용 결재 + 혁신금융서비스 지정 서류가
+ * 자동으로 결재선에 묶이는 통제 구조까지 함께 보여준다.
+ *
+ * ⚠️ 여기에 ONM-007 을 인용하지 말 것 — 그 요건은 "K8s 표준 MSA · 무중단 HA
+ *    구조 설계"(필수)이고 근거 화면은 `/admin/platform` 이다. 망분리 완화라는
+ *    문구만 겹쳐서 한때 이 화면에 칩을 달아 놨었다.
  */
 const INFRAS = {
   onprem: {
@@ -169,7 +172,7 @@ export default function KnowledgeTaskRegisterPage() {
                       key={c}
                       type="button"
                       disabled={!cfg.available}
-                      title={cfg.available ? undefined : '향후 망분리 규제 완화 시 활성화 (RFP ONM-007)'}
+                      title={cfg.available ? undefined : '향후 망분리 규제가 완화될 때 활성화되는 선택지'}
                       onClick={() => cfg.available && setInfra(c)}
                       className={cn(
                         'flex items-center gap-3 p-3 rounded-lg border text-left transition-colors',
@@ -206,7 +209,7 @@ export default function KnowledgeTaskRegisterPage() {
                 })}
               </div>
               <p className="mt-2 text-[10.5px] text-ink-mid font-semibold">
-                🔒 {INFRAS.hybrid.note} — RFP ONM-007 대비
+                🔒 {INFRAS.hybrid.note} — 향후 망분리 규제 완화 대비
               </p>
             </FormField>
           </SectionCard>

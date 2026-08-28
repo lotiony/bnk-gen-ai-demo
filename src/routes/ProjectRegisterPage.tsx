@@ -24,9 +24,14 @@ const ATTACHMENTS = [
  * 모델 구동 위치.
  *
  * 공동존 On-Premise 가 본 사업의 유일한 구동 환경이다.
- * 'Public LLM' 은 RFP 권고 항목(ONM-007 — 향후 망분리 규제 완화 대비)을
- * 화면으로 보이기 위한 비활성 선택지로, 고르면 혁신금융서비스 지정 서류가
- * 필수 첨부로 붙는 통제 구조를 함께 보여준다.
+ * 'Public LLM' 은 **사업 전제(공동존 On-Prem 전용)** 를 화면에서 못박기 위한
+ * 비활성 선택지다. 고르면 혁신금융서비스 지정 서류가 필수 첨부로 붙는 통제
+ * 구조를 함께 보여준다.
+ *
+ * ⚠️ 여기에 ONM-007 을 인용하지 말 것. ONM-007 은 "K8s 표준 MSA · 무중단 HA
+ *    구조 설계"(필수)이지 모델 구동 위치 선택지가 아니다. 망분리 완화 문구가
+ *    겹쳐 보여 한때 이 화면에 ONM-007 칩을 달았는데, 조견표에서 근거 화면을
+ *    찾으면 아무 관련 내용이 없었다. ONM-007 근거는 `/admin/platform`.
  */
 const HOSTS = ['공동존 On-Prem', 'Public LLM'] as const;
 
@@ -353,7 +358,7 @@ export default function ProjectRegisterPage() {
 
           {/* F. 모델 + 비용 추정 */}
           <SectionCard letter="F" name="사용 가능 모델 + 비용 추정" tag="MVP">
-            <FormField label="모델 구동 위치" required hint="공동존 On-Premise 전용. Public LLM 은 향후 망분리 규제 완화 시 활성(RFP ONM-007)."> 
+            <FormField label="모델 구동 위치" required hint="공동존 On-Premise 전용. Public LLM 은 향후 망분리 규제가 완화될 때 활성화되는 선택지다."> 
               <div className="flex flex-wrap gap-2">
                 {HOSTS.map((h) => {
                   const future = FUTURE_HOSTS.includes(h);
