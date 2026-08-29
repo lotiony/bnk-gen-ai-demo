@@ -70,7 +70,7 @@ export interface PortalDef {
   /** 카드를 눌렀을 때 도착하는 경로. */
   home: string;
   nsScope: PortalNsScope;
-  /** 이 포털을 여는 역할(RFP 2-1 역할 6종 기준 서술). */
+  /** 이 포털을 여는 역할. 카드 하단 한 줄에 들어가야 하므로 짧게 적는다. */
   audience: string;
   /** 이 포털 화면이 근거로 삼는 대표 요건 — 조견표 상호 참조용. */
   reqs: string[];
@@ -93,7 +93,7 @@ export const PORTALS: PortalDef[] = [
       '대화와 지식 조회는 소속 계열사 Namespace 안에서 실행된다.',
     home: '/',
     nsScope: 'affiliate',
-    audience: '전 임직원 (일반 사용자 포함 6개 역할 전체)',
+    audience: '전 임직원',
     reqs: ['AGB-006', 'RAG-007', 'SEC-003', '2-1 개인화'],
     nav: [
       { label: '홈', to: '/', area: 'home' },
@@ -116,7 +116,7 @@ export const PORTALS: PortalDef[] = [
       '결재를 거쳐 배포한다. 제작 산출물은 소속 계열사 Namespace 에 귀속된다.',
     home: '/studio',
     nsScope: 'affiliate',
-    audience: '에이전트 개발자 · 모델러 · 데이터 담당자 · 과제 오너',
+    audience: '개발자 · 모델러 · 데이터 담당자',
     reqs: ['AGB-001~012', 'EDA-006', 'RAG-009', 'LSM-005'],
     nav: [
       { label: 'AI Studio', to: '/studio', area: 'studio', matchPrefix: '/studio' },
@@ -137,7 +137,7 @@ export const PORTALS: PortalDef[] = [
       '나눠 보면서 그룹 전체를 통제한다. MFA 인증을 거쳐 진입한다.',
     home: '/admin',
     nsScope: 'common',
-    audience: '운영자 · 플랫폼 관리자 · 정보보호 담당',
+    audience: '운영자 · 관리자 · 정보보호',
     reqs: ['ONM-005', 'LSM-001', 'SEC-005', 'SEC-009'],
     nav: [{ label: '운영 콘솔', to: '/admin', area: 'admin', matchPrefix: '/admin' }],
     nsNote: '공통 포털 웹 Namespace 에서 10개 계열사 Namespace 를 가로질러 관리',
@@ -155,7 +155,7 @@ export const PORTALS: PortalDef[] = [
       '기일을 그룹 원장으로 추적한다. 결재 절차는 계열사별로 일부 다르다.',
     home: '/governance',
     nsScope: 'common',
-    audience: '거버넌스 · 준법 · 리스크 · 감사 담당, 과제 오너',
+    audience: '거버넌스 · 준법 · 감사',
     reqs: ['2-3 AI거버넌스 포탈', 'ONM-004'],
     nav: [
       { label: '원장 · 라이프사이클', to: '/governance', area: 'governance' },

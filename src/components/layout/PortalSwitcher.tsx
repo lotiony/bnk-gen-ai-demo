@@ -147,16 +147,32 @@ export default function PortalSwitcher() {
   );
 }
 
-/** 포털 1자 코드 배지 — 칩·목록·랜딩 카드가 같은 표기를 쓴다. */
-export function PortalMark({ p, size = 'sm' }: { p: PortalDef; size?: 'sm' | 'lg' }) {
+/**
+ * 포털 1자 코드 배지 — 칩·목록·랜딩 카드가 같은 표기를 쓴다.
+ *
+ * 색이 `nsScope` 를 그대로 나른다 — 계열사 Namespace 에서 도는 포털은 브랜드
+ * 레드, 공통 포털 웹에서 도는 포털은 먹색. 카드를 훑기만 해도 "이 둘은 계열사
+ * 안, 저 둘은 계열사를 가로지른다" 가 읽힌다.
+ */
+const MARK_SIZE = {
+  sm: 'w-6 h-6 text-[11px]',
+  lg: 'w-9 h-9 text-[15px]',
+  xl: 'w-11 h-11 text-[18px] rounded-md',
+} as const;
+
+export function PortalMark({
+  p,
+  size = 'sm',
+}: {
+  p: PortalDef;
+  size?: keyof typeof MARK_SIZE;
+}) {
   return (
     <span
       className={cn(
         'inline-flex items-center justify-center rounded font-black flex-shrink-0',
-        p.nsScope === 'common'
-          ? 'bg-ink text-white'
-          : 'bg-brand text-white',
-        size === 'lg' ? 'w-9 h-9 text-[15px]' : 'w-6 h-6 text-[11px]',
+        p.nsScope === 'common' ? 'bg-ink text-white' : 'bg-brand text-white',
+        MARK_SIZE[size],
       )}
       aria-hidden
     >
