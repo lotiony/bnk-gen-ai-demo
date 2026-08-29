@@ -137,11 +137,11 @@ export default function TenantSwitcher() {
                 })}
               </ul>
               <Link
-                to="/tenants"
+                to="/portal"
                 onClick={() => setOpen(false)}
                 className="block px-3 py-2 border-t border-line-soft text-[11px] font-extrabold text-ink-dark hover:bg-surface-soft hover:text-brand"
               >
-                전체 계열사 보기 →
+                공통 포털 랜딩에서 전체 보기 →
               </Link>
               <div className="px-3 py-2 border-t border-line-soft text-[10px] text-ink-mid leading-snug">
                 🔒 그룹 운영 권한으로 전환합니다 — 전환은 감사 원장에 기록됩니다.

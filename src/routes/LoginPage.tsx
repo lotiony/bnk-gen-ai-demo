@@ -33,8 +33,9 @@ export default function LoginPage() {
   const handleSelect = (id: PersonaId) => {
     setLoadingId(id);
     setStoredPersona(id);
-    // 1막은 계열사 선택 랜딩(화면 1)에서 시작한다 — 11 Namespace 구조를 먼저 각인시킨다.
-    setTimeout(() => navigate('/tenants', { replace: true }), 250);
+    // 1막은 공통 포털 랜딩(화면 1)에서 시작한다 —
+    // 역할에 따라 열리는 워크스페이스(2-1)와 11 Namespace 구조(SEC-001)를 함께 각인시킨다.
+    setTimeout(() => navigate('/portal', { replace: true }), 250);
   };
 
   return (

@@ -21,8 +21,10 @@ export default function Topbar({ envBadge }: TopbarProps) {
     <header className="sticky top-0 z-30 bg-white border-b border-line px-6 py-3">
       <div className="max-w-[1360px] mx-auto flex items-center gap-3.5">
         <TenantSwitcher />
+        {/* 브랜드는 그룹 단위 식별자다 — 포털 홈이 아니라 공통 포털 랜딩으로 보낸다. */}
         <Link
-          to="/"
+          to="/portal"
+          title="공통 포털 랜딩 — 워크스페이스 선택 · Namespace 구조"
           className="flex items-center gap-2.5 text-sm font-extrabold text-ink pl-1 -ml-1.5"
         >
           공동 생성형 AI 플랫폼

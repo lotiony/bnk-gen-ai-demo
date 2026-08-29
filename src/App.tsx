@@ -6,7 +6,7 @@ import LoginPage from './routes/LoginPage';
 import HomePage from './routes/HomePage';
 import ChatPage from './routes/ChatPage';
 import PersonalDocsPage from './routes/PersonalDocsPage';
-import TenantLandingPage from './routes/TenantLandingPage';
+import PortalLandingPage from './routes/PortalLandingPage';
 import { useCurrentPersona } from './lib/persona';
 import ProjectsListPage from './routes/ProjectsListPage';
 import ProjectDetailPage from './routes/ProjectDetailPage';
@@ -137,7 +137,12 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/documents" element={<PersonalDocsPage />} />
-        <Route path="/tenants" element={<TenantLandingPage />} />
+        {/*
+          공통 포털 랜딩 — 로그인 직후 도착지. 포털 선택과 Namespace 구조를 함께 다룬다.
+          옛 `/tenants`(계열사 선택 랜딩)를 흡수했으므로 딥링크는 여기로 접는다.
+        */}
+        <Route path="/portal" element={<PortalLandingPage />} />
+        <Route path="/tenants" element={<Navigate to="/portal" replace />} />
 
         {/* 프로젝트 계층 — AreaGuard 로 감싼다(위 주석 ①②). */}
         <Route element={<ProjectsArea />}>

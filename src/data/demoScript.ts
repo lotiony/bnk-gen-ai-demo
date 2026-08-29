@@ -37,9 +37,9 @@ const PID = 'PRJ-2025-PB-001';
 
 export const DEMO_STOPS: DemoStop[] = [
   {
-    screen: '1', act: 1, title: '그룹 공통 랜딩', path: '/tenants', persona: 'service_user',
-    cue: '11개 Namespace 구조를 짚고, 부산은행 카드로 입장한다',
-    reqs: ['Ⅱ.3.나(3)', 'SEC-001'],
+    screen: '1', act: 1, title: '공통 포털 랜딩', path: '/portal', persona: 'service_user',
+    cue: '일반 사용자에게 포털 카드가 1장뿐인 것을 짚고(2-1), 11 Namespace 구조를 보여준 뒤 업무 AI 포털로 입장한다',
+    reqs: ['Ⅱ.3.나(3)', '2-1', 'SEC-001'],
   },
   {
     screen: '2·3', act: 1, title: '포털 Chat · 규정/책무 질의', path: '/chat', persona: 'service_user',
