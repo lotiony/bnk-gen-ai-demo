@@ -65,7 +65,11 @@ export interface PortalDef {
   initial: string;
   /** 랜딩 카드 부제. */
   tagline: string;
-  /** 랜딩 카드 본문. */
+  /**
+   * 랜딩 카드 본문. **한 문장으로 끝낸다** — 타일이 정사각 비율을 유지해야 하고,
+   * 네 장이 1920×1080 한 화면에 들어와야 한다(랜딩 주석 참조).
+   * Namespace 스코프는 카드 하단 줄이 이미 말하므로 여기서 반복하지 않는다.
+   */
   desc: string;
   /** 카드를 눌렀을 때 도착하는 경로. */
   home: string;
@@ -88,9 +92,7 @@ export const PORTALS: PortalDef[] = [
     short: '업무 AI',
     initial: 'U',
     tagline: '전 임직원의 일상 업무 동선',
-    desc:
-      '그룹 공동 에이전트와 AI 대화, 마켓플레이스, 개인 문서를 한곳에서 이용한다. ' +
-      '대화와 지식 조회는 소속 계열사 Namespace 안에서 실행된다.',
+    desc: '그룹 공동 에이전트와 AI 대화, 마켓플레이스, 개인 문서를 한곳에서 이용한다.',
     home: '/',
     nsScope: 'affiliate',
     audience: '전 임직원',
@@ -111,9 +113,7 @@ export const PORTALS: PortalDef[] = [
     short: 'AI Studio',
     initial: 'S',
     tagline: '만들고 검증해서 승인받는 곳',
-    desc:
-      '에이전트 · 워크플로우 · Tool 을 만들고, 지식과 데이터를 붙여 검증한 뒤 ' +
-      '결재를 거쳐 배포한다. 제작 산출물은 소속 계열사 Namespace 에 귀속된다.',
+    desc: '에이전트 · 워크플로우 · Tool 을 만들고, 지식과 데이터를 붙여 검증한 뒤 배포한다.',
     home: '/studio',
     nsScope: 'affiliate',
     audience: '개발자 · 모델러 · 데이터 담당자',
@@ -132,9 +132,7 @@ export const PORTALS: PortalDef[] = [
     short: '통합 운영',
     initial: 'O',
     tagline: '10개 계열사를 가로지르는 관리',
-    desc:
-      '사용자 · 권한 · 모델 · 게이트웨이 · 보안 정책 · 자원과 비용을 계열사 단위로 ' +
-      '나눠 보면서 그룹 전체를 통제한다. MFA 인증을 거쳐 진입한다.',
+    desc: '사용자 · 권한 · 모델 · 보안 정책 · 자원과 비용을 계열사 단위로 나눠 통제한다.',
     home: '/admin',
     nsScope: 'common',
     audience: '운영자 · 관리자 · 정보보호',
@@ -150,9 +148,7 @@ export const PORTALS: PortalDef[] = [
     short: 'AI 거버넌스',
     initial: 'G',
     tagline: 'RFP 2-3 이 규정한 별도 포탈',
-    desc:
-      'AI 서비스의 등록부터 폐기까지 라이프사이클 관문 · 위험 평가 · 결재 · 재평가 ' +
-      '기일을 그룹 원장으로 추적한다. 결재 절차는 계열사별로 일부 다르다.',
+    desc: 'AI 서비스의 등록부터 폐기까지 관문 · 위험 평가 · 결재 · 재평가 기일을 추적한다.',
     home: '/governance',
     nsScope: 'common',
     audience: '거버넌스 · 준법 · 감사',
