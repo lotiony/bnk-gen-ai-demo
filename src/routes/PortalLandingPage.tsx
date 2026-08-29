@@ -46,19 +46,25 @@ export default function PortalLandingPage() {
   const portals = visiblePortals(persona);
 
   return (
-    <div className="max-w-[1400px] mx-auto px-8 pt-6 pb-8">
+    /*
+     * 페이지 전체가 **하나의 컬럼**이다(내용 폭 750px = 카드 367 × 2 + gap 16).
+     * 히어로 줄을 화면 폭에 맞추고 카드만 가운데로 묶었더니 두 블록의 좌우 끝이
+     * 전혀 안 맞아 층이 어긋나 보였다. 정사각 타일이 카드 폭을 확정하므로
+     * **카드 폭이 컬럼 폭을 정하고, 위 블록이 거기에 맞춘다** — 반대가 아니다.
+     */
+    <div className="max-w-[814px] mx-auto px-8 pt-6 pb-8">
       {/* ═══════════ 위 — 무엇인가 · 누구인가 ═══════════ */}
-      <div className="grid grid-cols-[1fr_minmax(0,340px)] gap-14 items-start mb-5">
-        <div className="pt-1">
-          <div className="text-[10px] font-extrabold text-brand uppercase tracking-[1.4px] mb-3">
+      <div className="grid grid-cols-[1fr_minmax(0,296px)] gap-7 items-start mb-6">
+        <div className="pt-0.5">
+          <div className="text-[10px] font-extrabold text-brand uppercase tracking-[1.4px] mb-2.5">
             BNK Group Generative AI Platform
           </div>
-          <h1 className="text-[33px] font-black text-ink leading-[1.14] tracking-[-1.2px]">
+          <h1 className="text-[31px] font-black text-ink leading-[1.16] tracking-[-1.1px]">
             하나의 공동 기반,
             <br />
             <span className="text-brand">{PORTAL_COUNT}개의 워크스페이스</span>
           </h1>
-          <p className="text-[12.5px] text-ink-dark font-semibold leading-[1.65] mt-3 max-w-[520px]">
+          <p className="text-[12px] text-ink-dark font-semibold leading-[1.65] mt-3">
             {AFFILIATE_COUNT}개 계열사의 업무 활용 · 에이전트 제작 · 공동존 운영 · AI 거버넌스를
             하나의 접속 체계로 연결합니다.
           </p>
@@ -78,11 +84,10 @@ export default function PortalLandingPage() {
       {/*
         ═══════════ 아래 — 어디로 갈 것인가 ═══════════
 
-        바둑판 타일이 되도록 그리드 폭을 묶는다. 폭을 750px 로 묶으면 한 칸이
-        367×300 (약 1.2:1) 이 되어 네 장이 같은 무게로 놓인다.
-        (옆에 다른 블록을 두지 않는다는 원칙은 그대로다 — 가운데 정렬만 한다.)
+        컬럼 폭(750px)을 정하는 쪽이 여기다. 한 칸이 367×298 (약 1.23:1) 인
+        정사각 타일이 되어 네 장이 같은 무게로 놓인다. 위 히어로 줄이 이 폭에 맞춘다.
       */}
-      <div className="max-w-[750px] mx-auto">
+      <div>
         <div className="flex items-baseline gap-2.5 mb-1">
           <span className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.5px]">
             Select Workspace
@@ -102,9 +107,10 @@ export default function PortalLandingPage() {
         <div
           className={cn(
             'grid gap-4',
-            /* 한 장뿐이면(일반 사용자) 정사각 타일 하나를 가운데 둔다 — 두 칸으로
-               펴면 다시 가로로 긴 판이 되어 다른 계정과 인상이 달라진다. */
-            portals.length === 1 ? 'grid-cols-1 max-w-[367px] mx-auto' : 'grid-cols-2',
+            /* 한 장뿐이면(일반 사용자) 두 칸으로 펴지 않는다 — 펴면 다시 가로로 긴
+               판이 되어 그 계정만 인상이 달라진다. 가운데가 아니라 **왼쪽**에 붙여
+               히어로·헤더와 좌측 끝을 맞춘다. */
+            portals.length === 1 ? 'grid-cols-1 max-w-[367px]' : 'grid-cols-2',
           )}
         >
           {portals.map((p, i) => (
