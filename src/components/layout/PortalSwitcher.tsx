@@ -155,9 +155,9 @@ export default function PortalSwitcher() {
  * 안, 저 둘은 계열사를 가로지른다" 가 읽힌다.
  */
 const MARK_SIZE = {
-  sm: 'w-6 h-6 text-[11px]',
-  lg: 'w-9 h-9 text-[15px]',
-  xl: 'w-11 h-11 text-[18px] rounded-md',
+  sm: 'w-6 h-6 text-[11px] rounded-[5px]',
+  lg: 'w-9 h-9 text-[15px] rounded-[7px]',
+  xl: 'w-11 h-11 text-[18px] rounded-[9px]',
 } as const;
 
 export function PortalMark({
@@ -170,7 +170,7 @@ export function PortalMark({
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center rounded font-black flex-shrink-0',
+        'inline-flex items-center justify-center font-black flex-shrink-0',
         p.nsScope === 'common' ? 'bg-ink text-white' : 'bg-brand text-white',
         MARK_SIZE[size],
       )}

@@ -131,7 +131,7 @@ function ContextPanel() {
   const canSwitch = persona?.canSwitchTenant ?? false;
 
   return (
-    <div className="card px-5 py-4">
+    <div className="card rounded-[10px] px-5 py-4">
       <div className="flex items-baseline gap-2 pb-2.5 mb-3 border-b border-line-soft">
         <h2 className="text-[12.5px] font-extrabold text-ink">접속 컨텍스트</h2>
         <span className="ml-auto pill bg-ok-bg text-ok border border-ok-border">SSO 인증됨</span>
@@ -212,6 +212,12 @@ function PortalCard({ p, wide }: { p: PortalDef; wide: boolean }) {
       onClick={() => navigate(p.home)}
       className={cn(
         'text-left card px-7 py-6 flex flex-col min-h-[228px] group',
+        /*
+         * 전역 radius 스케일은 각지게 눌러 뒀다(tailwind.config — 레퍼런스 마감).
+         * 랜딩은 업무 화면이 아니라 표지에 가까운 자리라 이 화면 안에서만 풀어 준다.
+         * 전역 스케일을 건드리면 24장 캡처의 마감이 전부 바뀐다.
+         */
+        'rounded-[10px]',
         'border-line-soft hover:border-brand hover:shadow-[0_2px_16px_rgba(203,44,16,0.10)]',
         'transition-all duration-150',
         wide && 'col-span-2',
