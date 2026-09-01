@@ -1,8 +1,2 @@
-node_modules
-dist
-.DS_Store
-*.log
-.env*
-!.env.example
-.vite
-*.tsbuildinfo
+.playwright-cli/
+output/playwright/
