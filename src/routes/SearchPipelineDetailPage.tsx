@@ -421,7 +421,7 @@ function IndexesTab({ task }: { task: PipelineTask }) {
 
       {/* Submit toast */}
       {submittedToast && (
-        <div className="fixed bottom-6 right-6 z-50 card border-ok-border bg-ok-bg px-4 py-3 shadow-lg flex items-center gap-2.5 max-w-[420px]">
+        <div className="fixed top-16 right-6 z-50 card border-ok-border bg-ok-bg px-4 py-3 shadow-lg flex items-center gap-2.5 max-w-[420px]">
           <span className="w-6 h-6 rounded-full bg-ok text-white inline-flex items-center justify-center font-extrabold text-[11px]">
             ✓
           </span>

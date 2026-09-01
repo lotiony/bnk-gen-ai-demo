@@ -62,8 +62,9 @@ const ICON_CLS: Record<ToastTone, string> = {
 /** 전역 1개만 둔다 — Layout 에 붙어 있다. */
 export function Toaster() {
   const list = useToasts();
+  // 화면 녹화 자막 DIM이 하단 전체를 덮으므로 알림은 헤더 아래 우상단에 쌓는다.
   return (
-    <div className="fixed right-5 bottom-32 z-[60] flex flex-col gap-2 w-[360px] pointer-events-none">
+    <div className="fixed right-5 top-16 z-[60] flex flex-col gap-2 w-[360px] pointer-events-none">
       {list.map((t) => (
         <ToastCard key={t.id} item={t} />
       ))}
