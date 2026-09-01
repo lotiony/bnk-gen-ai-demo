@@ -63,7 +63,7 @@ const ICON_CLS: Record<ToastTone, string> = {
 export function Toaster() {
   const list = useToasts();
   return (
-    <div className="fixed right-5 bottom-5 z-[60] flex flex-col gap-2 w-[360px] pointer-events-none">
+    <div className="fixed right-5 bottom-32 z-[60] flex flex-col gap-2 w-[360px] pointer-events-none">
       {list.map((t) => (
         <ToastCard key={t.id} item={t} />
       ))}

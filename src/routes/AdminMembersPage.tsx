@@ -344,8 +344,39 @@ function AccessHistoryTab() {
 }
 
 function UsagePermissionTab() {
+  /* 원본 관리자 시나리오의 권한 요청 접수·승인 흐름을 위한 세션 목업.
+     실제 IAM/결재 API가 아니라 이 브라우저 세션에서만 상태가 바뀐다. */
+  const [requestState, setRequestState] = useState<'대기' | '승인'>('대기');
   return (
     <div className="space-y-3.5">
+      <section className="card p-4">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div>
+            <h2 className="text-[13px] font-extrabold text-ink">권한 요청</h2>
+            <p className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
+              계열사 밖 자산 접근 요청 · 결재선에 따라 승인 후 권한을 확장한다
+            </p>
+          </div>
+          <StatusPill tone={requestState === '승인' ? 'ok' : 'warn'}>{requestState}</StatusPill>
+        </div>
+        <div className="flex items-center gap-3 px-3 py-2 border border-line-soft rounded bg-white">
+          <div className="flex-1 min-w-0">
+            <div className="text-[11.5px] font-extrabold text-ink-dark">REQ-2026-031 · 부산은행 행원</div>
+            <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
+              그룹 공통 여신업무 어시스턴트 · 조회 권한 · 결재선: 부서장 → 계열사 관리자 → 그룹 관리자
+            </div>
+          </div>
+          {requestState === '대기' ? (
+            <button
+              type="button"
+              onClick={() => { setRequestState('승인'); toast('권한 요청을 승인했습니다 — 감사 원장에 기록됩니다'); }}
+              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark"
+            >승인</button>
+          ) : (
+            <span className="text-[11px] font-extrabold text-ok">권한 확장 완료</span>
+          )}
+        </div>
+      </section>
       <section className="card p-4">
         <h2 className="text-[13px] font-extrabold text-ink mb-2.5">부서별 서비스 카테고리 접근</h2>
         <table className="w-full text-[11.5px]">

@@ -55,6 +55,13 @@ export default function SearchPipelineDetailPage() {
   const returnPath = useWorkReturnPath(pid);
   const task = pipelineId ? findPipelineTask(pipelineId) : undefined;
   const [tab, setTab] = useState<TabId>('overview');
+  /**
+   * 시나리오에서 요구하는 학습계 결재 상태를 이 상세 화면에서도 확인할 수 있게
+   * 하는 데모 전용 상태다. 실제 결재 API를 가장하지 않고, 브라우저 세션 안에서만
+   * 상신 전/후 화면을 전환한다.
+   */
+  const [trainingApprovalSubmitted, setTrainingApprovalSubmitted] = useState(false);
+  const [servingApprovalSubmitted, setServingApprovalSubmitted] = useState(false);
 
   if (!task) return <Navigate to={returnPath} replace />;
 
@@ -103,8 +110,25 @@ export default function SearchPipelineDetailPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button variant="ghost">📎 첨부 보기</Button>
             <Button>▶ 테스트 호출</Button>
-            <Button variant="primary" disabled={!passedAll}>
-              ＋ 서빙계 프로모션 결재
+            <Button
+              variant={trainingApprovalSubmitted ? 'ghost' : 'primary'}
+              disabled={!passedAll || trainingApprovalSubmitted}
+              onClick={() => {
+                setTrainingApprovalSubmitted(true);
+                toast('학습계 배포 결재를 상신했습니다 · 결재선 검토가 시작됩니다 (데모)');
+              }}
+            >
+              {trainingApprovalSubmitted ? '✓ 학습계 배포 결재 상신 완료' : '＋ 학습계 배포 결재 상신'}
+            </Button>
+            <Button
+              variant={servingApprovalSubmitted ? 'ghost' : 'primary'}
+              disabled={!passedAll || servingApprovalSubmitted}
+              onClick={() => {
+                setServingApprovalSubmitted(true);
+                toast('서빙계 프로모션 결재를 상신했습니다 · 레드팀 게이트가 결재선에 추가됩니다 (데모)');
+              }}
+            >
+              {servingApprovalSubmitted ? '✓ 서빙계 프로모션 결재 상신 완료' : '＋ 서빙계 프로모션 결재'}
             </Button>
           </div>
         </div>
@@ -1522,4 +1546,3 @@ function AutoLine({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

@@ -48,11 +48,11 @@ export default function LoginPage() {
               BNK
             </span>
             <span className="text-[18px] font-extrabold text-ink tracking-tight">
-              공동 생성형 AI 플랫폼
+              그룹 공동 생성형 AI 플랫폼 도입 사업
             </span>
           </div>
           <div className="text-[11.5px] text-ink-mid font-semibold mt-2">
-            BNK금융그룹 공동 생성형 AI 플랫폼
+            BNK 그룹 공동 생성형 AI 플랫폼 도입 사업
           </div>
         </div>
 

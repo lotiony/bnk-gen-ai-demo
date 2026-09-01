@@ -27,7 +27,7 @@ export default function Topbar({ envBadge }: TopbarProps) {
           title="공통 포털 랜딩 — 워크스페이스 선택 · Namespace 구조"
           className="flex items-center gap-2.5 text-sm font-extrabold text-ink pl-1 -ml-1.5"
         >
-          공동 생성형 AI 플랫폼
+          그룹 공동 생성형 AI 플랫폼 도입 사업
         </Link>
         {envBadge && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-ink-dark bg-surface px-2 py-1 rounded-sm border border-line-soft font-semibold">
