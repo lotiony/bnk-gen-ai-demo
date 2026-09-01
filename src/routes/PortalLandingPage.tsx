@@ -56,8 +56,8 @@ export default function PortalLandingPage() {
       {/* ═══════════ 위 — 무엇인가 · 누구인가 ═══════════ */}
       <div className="grid grid-cols-[1fr_minmax(0,296px)] gap-7 items-start mb-6">
         <div className="pt-0.5">
-          <div className="text-[10px] font-extrabold text-brand uppercase tracking-[1.4px] mb-2.5">
-            BNK Group Generative AI Platform
+          <div className="text-[10px] font-extrabold text-brand tracking-[0.5px] mb-2.5">
+            BNK 그룹 공동 생성형 AI 플랫폼 도입 사업
           </div>
           <h1 className="text-[31px] font-black text-ink leading-[1.16] tracking-[-1.1px]">
             하나의 공동 기반,
