@@ -14,13 +14,13 @@
  * 규칙과 같다: 선이 도형 안에서 튀어나오면 그래프가 싸구려로 보인다.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
 import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
-import { addTemplate } from '@/data/mockTemplates';
+import { addTemplate, getTemplate } from '@/data/mockTemplates';
 import {
   NODE_KINDS,
   KIND_META,
@@ -43,12 +43,44 @@ import {
 } from '@/data/mockWorkflow';
 
 /**
- * 캔버스 높이만 고정하고 **폭은 실측한다.**
+ * ## 좌표계 — 월드(world)와 뷰포트(viewport)를 분리한다
+ *
+ * 예전에는 캔버스 폭을 **실측해서** 그대로 좌표계로 썼다. 그래서 빌더가 AI Studio
+ * 셸(사이드바 200px) 안으로 들어오자 캔버스 폭이 598px 로 줄었고, x=1006 에 있는
+ * 마지막 노드부터 네 개가 통째로 잘렸다. 더 나쁜 건 **드래그 클램프도 실측 폭을
+ * 썼다는 것** — 잘린 영역의 노드를 건드리면 좁은 폭 안으로 끌려 들어와 되돌릴 수
+ * 없었다.
+ *
+ * 그래서 둘을 뗀다.
+ *   · **월드** WORLD_W×WORLD_H — 뷰포트와 무관한 고정 좌표계. 노드 좌표·클램프·
+ *     관계선 SVG 가 전부 이 위에서만 논다.
+ *   · **뷰포트** — 월드를 들여다보는 창. 스크롤·줌·높이 조절은 여기서만 일어나고
+ *     월드 좌표는 건드리지 않는다.
+ *
  * 관계선 SVG 에 viewBox 를 걸면 SVG 좌표가 스케일되는데 노드는 절대 px 이라
  * 둘이 어긋난다 — 선이 노드 옆구리에서 시작하는 그 증상이다. 그래서 SVG 는
- * viewBox 없이 CSS 픽셀 좌표를 그대로 쓴다.
+ * viewBox 없이 **월드 픽셀 좌표를 그대로** 쓰고, 확대·축소는 월드 레이어 전체에
+ * 걸린 CSS transform 이 담당한다(노드와 선이 같은 변환을 받으므로 어긋나지 않는다).
  */
-const CANVAS_H = 470;
+const WORLD_W = 1400;
+const WORLD_H = 700;
+
+/** 뷰포트 높이 — 하단 핸들로 이 범위 안에서 조절한다. */
+const VIEW_H_MIN = 320;
+const VIEW_H_MAX = 900;
+const VIEW_H_DEFAULT = 470;
+
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 1.6;
+const ZOOM_STEP = 0.1;
+/**
+ * **자동** 맞춤의 하한.
+ * 598px 짜리 셸 안에 1184px 그래프를 다 넣으려면 48% 까지 줄여야 하는데,
+ * 그러면 11.5px 노드 제목이 5.5px 가 되어 아무도 못 읽는다. 잘려 보이는 것보다
+ * 나쁜 게 **읽을 수 없는 화면**이라, 자동 맞춤은 여기서 멈추고 나머지는
+ * 스크롤·팬·전체화면에 넘긴다. 사용자가 − 버튼으로 더 줄이는 건 막지 않는다.
+ */
+const ZOOM_FIT_MIN = 0.7;
 
 /** 출력 포트 좌표 — 노드 오른쪽 경계. 분기 노드는 위/아래로 나눈다. */
 function outPort(n: WfNode, port: number) {
@@ -79,9 +111,27 @@ export default function WorkflowBuilderPage() {
 
   const persona = useCurrentPersona();
 
-  const [nodes, setNodes] = useState<WfNode[]>(SEED_NODES);
-  const [edges, setEdges] = useState<WfEdge[]>(SEED_EDGES);
-  const [sel, setSel] = useState<string | null>('n3');
+  /*
+   * 템플릿 복제 진입 — AI Studio 「템플릿에서 시작」의 `?tpl=TPL-02`.
+   * 템플릿을 골랐는데 빈 캔버스(혹은 늘 같은 시드)가 뜨면 '복제' 가 말뿐이 된다.
+   * 여기서 **캔버스를 템플릿 구성으로 채운 채** 연다.
+   */
+  const [params] = useSearchParams();
+  const tplId = params.get('tpl');
+  const tpl = useMemo(() => getTemplate(tplId), [tplId]);
+  const tplGraph = tpl?.preset?.kind === '워크플로우' ? tpl.preset : null;
+
+  /** 이 화면의 '원본' — 초기화 버튼이 되돌아갈 기준점. 템플릿이면 템플릿이다. */
+  const baseNodes = tplGraph?.nodes ?? SEED_NODES;
+  const baseEdges = tplGraph?.edges ?? SEED_EDGES;
+
+  /** 화면 제목 — 템플릿에서 왔으면 그 사실이 제목에 드러나야 한다. */
+  // '… 템플릿 (7단계)' 처럼 뒤에 괄호가 붙는 이름도 있으므로 끝이 아니라 단어로 지운다.
+  const wfTitle = tplGraph ? tpl!.name.replace(/\s*템플릿/, '').trim() : '여신 상담 워크플로우';
+
+  const [nodes, setNodes] = useState<WfNode[]>(() => baseNodes);
+  const [edges, setEdges] = useState<WfEdge[]>(() => baseEdges);
+  const [sel, setSel] = useState<string | null>(tplGraph ? 'n1' : 'n3');
   const [tab, setTab] = useState<'prop' | 'trace' | 'longrun'>('prop');
   const [runIdx, setRunIdx] = useState(-1);
   /*
@@ -102,9 +152,11 @@ export default function WorkflowBuilderPage() {
   const saveTemplate = () => {
     const id = addTemplate({
       kind: '워크플로우',
-      name: `여신 상담 워크플로우 템플릿 (${nodes.length}단계)`,
+      name: `${wfTitle} 템플릿 (${nodes.length}단계)`,
       desc: `현재 캔버스 구성을 그대로 복제 — 노드 ${nodes.length} · 연결 ${edges.length}`,
       savedBy: persona?.name ?? '현재 사용자',
+      // 구성을 함께 담아야 나중에 「이 템플릿 사용하기」가 **이 캔버스**를 되살린다.
+      preset: { kind: '워크플로우', nodes, edges },
     });
     toast(
       `템플릿으로 저장했습니다 · ${id}`,
@@ -112,28 +164,122 @@ export default function WorkflowBuilderPage() {
       'ok',
     );
   };
+  /* `?tpl=` 이 바뀌면(같은 빌더에 머문 채 다른 템플릿으로 진입) 캔버스를 다시 채운다. */
+  useEffect(() => {
+    setNodes(baseNodes);
+    setEdges(baseEdges);
+    setRunIdx(-1);
+    setSel(tplGraph ? 'n1' : 'n3');
+    touchedZoom.current = false;
+    // baseNodes/baseEdges 는 tplId 로부터 파생된 값이라 tplId 만 보면 충분하다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tplId]);
+
   /** 자연어 생성(AGB-003) — 입력 문장과 해석 결과 노출 여부. */
   const [nlText, setNlText] = useState('');
   const [nlParsed, setNlParsed] = useState(false);
   const activeTrace: TraceStep[] = runMode === 'fail' ? TRACE_FAIL : TRACE;
   const [linking, setLinking] = useState<{ from: string; port: number; x: number; y: number } | null>(null);
+
+  /* ── 뷰포트 (월드와 분리된 '보는 창') ── */
+  /** 월드 레이어 — 노드·관계선이 얹히는 고정 좌표계. 좌표 변환의 기준점이다. */
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasW, setCanvasW] = useState(1200);
+  /** 스크롤 컨테이너 — 월드보다 작을 때 이 안에서 스크롤·팬이 일어난다. */
+  const viewRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [viewH, setViewH] = useState(VIEW_H_DEFAULT);
+  /** 전체화면 — 시연 중 "직접 만들어 보시겠어요" 에 대응하는 넓은 작업면. */
+  const [fullscreen, setFullscreen] = useState(false);
+  /**
+   * zoom 을 ref 로도 들고 있는 이유 — toCanvas 가 포인터 이벤트 리스너 안에서
+   * 불린다. zoom 을 클로저로 잡으면 줌을 바꾼 뒤 리스너를 다시 붙일 때까지
+   * **옛 배율로 좌표를 계산**해서 노드가 커서에서 미끄러진다.
+   */
+  const zoomRef = useRef(1);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
   const dragRef = useRef<{ id: string; dx: number; dy: number } | null>(null);
+  /** 빈 배경 드래그 = 화면 팬. moved 로 '클릭(선택 해제)' 과 구분한다. */
+  const panRef = useRef<{ x: number; y: number; sl: number; st: number; moved: boolean } | null>(null);
   const seq = useRef(100);
 
   const nodeById = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
 
-  /* 캔버스 실폭 추적 — 노드 이동 클램프가 이 값에 걸린다. */
+  /**
+   * 화면에 다 들어오는 배율을 계산한다.
+   * 노드 클램프는 더 이상 이 값에 걸리지 않는다 — 월드 크기에만 걸린다.
+   */
+  const computeFit = useCallback(() => {
+    const el = viewRef.current;
+    if (!el) return 1;
+    const pad = 28;
+    const maxX = nodes.reduce((m, n) => Math.max(m, n.x + NODE_W), 1);
+    const maxY = nodes.reduce((m, n) => Math.max(m, n.y + NODE_H), 1);
+    const z = Math.min((el.clientWidth - pad) / maxX, (el.clientHeight - pad) / maxY, 1);
+    return Math.max(ZOOM_FIT_MIN, Math.min(ZOOM_MAX, Number(z.toFixed(3))));
+  }, [nodes]);
+
+  /** 현재 배율로 그래프 전체가 뷰포트에 들어오는지 — 안 들어오면 안내를 띄운다. */
+  const [overflowing, setOverflowing] = useState(false);
+
+  const fit = useCallback(() => setZoom(computeFit()), [computeFit]);
+
+  /**
+   * 뷰포트가 좁아지면 자동으로 맞춘다.
+   * 1280×720 에서는 캔버스 폭이 520px 남짓이라 자동 맞춤이 없으면 열자마자
+   * 잘려 보인다 — 시연 첫인상이 여기서 갈린다. 다만 **사용자가 줌을 직접
+   * 만진 뒤에는 건드리지 않는다**(발표 중 확대해 둔 화면이 리사이즈 한 번에
+   * 되돌아가면 안 된다).
+   */
+  const touchedZoom = useRef(false);
   useEffect(() => {
-    const el = canvasRef.current;
+    const el = viewRef.current;
     if (!el) return;
-    const sync = () => setCanvasW(el.clientWidth);
+    const sync = () => {
+      if (!touchedZoom.current) setZoom(computeFit());
+    };
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     return () => ro.disconnect();
+  }, [computeFit]);
+
+  /* 배율·노드·뷰포트가 바뀔 때마다 '다 보이는가' 를 다시 판정한다. */
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+    const maxX = nodes.reduce((m, n) => Math.max(m, n.x + NODE_W), 1);
+    const maxY = nodes.reduce((m, n) => Math.max(m, n.y + NODE_H), 1);
+    setOverflowing(maxX * zoom > el.clientWidth + 2 || maxY * zoom > el.clientHeight + 2);
+  }, [nodes, zoom, viewH, fullscreen]);
+
+  /** Ctrl/⌘ + 휠 확대·축소. React 의 onWheel 은 passive 라 preventDefault 가 먹지 않는다. */
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      touchedZoom.current = true;
+      setZoom((z) =>
+        Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Number((z - Math.sign(e.deltaY) * ZOOM_STEP).toFixed(2)))),
+      );
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, []);
+
+  /** 전체화면 탈출 — Esc. */
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullscreen]);
 
   /* ── 실행 재생 ── */
   useEffect(() => {
@@ -155,10 +301,19 @@ export default function WorkflowBuilderPage() {
   const running = runIdx >= 0 && runIdx < activeTrace.length;
   const doneAll = runIdx >= activeTrace.length;
 
-  /* ── 좌표 변환 ── */
+  /**
+   * 화면 좌표 → 월드 좌표.
+   *
+   * 월드 레이어에 `transform: scale()` 이 걸려 있으므로 getBoundingClientRect 는
+   * **배율이 반영된** 박스를 돌려준다. transform-origin 이 0 0 이라 rect.left 는
+   * 곧 월드 원점의 화면 x 이고, 스크롤도 여기에 이미 반영돼 있다. 따라서
+   * 스크롤 오프셋을 따로 더할 필요가 없고 **배율로 나누기만** 하면 된다.
+   * (여기서 배율을 빠뜨리면 확대 상태에서 노드가 커서보다 빨리 달아난다.)
+   */
   const toCanvas = useCallback((e: { clientX: number; clientY: number }) => {
     const r = canvasRef.current?.getBoundingClientRect();
-    return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) };
+    const z = zoomRef.current || 1;
+    return { x: (e.clientX - (r?.left ?? 0)) / z, y: (e.clientY - (r?.top ?? 0)) / z };
   }, []);
 
   /* ── 노드 이동 ── */
@@ -174,8 +329,8 @@ export default function WorkflowBuilderPage() {
     const d = dragRef.current;
     if (!d) return;
     const p = toCanvas(e);
-    const x = Math.max(0, Math.min(canvasW - NODE_W, p.x - d.dx));
-    const y = Math.max(0, Math.min(CANVAS_H - NODE_H, p.y - d.dy));
+    const x = Math.max(0, Math.min(WORLD_W - NODE_W, p.x - d.dx));
+    const y = Math.max(0, Math.min(WORLD_H - NODE_H, p.y - d.dy));
     setNodes((ns) => ns.map((n) => (n.id === d.id ? { ...n, x, y } : n)));
   };
   const onNodePointerUp = () => {
@@ -232,12 +387,59 @@ export default function WorkflowBuilderPage() {
         kind,
         title: KIND_META[kind].label,
         config: [{ k: '설정', v: '미지정' }],
-        x: Math.max(0, Math.min(canvasW - NODE_W, p.x - NODE_W / 2)),
-        y: Math.max(0, Math.min(CANVAS_H - NODE_H, p.y - NODE_H / 2)),
+        x: Math.max(0, Math.min(WORLD_W - NODE_W, p.x - NODE_W / 2)),
+        y: Math.max(0, Math.min(WORLD_H - NODE_H, p.y - NODE_H / 2)),
       },
     ]);
     setSel(id);
     setTab('prop');
+  };
+
+  /* ── 빈 배경 드래그 = 화면 팬 ── */
+  const onBgPointerDown = (e: React.PointerEvent) => {
+    // 노드·포트 위에서 시작한 드래그는 팬이 아니다.
+    if (e.target !== e.currentTarget) return;
+    const el = viewRef.current;
+    if (!el) return;
+    panRef.current = { x: e.clientX, y: e.clientY, sl: el.scrollLeft, st: el.scrollTop, moved: false };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onBgPointerMove = (e: React.PointerEvent) => {
+    const pan = panRef.current;
+    const el = viewRef.current;
+    if (!pan || !el) return;
+    const dx = e.clientX - pan.x;
+    const dy = e.clientY - pan.y;
+    // 임계값 — 손떨림을 팬으로 오해하면 '빈 곳 클릭 = 선택 해제' 가 죽는다.
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) pan.moved = true;
+    el.scrollLeft = pan.sl - dx;
+    el.scrollTop = pan.st - dy;
+  };
+  const onBgPointerUp = () => {
+    const pan = panRef.current;
+    panRef.current = null;
+    if (pan && !pan.moved) setSel(null);
+  };
+
+  /* ── 뷰포트 높이 조절 (하단 핸들) ── */
+  const resizeRef = useRef<{ y: number; h: number } | null>(null);
+  const onResizeDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    resizeRef.current = { y: e.clientY, h: viewH };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onResizeMove = (e: React.PointerEvent) => {
+    const r = resizeRef.current;
+    if (!r) return;
+    setViewH(Math.max(VIEW_H_MIN, Math.min(VIEW_H_MAX, r.h + (e.clientY - r.y))));
+  };
+  const onResizeUp = () => {
+    resizeRef.current = null;
+  };
+
+  const zoomBy = (d: number) => {
+    touchedZoom.current = true;
+    setZoom((z) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Number((z + d).toFixed(2)))));
   };
 
   const removeSelected = () => {
@@ -256,14 +458,28 @@ export default function WorkflowBuilderPage() {
       {/* 헤더 */}
       <div className="flex items-start gap-3 mt-2 mb-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-[20px] font-extrabold tracking-[-0.4px]">여신 상담 워크플로우</h1>
+          <h1 className="text-[20px] font-extrabold tracking-[-0.4px]">
+            {wfTitle}
+            {tplGraph && <span className="text-ink-mid font-bold"> (복제본)</span>}
+          </h1>
           <div className="mt-1.5 flex items-center gap-2 flex-wrap">
             <span className="pill bg-info-bg text-info border border-info-border">Studio (노코드)</span>
             <span className="pill bg-surface text-ink-mid border border-line-soft">
               노드 <b className="text-ink-dark">{nodes.length}</b> · 연결{' '}
               <b className="text-ink-dark">{edges.length}</b>
             </span>
-            <span className="pill bg-brand-tint text-brand border border-brand-tint">WFL-101</span>
+            <span className="pill bg-brand-tint text-brand border border-brand-tint">
+              {tplGraph ? 'WFL-신규' : 'WFL-101'}
+            </span>
+            {/*
+              복제 출처를 화면에 남긴다 — RFP 2-1 「조직 내 재사용 자산 관리」는
+              '누가 저장한 무엇을 복제했는지' 가 보여야 관리라고 말할 수 있다.
+            */}
+            {tpl && (
+              <span className="pill bg-ok-bg text-ok border border-ok-border">
+                {tpl.id} 템플릿에서 복제 · 저장 {tpl.savedBy} · {tpl.usedCount}회 사용
+              </span>
+            )}
             {['AGB-002', 'AGB-005', 'AGB-008'].map((r) => (
               <span key={r} className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
                 {r}
@@ -303,10 +519,10 @@ export default function WorkflowBuilderPage() {
           </button>
           <button
             onClick={() => {
-              setNodes(SEED_NODES);
-              setEdges(SEED_EDGES);
+              setNodes(baseNodes);
+              setEdges(baseEdges);
               setRunIdx(-1);
-              setSel('n3');
+              setSel(tplGraph ? 'n1' : 'n3');
             }}
             className="inline-flex items-center h-8 px-3 rounded border border-line bg-white text-[12px] font-bold text-ink-dark hover:bg-surface"
           >
@@ -322,7 +538,16 @@ export default function WorkflowBuilderPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[170px_1fr_300px] gap-3">
+      {/*
+        전체화면 — AI Studio 셸의 max-w 1360px 밖으로 나가는 유일한 통로다.
+        셸 자체를 넓히면 다른 화면이 전부 흔들리므로 이 화면에서만 벗어난다.
+      */}
+      <div
+        className={cn(
+          'grid grid-cols-[170px_1fr_300px] gap-3',
+          fullscreen && 'fixed inset-0 z-50 bg-surface-soft px-5 py-4 overflow-auto content-start',
+        )}
+      >
         {/* ── 팔레트 ── */}
         <aside className="card px-3 py-3 self-start">
           <div className="text-[10.5px] font-extrabold text-ink-dark uppercase tracking-[0.4px] mb-2">
@@ -391,8 +616,8 @@ export default function WorkflowBuilderPage() {
                 type="button"
                 disabled={!nlText.trim()}
                 onClick={() => {
-                  setNodes(SEED_NODES);
-                  setEdges(SEED_EDGES);
+                  setNodes(baseNodes);
+                  setEdges(baseEdges);
                   setRunIdx(-1);
                   setNlParsed(true);
                   toast('문장을 해석해 파이프라인을 생성했습니다 — 해석 결과를 확인하세요');
@@ -445,21 +670,101 @@ export default function WorkflowBuilderPage() {
         </aside>
 
         {/* ── 캔버스 ── */}
-        <section className="card overflow-hidden">
+        <section className="card overflow-hidden flex flex-col min-w-0">
           <div className="px-4 py-2 border-b border-line-soft flex items-center gap-2">
-            <span className="text-[12px] font-extrabold text-ink">캔버스</span>
-            <span className="text-[10.5px] text-ink-mid font-semibold">
-              노드를 끌어 옮기고, 포트를 끌어 연결합니다
+            {/*
+              좁은 셸(1280 에서 캔버스 폭 516px)에서는 이 줄이 먼저 눌린다.
+              nowrap + shrink-0 을 안 걸면 '캔버스' 가 세로로 쪼개진다.
+            */}
+            <span className="text-[12px] font-extrabold text-ink flex-shrink-0 whitespace-nowrap">
+              캔버스
             </span>
-            {sel && (
+            <span className="text-[10.5px] text-ink-mid font-semibold min-w-0 truncate hidden [@media(min-width:1600px)]:inline">
+              노드를 끌어 옮기고 · 포트를 끌어 연결 · 빈 곳을 끌어 화면 이동
+            </span>
+            {overflowing && !fullscreen && (
               <button
-                onClick={removeSelected}
-                className="ml-auto pill bg-white text-bad border border-bad-border hover:bg-bad-bg"
+                onClick={() => setFullscreen(true)}
+                className="pill bg-warn-bg text-warn border border-warn-border hover:brightness-95 flex-shrink-0 whitespace-nowrap"
+                title="전체화면으로 열면 축소 없이 전부 보인다"
               >
-                선택 노드 삭제
+                일부가 화면 밖 · ⤢ 넓게
               </button>
             )}
+
+            {/* 배율 — 좁은 셸에서도 전체가 보이게 하는 장치. 열 때 자동으로 맞춘다. */}
+            <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+              {sel && (
+                <button
+                  onClick={removeSelected}
+                  className="pill bg-white text-bad border border-bad-border hover:bg-bad-bg mr-1 whitespace-nowrap"
+                >
+                  노드 삭제
+                </button>
+              )}
+              <div className="inline-flex items-center rounded border border-line overflow-hidden bg-white">
+                <button
+                  onClick={() => zoomBy(-ZOOM_STEP)}
+                  disabled={zoom <= ZOOM_MIN}
+                  title="축소 (Ctrl + 휠)"
+                  className="w-7 h-[26px] text-[13px] font-extrabold text-ink-dark hover:bg-surface disabled:opacity-35"
+                >
+                  −
+                </button>
+                <span className="w-[46px] text-center text-[10.5px] font-extrabold text-ink-mid tabular-nums border-x border-line-soft leading-[26px]">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  onClick={() => zoomBy(ZOOM_STEP)}
+                  disabled={zoom >= ZOOM_MAX}
+                  title="확대 (Ctrl + 휠)"
+                  className="w-7 h-[26px] text-[13px] font-extrabold text-ink-dark hover:bg-surface disabled:opacity-35"
+                >
+                  +
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  touchedZoom.current = false;
+                  fit();
+                }}
+                title="전체가 보이도록 맞춘다"
+                className="h-[26px] px-2 rounded border border-line bg-white text-[10.5px] font-extrabold text-ink-dark hover:bg-surface whitespace-nowrap"
+              >
+                맞춤
+              </button>
+              <button
+                onClick={() => {
+                  touchedZoom.current = true;
+                  setZoom(1);
+                }}
+                title="실제 크기"
+                className="h-[26px] px-2 rounded border border-line bg-white text-[10.5px] font-extrabold text-ink-dark hover:bg-surface whitespace-nowrap"
+              >
+                100%
+              </button>
+              <button
+                onClick={() => setFullscreen((v) => !v)}
+                title={fullscreen ? '전체화면 종료 (Esc)' : '전체화면으로 넓게 쓰기'}
+                className="h-[26px] px-2 rounded border border-line bg-white text-[10.5px] font-extrabold text-ink-dark hover:bg-surface whitespace-nowrap"
+              >
+                {fullscreen ? '⤡ 종료' : '⤢ 넓게'}
+              </button>
+            </div>
           </div>
+
+          {/* 뷰포트 — 월드보다 좁으면 스크롤된다. 월드 좌표는 여기 영향을 받지 않는다. */}
+          <div
+            ref={viewRef}
+            className="relative overflow-auto bg-surface-soft"
+            style={{ height: fullscreen ? 'calc(100vh - 129px)' : viewH }}
+          >
+          {/*
+            축소하면 월드는 시각적으로만 작아지고 **레이아웃 상자는 그대로**라
+            오른쪽에 빈 스크롤 영역이 남는다. 배율을 곱한 크기의 상자를 하나 씌워
+            스크롤 범위를 실제 그림 크기에 맞춘다.
+          */}
+          <div style={{ width: WORLD_W * zoom, height: WORLD_H * zoom }}>
           <div
             ref={canvasRef}
             onDragOver={(e) => {
@@ -467,14 +772,19 @@ export default function WorkflowBuilderPage() {
               e.dataTransfer.dropEffect = 'copy';
             }}
             onDrop={onDrop}
-            onPointerDown={(e) => {
-              if (e.target === e.currentTarget) setSel(null);
+            onPointerDown={onBgPointerDown}
+            onPointerMove={onBgPointerMove}
+            onPointerUp={onBgPointerUp}
+            className="relative bg-white bg-[linear-gradient(#F2F2F2_1px,transparent_1px),linear-gradient(90deg,#F2F2F2_1px,transparent_1px)] bg-[size:22px_22px]"
+            style={{
+              width: WORLD_W,
+              height: WORLD_H,
+              transform: `scale(${zoom})`,
+              transformOrigin: '0 0',
             }}
-            className="relative bg-[linear-gradient(#F2F2F2_1px,transparent_1px),linear-gradient(90deg,#F2F2F2_1px,transparent_1px)] bg-[size:22px_22px]"
-            style={{ width: '100%', height: CANVAS_H }}
           >
             {/* 관계선 레이어 */}
-            <svg className="absolute inset-0 pointer-events-none" width="100%" height={CANVAS_H}>
+            <svg className="absolute inset-0 pointer-events-none" width={WORLD_W} height={WORLD_H}>
               <defs>
                 <marker id="wf-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                   <path d="M 0 1 L 9 5 L 0 9 z" fill="#B4B4B4" />
@@ -612,10 +922,31 @@ export default function WorkflowBuilderPage() {
               );
             })}
           </div>
+          </div>
+          </div>
+
+          {/*
+            높이 조절 핸들 — 세로로 늘렸다 줄였다.
+            분기 노드가 위아래로 벌어지는 그래프라 세로 여유가 판독성을 좌우한다.
+          */}
+          {!fullscreen && (
+            <div
+              onPointerDown={onResizeDown}
+              onPointerMove={onResizeMove}
+              onPointerUp={onResizeUp}
+              title="끌어서 캔버스 높이 조절"
+              className="h-[9px] flex items-center justify-center cursor-ns-resize border-t border-line-soft bg-white hover:bg-surface group"
+            >
+              <span className="w-9 h-[3px] rounded-full bg-line group-hover:bg-ink-light" />
+            </div>
+          )}
         </section>
 
         {/* ── 속성 / Trace ── */}
-        <aside className="card flex flex-col self-start max-h-[534px]">
+        <aside
+          className="card flex flex-col self-start"
+          style={{ maxHeight: fullscreen ? 'calc(100vh - 88px)' : viewH + 50 }}
+        >
           <div className="flex items-center border-b border-line-soft">
             {(
               [
