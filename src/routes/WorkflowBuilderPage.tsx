@@ -65,10 +65,14 @@ import {
 const WORLD_W = 1400;
 const WORLD_H = 700;
 
-/** 뷰포트 높이 — 하단 핸들로 이 범위 안에서 조절한다. */
+/**
+ * 뷰포트 높이 — 하단 핸들로 이 범위 안에서 조절한다.
+ * 기본값은 1080 화면에서 헤더·툴바를 빼고 남는 만큼 잡았다. 캔버스가 작으면
+ * 노코드 빌더가 '보조 위젯' 처럼 보인다 — 이 화면의 주인공은 캔버스다.
+ */
 const VIEW_H_MIN = 320;
 const VIEW_H_MAX = 900;
-const VIEW_H_DEFAULT = 470;
+const VIEW_H_DEFAULT = 560;
 
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 1.6;

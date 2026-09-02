@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/lib/tenantStore';
 import { TENANTS } from '@/data/tenants';
@@ -14,6 +14,19 @@ import { TENANTS } from '@/data/tenants';
  * 사이드바 하단에 현재 Namespace 를 항상 띄워 둔다 — 어느 계열사 맥락에서
  * 만들고 있는지가 이 화면에서 가장 중요한 정보다(SEC-001 테넌트 격리).
  */
+
+/**
+ * 폭이 넓어야 하는 화면.
+ *
+ * 이 셸의 기본 상한은 1360px 이다. 대부분의 화면(목록·폼)은 그보다 넓으면
+ * 오히려 시선 이동만 길어져서 그렇게 잡았다. 그런데 **캔버스형 화면은 반대**다 —
+ * 워크플로우 빌더는 팔레트·속성 패널을 빼고 나면 캔버스에 598px 밖에 안 남아
+ * 7노드 그래프(1184px)가 축소 없이는 들어오지 않는다.
+ *
+ * 셸 전체를 넓히면 나머지 20여 개 화면의 레이아웃이 같이 흔들리므로
+ * **경로로 지목한 화면만** 프로젝트 표준 상한(1760px)까지 열어 준다.
+ */
+const WIDE_PATHS = ['/studio/workflow'];
 
 export interface WorkspaceNavItem {
   label: string;
@@ -40,9 +53,16 @@ interface Props {
 export default function WorkspaceLayout({ eyebrow, title, subtitle, nav, groups }: Props) {
   const tenant = useTenant();
   const meta = TENANTS.find((t) => t.name === tenant);
+  const { pathname } = useLocation();
+  const wide = WIDE_PATHS.some((w) => pathname.startsWith(w));
 
   return (
-    <div className="max-w-[1360px] mx-auto px-6 pt-[18px] pb-14">
+    <div
+      className={cn(
+        'mx-auto px-6 pt-[18px] pb-14',
+        wide ? 'max-w-[1760px]' : 'max-w-[1360px]',
+      )}
+    >
       <div className="grid grid-cols-[200px_1fr] gap-5">
         <aside className="sticky top-[110px] self-start">
           <div className="card px-3 py-3">
