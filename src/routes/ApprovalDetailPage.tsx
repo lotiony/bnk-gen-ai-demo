@@ -3,7 +3,9 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   approvals,
   useApprovalRevision,
+  currentPromotionStage,
   findPromotion,
+  promotionLine,
   decideApproval,
   getApprovalDecision,
   namespaceOf,
@@ -30,7 +32,7 @@ import ChipReadonly from '@/components/projectForm/ChipReadonly';
 import SidebarCard from '@/components/projectForm/SidebarCard';
 import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
-import { canViewApproval, canViewPtuPool } from '@/lib/personaView';
+import { canDecideApproval, canViewApproval, canViewPtuPool } from '@/lib/personaView';
 
 /**
  * 결재 상세.
@@ -88,6 +90,8 @@ export default function ApprovalDetailPage() {
 
   const approval = approvals.find((a) => a.id === approvalId) ?? approvals[0];
   const pending = approval.state === 'pending';
+  // 열람과 처리는 다른 권한이다 — 열람된다고 결재할 수 있는 게 아니다(ONM-003).
+  const right = canDecideApproval(persona, approval);
   const decision = getApprovalDecision(approval.id);
 
   /** 승인·반려·보류 — 상태가 실제로 바뀌고, **누가** 처리했는지 남는다(ONM-004). */
@@ -426,10 +430,13 @@ export default function ApprovalDetailPage() {
         </aside>
       </div>
 
-      {/* Sticky action bar — 승인·반려·보류가 실제로 상태를 바꾼다. */}
+      {/* Sticky action bar — 승인·반려·보류가 실제로 상태를 바꾼다.
+          승인 자격이 없으면 버튼 자체를 내리고 어느 계정으로 전환해야 하는지만 남긴다. */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
-          {pending ? (
+          {pending && !right.ok ? (
+            <SodNotice hint={right.hint} />
+          ) : pending ? (
             <>
               <textarea
                 value={note}
@@ -473,6 +480,24 @@ export default function ApprovalDetailPage() {
 }
 
 /* ═══════════════════════ 공용 조각 ═══════════════════════ */
+
+/**
+ * 승인 자격이 없을 때 액션 바에 들어가는 안내.
+ *
+ * 버튼을 비활성화만 하면 "왜 못 누르는지" 가 화면에 없다. 시연에서는 막힌 이유와
+ * 다음 동작(어느 계정으로 전환할지)이 같이 보여야 직무 분리가 설명 없이 읽힌다.
+ */
+function SodNotice({ hint }: { hint: string }) {
+  return (
+    <div className="ml-auto flex items-center gap-2 text-[11.5px] font-semibold text-ink-mid">
+      <span className="pill border bg-warn-bg text-warn border-warn-border">🔒 승인 권한 없음</span>
+      <span>{hint}</span>
+      <Link to="/approvals" className="ml-2 text-info font-bold hover:underline">
+        결재함으로 →
+      </Link>
+    </div>
+  );
+}
 
 /**
  * 첨부 문서 열람.
@@ -597,6 +622,8 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
   const persona = useCurrentPersona();
   const [note, setNote] = useState('');
   const pending = dep.state === 'pending';
+  // 승인 자격 — 기안자 자기결재와 비(非)승인권자를 함께 막는다(ONM-003).
+  const right = canDecideApproval(persona, dep);
   const isServ = dep.category === 'serv';
   const env = isServ ? '서빙계' : '학습계';
   // 비교용 현재 = 같은 환경(train/serv)의 최신 승인(done) 배포 (이 건 제외).
@@ -770,16 +797,23 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
               {env} 배포 결재 · {dep.stage.label}
             </div>
             <div className="ml-auto flex items-center gap-2">
+              {/* 회수는 기안자의 권한이라 자격 판정과 무관하게 남긴다. */}
               <Button variant="ghost" onClick={cancel}>신청 회수</Button>
-              <button
-                onClick={() => decide('reject')}
-                className="py-2 px-3.5 bg-white border border-bad-border rounded text-[12.5px] font-extrabold text-bad hover:bg-bad-bg"
-              >
-                반려
-              </button>
-              <Button variant="primary" onClick={() => decide('approve')}>
-                ✓ 승인
-              </Button>
+              {right.ok ? (
+                <>
+                  <button
+                    onClick={() => decide('reject')}
+                    className="py-2 px-3.5 bg-white border border-bad-border rounded text-[12.5px] font-extrabold text-bad hover:bg-bad-bg"
+                  >
+                    반려
+                  </button>
+                  <Button variant="primary" onClick={() => decide('approve')}>
+                    ✓ 승인
+                  </Button>
+                </>
+              ) : (
+                <SodNotice hint={right.hint} />
+              )}
             </div>
           </div>
         </div>
@@ -921,6 +955,11 @@ function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: Ap
   const persona = useCurrentPersona();
   const [note, setNote] = useState('');
   const pending = item.state === 'pending';
+  // 단계마다 승인 주체가 다르다 — 지금 이 계정이 현재 단계의 당사자인가.
+  const right = canDecideApproval(persona, item);
+  const stage = currentPromotionStage(promo);
+  // 마지막 단계에서만 공유 범위가 실제로 넓어진다. 그 전 단계는 '동의' 다.
+  const isFinalStage = !!stage && !promo.stages.some((st) => st.state === 'upcoming');
   const decision = getApprovalDecision(item.id);
 
   const fromIdx = SCOPE_ORDER.indexOf(promo.fromScope);
@@ -928,13 +967,21 @@ function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: Ap
   const ownerNs = namespaceOf(promo.ownerTenant);
 
   const decide = (kind: ApprovalDecisionKind) => {
+    // 다음 단계는 **처리 전에** 읽어 둔다 — decideApproval 이 상태를 옮기고 나면
+    // 그 단계는 이미 'current' 라서 'upcoming' 검색에 걸리지 않는다.
+    const next = promo.stages.find((st) => st.state === 'upcoming');
     decideApproval(item.id, kind, persona?.name ?? '현재 사용자', persona?.role ?? '결재자', note);
-    const label = kind === 'approve' ? '승인' : kind === 'reject' ? '반려' : '보류';
+    const who = `${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'})`;
+    const label =
+      kind === 'approve' ? (isFinalStage ? '최종 승인' : '승인') : kind === 'reject' ? '반려' : '보류';
+    // 중간 단계 승인은 완결이 아니다 — 다음 결재자가 누구인지까지 알려 준다.
     toast(
       `${item.id} · 공유범위 승격 ${label}`,
-      kind === 'approve'
-        ? `${promo.assetId} ${promo.assetName} 이(가) 그룹 범위로 공개됩니다 — 11개 Namespace 전체 노출\n처리 ${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'})`
-        : `처리 ${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'}) · 통합 감사 원장에 기록되었습니다`,
+      kind !== 'approve'
+        ? `처리 ${who} · 통합 감사 원장에 기록되었습니다`
+        : isFinalStage
+        ? `${promo.assetId} ${promo.assetName} 이(가) 그룹 범위로 공개됩니다 — 11개 Namespace 전체 노출\n처리 ${who}`
+        : `처리 ${who}\n다음 단계: ${next?.label ?? '-'} · ${next?.approverName ?? '-'} (${next?.approverTenant ?? '-'})`,
       kind === 'reject' ? 'warn' : 'ok',
     );
     setNote('');
@@ -1144,6 +1191,16 @@ function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: Ap
                 }
               />
             ))}
+            {/* 기안 폼에서 요청자가 직접 쓴 입력 — 자동 문장이 아니다 */}
+            <FormRow k="활용 업무" v={<span className="font-semibold">{promo.purpose}</span>} />
+            <FormRow
+              k="활용 예정 범위"
+              v={
+                <span className="font-semibold">
+                  {promo.requesterTenant} 내 {promo.deployUnit}
+                </span>
+              }
+            />
             <FormRow k="요청 사유" v={<span className="leading-relaxed font-medium">{promo.reason}</span>} />
           </FormSection>
 
@@ -1201,7 +1258,7 @@ function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: Ap
         <aside className="sticky top-[106px] self-start">
           <SidebarCard title="결재선 진행" icon="📋">
             <div className="space-y-1.5">
-              {promo.line.map((st) => (
+              {promotionLine(promo).map((st) => (
                 <ApprStep
                   key={st.seq + st.label}
                   seq={st.seq}
@@ -1235,7 +1292,7 @@ function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: Ap
             </SidebarCard>
           )}
 
-          {pending && (
+          {pending && right.ok && (
             <SidebarCard title="결재 의견" icon="✎">
               <textarea
                 value={note}
@@ -1260,11 +1317,15 @@ function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: Ap
             공유범위 승격 · {promo.fromScope} → {promo.toScope} · {item.stage.label}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {pending ? (
+            {pending && !right.ok ? (
+              <SodNotice hint={right.hint} />
+            ) : pending ? (
               <>
                 <Button variant="danger" onClick={() => decide('reject')}>반려</Button>
                 <Button onClick={() => decide('hold')}>보류</Button>
-                <Button variant="primary" onClick={() => decide('approve')}>✓ 승인 · 그룹 공개</Button>
+                <Button variant="primary" onClick={() => decide('approve')}>
+                  {isFinalStage ? '✓ 승인 · 그룹 공개' : '✓ 승인 — 다음 단계로'}
+                </Button>
               </>
             ) : (
               <Link to="/approvals" className="text-[12px] font-bold text-info hover:underline">

@@ -30,6 +30,7 @@ export type PersonaId =
   | 'security_admin'
   | 'operator'
   // 부산은행
+  | 'bs_admin'
   | 'project_owner'
   | 'agent_lead'
   | 'agent_dev'
@@ -38,6 +39,7 @@ export type PersonaId =
   | 'project_member'
   | 'service_user'
   // 경남은행
+  | 'kn_admin'
   | 'kn_agent_dev'
   | 'kn_data_dev'
   | 'kn_service_user'
@@ -145,6 +147,29 @@ export const PERSONAS: Persona[] = [
   },
 
   /* ─── 부산은행 ─── */
+  /**
+   * 계열사 AI서비스 관리자 — **소유 계열사의 승인권자**.
+   *
+   * RFP 관리자 포털: "그룹 공통 AI자산과 계열사 전용 AI 자산의 **공개, 공유 범위
+   * 설정** 기능 제공". 즉 자기 계열사 자산을 그룹에 여는 결정은 그 계열사의
+   * 관리자 몫이다. 자산을 만든 개발자가 아니다 — ONM-003 이 "에이전트 개발자와
+   * 승인권자 간 직무 분리" 를 필수로 못박는다.
+   *
+   * 계열사 소속이므로 `canSwitchTenant` 는 false 다(SEC-001). 그룹 공동존 운영
+   * 콘솔도 열지 않는다 — 승인권자이지 공동존 운영자가 아니다.
+   */
+  {
+    id: 'bs_admin',
+    role: '계열사 AI서비스 관리자',
+    rfpRole: '관리자',
+    name: '고승인',
+    initial: '고',
+    dept: '부산은행 · AI서비스운영부',
+    group: '관리자',
+    tenant: '부산은행',
+    canSwitchTenant: false,
+    hint: '부산은행 AI자산의 공개·공유 범위 승인',
+  },
   {
     id: 'project_owner',
     role: '과제 오너',
@@ -244,6 +269,18 @@ export const PERSONAS: Persona[] = [
 
   /* ─── 경남은행 ─── */
   {
+    id: 'kn_admin',
+    role: '계열사 AI서비스 관리자',
+    rfpRole: '관리자',
+    name: '유승인',
+    initial: '유',
+    dept: '경남은행 · 디지털기획부',
+    group: '관리자',
+    tenant: '경남은행',
+    canSwitchTenant: false,
+    hint: '경남은행 AI자산의 공개·공유 범위 승인',
+  },
+  {
     id: 'kn_agent_dev',
     role: '에이전트 개발자',
     rfpRole: '에이전트 개발자',
@@ -312,4 +349,15 @@ export const PERSONA_TENANT_ORDER: Tenant[] = [
 
 export function personasByTenant(t: Tenant): Persona[] {
   return PERSONAS.filter((p) => p.tenant === t);
+}
+
+/**
+ * 계열사 소속 승인권자 — 그룹 공동존 운영 역할과 구분한다.
+ * 결재 권한은 갖되 공동존 운영 콘솔·타 계열사 Namespace 는 열지 않는다.
+ */
+export const AFFILIATE_APPROVER_IDS: PersonaId[] = ['bs_admin', 'kn_admin'];
+
+/** 해당 계열사의 승인권자(관리자 그룹). 없으면 undefined. */
+export function affiliateApprover(t: Tenant): Persona | undefined {
+  return PERSONAS.find((p) => p.tenant === t && p.group === '관리자');
 }

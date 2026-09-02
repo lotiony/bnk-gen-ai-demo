@@ -29,6 +29,7 @@ import { useTenant } from '@/lib/tenantStore';
 import { useCurrentPersona } from '@/lib/persona';
 import { canAccessArea } from '@/lib/personaView';
 import { createScopePromotion, findPromotionByAsset, useApprovalRevision } from '@/data/mockApprovals';
+import PromotionRequestModal, { type PromotionForm } from '@/components/catalog/PromotionRequestModal';
 import {
   getCatalogItems,
   useVerdict,
@@ -83,6 +84,8 @@ export default function CatalogPage() {
   const [sort, setSort] = useState<SortKey>('usage');
   /** 자산 ID → 상신된 승격 결재번호. 카드에서 결재 상세로 바로 넘어갈 수 있게 번호를 들고 있는다. */
   const [requested, setRequested] = useState<Record<string, string>>({});
+  /** 기안 폼이 열려 있는 대상 자산. null 이면 닫힘. */
+  const [draftTarget, setDraftTarget] = useState<CatalogItem | null>(null);
 
   /** 비노출 자산은 카탈로그에 아예 실리지 않는다 — 격리가 먼저다. */
   const visible = useMemo(
@@ -114,8 +117,10 @@ export default function CatalogPage() {
   const hiddenCount = all.length - visible.length;
 
   /**
-   * 그룹 공개 요청 → **공유범위 승격 결재 상신** (RFP 1.3.2).
-   * 결재번호가 발번되고 결재함에서 실제로 조회된다.
+   * 그룹 공개 요청 → **기안 폼** 을 연다 (RFP 1.3.2).
+   *
+   * 버튼 한 번에 결재가 생기면 "승인 절차" 의 앞 절반(기안)이 화면에 없다.
+   * 사유·활용 업무·확인 사항을 요청자가 직접 쓰고 나서야 상신된다.
    */
   const request = (it: CatalogItem) => {
     const dup = findPromotionByAsset(it.id);
@@ -124,6 +129,13 @@ export default function CatalogPage() {
       toast('이미 상신된 승격 결재가 있습니다', `${dup.approvalId} · ${it.id} ${it.name}`, 'warn');
       return;
     }
+    setDraftTarget(it);
+  };
+
+  /** 기안 폼 제출 → **공유범위 승격 결재 상신**. 결재번호가 발번되고 결재함에서 조회된다. */
+  const submitRequest = (form: PromotionForm) => {
+    const it = draftTarget;
+    if (!it) return;
     const created = createScopePromotion({
       assetKind: it.kind,
       assetId: it.id,
@@ -140,8 +152,12 @@ export default function CatalogPage() {
       requestedBy: persona?.name ?? '현재 사용자',
       requesterRole: persona?.role ?? '사용자',
       requesterTenant: myTenant,
+      purpose: form.purpose,
+      deployUnit: form.deployUnit,
+      reason: form.reason,
     });
     setRequested((m) => ({ ...m, [it.id]: created.id }));
+    setDraftTarget(null);
     toast(
       `그룹 공개 요청 상신 · ${created.id}`,
       `${it.id} ${it.name}\n소유: ${it.tenant} · ${it.owner}\n${it.meta.scope} → 그룹 승격 결재가 결재함에 등재되었습니다. 승인 시 11개 Namespace 전체에 공개됩니다.`,
@@ -293,11 +309,23 @@ export default function CatalogPage() {
               key={`${it.kind}-${it.id}`}
               item={it}
               myTenant={myTenant}
-              requestedId={requested[it.id]}
+              // 화면을 떠났다 돌아와도 진행 중인 결재는 링크로 남아야 한다 — 스토어가 진실이다.
+              requestedId={requested[it.id] ?? findPromotionByAsset(it.id)?.approvalId}
               onRequest={() => request(it)}
               onUse={() => useAsset(it)}
             />
           ))}
+          <PromotionRequestModal
+            open={draftTarget !== null}
+            item={draftTarget}
+            requester={{
+              name: persona?.name ?? '현재 사용자',
+              role: persona?.role ?? '사용자',
+              tenant: myTenant,
+            }}
+            onClose={() => setDraftTarget(null)}
+            onSubmit={submitRequest}
+          />
         </div>
       )}
       </>

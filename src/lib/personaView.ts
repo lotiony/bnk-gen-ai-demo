@@ -8,11 +8,17 @@
  * 각 함수는 페르소나(또는 null)를 받고, 해당 페르소나에서 보여야 할
  * 데이터 슬라이스를 반환한다. 페르소나별 룰 조정은 이 파일 한 곳에서 이뤄진다.
  */
-import { approvals } from '@/data/mockApprovals';
+import {
+  approvals,
+  PROMOTE_CATEGORY,
+  currentPromotionStage,
+  findPromotion,
+} from '@/data/mockApprovals';
 import { getDeployApprovals } from '@/lib/deployApprovalStore';
 import { projectsList } from '@/data/mockProjects';
 import { FEATURED_AGENTS, type FeaturedAgent } from '@/data/mockFeaturedAgents';
 import type { ApprovalItem } from '@/types';
+import { AFFILIATE_APPROVER_IDS } from '@/data/mockPersonas';
 import type { Persona, PersonaId } from '@/data/mockPersonas';
 
 /** 현재 페르소나 ID (null이면 로그아웃 상태). */
@@ -41,6 +47,11 @@ function approvalCategoryAllowlist(persona: PersonaLike): string[] | null {
     case 'security_admin':
       // 정보보호 관리자는 접근통제·인증 관점의 계정 결재만 관심.
       return ['account'];
+    case 'bs_admin':
+    case 'kn_admin':
+      // 계열사 승인권자는 그룹 결재함 전체를 보지 않는다(SEC-001 격리).
+      // 빈 allowlist 로 두고, 아래 union 규칙이 **본인에게 배정된 승격 건**만 더한다.
+      return [];
     default:
       return null;
   }
@@ -62,13 +73,23 @@ export function getVisibleApprovals(persona: PersonaLike): ApprovalItem[] {
   if (persona?.group === '사용자') return [];
   // 서빙계 배포 결재(스토어)를 기존 정적 결재와 합쳐서 노출.
   let list: ApprovalItem[] = [...getDeployApprovals(), ...approvals];
-  // 개발자 그룹: 본인 기안 건만. (draftedBy에 "(SoD 자동 위임)" 같은 접미사가 붙을 수 있어 prefix 비교)
+  // 개발자 그룹: 본인 기안 건 + **본인이 처리해야 할 단계인 승격 건**.
+  // (draftedBy에 "(SoD 자동 위임)" 같은 접미사가 붙을 수 있어 prefix 비교)
+  //
+  // 자산 소유자 동의는 성격상 소유자 본인만 할 수 있다 — 자기 자산을 타 계열사에
+  // 열어 줄지 정하는 일이라 결재자 그룹으로 넘길 수 없다. 그래서 개발자라도
+  // 이 단계의 당사자면 결재함에 보인다. 보이지 않으면 승격 결재가 2단계에서 멈춘다.
   if (isDrafterOnlyPersona(persona) && persona) {
     const me = persona.name;
-    return list.filter((a) => a.draftedBy.startsWith(me));
+    return list.filter((a) => a.draftedBy.startsWith(me) || isMyPromotionStage(persona, a));
   }
   const allow = approvalCategoryAllowlist(persona);
-  if (allow) list = list.filter((a) => allow.includes(a.category));
+  // 관심 카테고리로 좁히되, **본인에게 배정된 승격 단계**는 카테고리와 무관하게 남긴다.
+  // 소유자 계정이 없어 정보보호 관리자에게 위임된 동의 단계가 여기서 걸러지면
+  // 결재가 조용히 멈춘다 — 배정과 노출이 어긋나면 안 된다.
+  if (allow && persona) {
+    list = list.filter((a) => allow.includes(a.category) || isMyPromotionStage(persona, a));
+  }
   // 사업·거버넌스 관리자는 완료·반려된 지난 이력은 홈에서 숨기고 진행 중 결재만 노출.
   if (
     persona?.id === 'business_admin' ||
@@ -85,7 +106,12 @@ export function getVisibleApprovals(persona: PersonaLike): ApprovalItem[] {
  * 목록 필터와 같은 규칙을 써서, 목록에 없는 건은 상세 URL로도 못 들어오게 한다.
  */
 export function canViewApproval(persona: PersonaLike, approvalId: string): boolean {
-  return getVisibleApprovals(persona).some((a) => a.id === approvalId);
+  if (getVisibleApprovals(persona).some((a) => a.id === approvalId)) return true;
+  // 결재함에 뜨지 않는 그룹(일반 사용자)이라도 **본인이 상신한 건**은 추적할 수 있어야
+  // 한다. 마켓플레이스 카드가 "결재 진행 중 · APV-…" 링크를 내주는데 그 링크가
+  // 열람 불가로 막히면, 요청이 어디로 갔는지 화면에서 끊긴다.
+  if (!persona) return false;
+  return approvals.some((a) => a.id === approvalId && a.draftedBy.startsWith(persona.name));
 }
 
 /** 해당 프로젝트의 참여자인지. members[].title이 "이름 (역할)" 형식이라 이름으로 판정. */
@@ -181,6 +207,9 @@ export function canViewPtuPool(persona: PersonaLike): boolean {
  */
 export function canAccessAdminConsole(persona: PersonaLike): boolean {
   if (!persona) return false;
+  // 계열사 소속 승인권자는 결재 권한만 갖는다 — 그룹 공동존 운영 콘솔(전사 대시보드·
+  // GPU 자원·감사 원장)은 열지 않는다. 승인권자이지 공동존 운영자가 아니다(SEC-001).
+  if (AFFILIATE_APPROVER_IDS.includes(persona.id)) return false;
   return persona.group === '관리자';
 }
 
@@ -277,6 +306,76 @@ export function canApproveGate(persona: PersonaLike, gate: ApprovalGate): boolea
   if (!persona) return false;
   if (gate === 'deploy') return persona.group === '관리자';
   return persona.id === 'security_admin' || persona.id === 'governance_admin';
+}
+
+/**
+ * 결재 건 하나를 지금 이 페르소나가 **처리할 수 있는가**.
+ *
+ * 열람(`canViewApproval`)과 처리를 분리하는 것이 이 함수의 존재 이유다.
+ * 전에는 결재 상세가 `state === 'pending'` 만 보고 승인 버튼을 열어서,
+ * 열람만 가능한 사람도 승인할 수 있었다 — 기안자 본인 포함이다.
+ * 마켓플레이스에서 그룹 공개 요청을 낸 거버넌스 관리자가 그 건을 스스로
+ * 최종 승인할 수 있었고, 그건 RBAC·직무 분리(ONM-003) 가 화면에서 깨진 상태다.
+ * 화면 9(`canApproveGate`)는 이미 같은 규칙을 지키고 있었으므로 두 화면이
+ * 서로 다른 말을 하고 있기도 했다.
+ *
+ * 반환값의 `hint` 는 **어느 계정으로 전환해야 하는지**까지 적는다.
+ * 시연 중 막혔을 때 다음 동작이 화면에 쓰여 있어야 한다.
+ */
+export interface DecisionRight {
+  ok: boolean;
+  hint: string;
+}
+
+const ALLOW: DecisionRight = { ok: true, hint: '' };
+
+export function canDecideApproval(persona: PersonaLike, item: ApprovalItem): DecisionRight {
+  if (!persona) return { ok: false, hint: '로그인이 필요합니다' };
+  if (persona.group === '사용자') {
+    return { ok: false, hint: '일반 사용자는 결재 권한이 없습니다' };
+  }
+  // ① 자기결재 차단 — 직무 분리의 핵심. 역할과 무관하게 먼저 막는다.
+  if (item.draftedBy.startsWith(persona.name)) {
+    return {
+      ok: false,
+      hint: '직무 분리(SoD) — 본인이 상신한 결재는 본인이 승인할 수 없습니다',
+    };
+  }
+  // ② 승격 결재는 단계마다 승인 주체가 다르다.
+  if (item.category === PROMOTE_CATEGORY) {
+    const promo = findPromotion(item.id);
+    const stage = promo && currentPromotionStage(promo);
+    if (!stage) return { ok: false, hint: '처리할 단계가 남아 있지 않습니다' };
+    if (stage.kind === 'affiliate-admin') {
+      // 승인 주체는 **관리자**여야 한다. 개발자가 승인 행위를 하면 ONM-003 위반이다.
+      return persona.group === '관리자' && persona.name === stage.approverName
+        ? ALLOW
+        : {
+            ok: false,
+            hint: `소유 계열사 승인권자 ${stage.approverName} (${stage.approverTenant}) 계정으로 전환해야 합니다`,
+          };
+    }
+    // 최종 통제는 그룹 공동존 운영 역할의 몫이다. 두 명을 두는 이유는 한 명이
+    // 기안자가 되면 자기결재 차단에 걸려 아무도 승인할 수 없게 되기 때문이다.
+    return persona.id === 'governance_admin' || persona.id === 'platform_admin'
+      ? ALLOW
+      : {
+          ok: false,
+          hint: '그룹 거버넌스 관리자(박거버) 또는 플랫폼 관리자(김플랫) 계정으로 전환해야 합니다',
+        };
+  }
+  // ③ 그 밖의 결재는 승인권자(관리자 그룹) 몫이다 — 개발자는 기안자다.
+  return persona.group === '관리자'
+    ? ALLOW
+    : { ok: false, hint: '승인권자(관리자 그룹) 계정으로 전환해야 합니다' };
+}
+
+/** 지금 이 페르소나에게 배정된 승격 단계인지 — 결재함 노출의 근거. */
+function isMyPromotionStage(persona: Persona, a: ApprovalItem): boolean {
+  if (a.category !== PROMOTE_CATEGORY || a.state !== 'pending') return false;
+  const promo = findPromotion(a.id);
+  const stage = promo && currentPromotionStage(promo);
+  return !!stage && stage.approverName === persona.name;
 }
 
 /** 승인 자격이 없을 때 화면에 띄울 안내 — 어느 계정으로 바꿔야 하는지까지 적는다. */
