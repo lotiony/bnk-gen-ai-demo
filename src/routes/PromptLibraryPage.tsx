@@ -11,7 +11,8 @@
  * 버전 규약 — versions[0] 이 최신이며 serving 은 항상 하나다. 롤백은 이력을
  * 지우지 않고 과거 본문을 새 버전으로 복제해 올린다(감사 추적 유지).
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
@@ -19,10 +20,25 @@ import { TENANT_SHORT } from '@/data/tenants';
 import type { Tenant } from '@/data/tenants';
 import { usePromptTemplates, publishVersion, rollbackTo } from '@/lib/promptStore';
 import type { PromptTemplate } from '@/data/mockPrompts';
+import { getTemplate } from '@/data/mockTemplates';
 
 export default function PromptLibraryPage() {
   const templates = usePromptTemplates();
-  const [selectedId, setSelectedId] = useState<string>(templates[0]?.id ?? '');
+
+  /*
+   * 템플릿 복제 진입 — AI Studio 「템플릿에서 시작」의 `?tpl=TPL-03`.
+   * 프롬프트는 에이전트·워크플로우와 달리 **새로 만드는 게 아니라 중앙 템플릿을
+   * 참조**하는 자산이다(RAG-001: 에이전트는 본문이 아니라 템플릿 ID 만 참조).
+   * 그래서 복제가 아니라 **해당 템플릿을 펼친 상태로 여는 것**이 맞는 동작이다.
+   */
+  const [params] = useSearchParams();
+  const tplId = params.get('tpl');
+  const reuse = useMemo(() => getTemplate(tplId), [tplId]);
+  const reusePromptId = reuse?.preset?.kind === '프롬프트' ? reuse.preset.promptId : null;
+
+  const [selectedId, setSelectedId] = useState<string>(
+    () => reusePromptId ?? templates[0]?.id ?? '',
+  );
   const selected = templates.find((t) => t.id === selectedId) ?? templates[0];
 
   return (
@@ -38,6 +54,19 @@ export default function PromptLibraryPage() {
           RAG-001
         </span>
       </div>
+
+      {/* 재사용 진입 출처 — 어느 템플릿을 타고 들어왔는지 화면에 남긴다. */}
+      {reuse && reusePromptId && (
+        <div className="mb-3.5 flex items-center gap-2 flex-wrap">
+          <span className="pill bg-ok-bg text-ok border border-ok-border">
+            {reuse.id} 「{reuse.name}」 · 저장 {reuse.savedBy} · {reuse.usedCount}회 사용
+          </span>
+          <span className="text-[11px] text-ink-mid font-semibold">
+            아래에서 <b className="text-ink-dark">{reusePromptId}</b> 를 펼쳐 두었습니다 — 프롬프트는
+            복제하지 않고 <b className="text-ink-dark">템플릿 ID 를 참조</b>해 씁니다(중앙 제어)
+          </span>
+        </div>
+      )}
 
       {/* 중앙 제어 안내 */}
       <div className="border border-line bg-surface-soft rounded px-3.5 py-2.5 mb-3.5">

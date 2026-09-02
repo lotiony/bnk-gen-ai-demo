@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Crumb from '@/components/ui/Crumb';
 import { toast } from '@/lib/toast';
 import { useWorkCrumb, useWorkContainer } from '@/lib/crumbs';
@@ -11,6 +11,7 @@ import FormField, { Input, Textarea, Select, Row } from '@/components/projectFor
 import { cn } from '@/lib/utils';
 import { MOCK_KNOWLEDGE_TASKS } from '@/data/mockKnowledgeTasks';
 import { addAgentTask, BUILDER_LABEL, type AgentBuilder } from '@/data/mockAgentTasks';
+import { getTemplate } from '@/data/mockTemplates';
 
 /**
  * 에이전트 과제 등록 — 프로젝트 내 에이전트 1개를 정의 (시스템 프롬프트·모델·도구·연결 지식).
@@ -28,18 +29,35 @@ export default function AgentTaskRegisterPage() {
   const crumbItems = useWorkCrumb('에이전트 빌더', pid);
   const containerCls = useWorkContainer(WORK_STANDALONE_CLS, WORK_SHELL_CLS);
 
-  const [name, setName] = useState('보이스피싱 1차 분류 에이전트');
-  const [stage, setStage] = useState<'학습계' | '서빙계'>('학습계');
-  const [builder, setBuilder] = useState<AgentBuilder>('pro-code');
+  /*
+   * 템플릿 복제 진입 — AI Studio 「템플릿에서 시작」의 `?tpl=TPL-01`.
+   * 템플릿을 골랐는데 기본값 폼이 뜨면 '복제' 가 말뿐이 된다. 아래 초기값들이
+   * 템플릿 프리셋에서 온다(없으면 기존 기본값 그대로).
+   */
+  const [params] = useSearchParams();
+  const tplId = params.get('tpl');
+  const tpl = useMemo(() => getTemplate(tplId), [tplId]);
+  const pre = tpl?.preset?.kind === '에이전트' ? tpl.preset.agent : null;
+
+  const [name, setName] = useState(pre?.name ?? '보이스피싱 1차 분류 에이전트');
+  const [stage, setStage] = useState<'학습계' | '서빙계'>(pre?.stage ?? '학습계');
+  const [builder, setBuilder] = useState<AgentBuilder>(pre?.builder ?? 'pro-code');
   const [systemPrompt, setSystemPrompt] = useState(
-    '당신은 보이스피싱 통화를 1차 분류하는 어시스턴트입니다. 통화 내용에서 의심 단서(긴급성·송금 요청·기관 사칭)를 식별하여 risk_score(0~100)와 근거를 JSON으로 반환합니다.',
+    pre?.systemPrompt ??
+      '당신은 보이스피싱 통화를 1차 분류하는 어시스턴트입니다. 통화 내용에서 의심 단서(긴급성·송금 요청·기관 사칭)를 식별하여 risk_score(0~100)와 근거를 JSON으로 반환합니다.',
   );
-  const [mainModel, setMainModel] = useState('onprem/gpt-oss-120b');
-  const [fallbackModel, setFallbackModel] = useState('google/gemma-4-31B-it-assistant');
-  const [tools, setTools] = useState<Set<string>>(new Set(['rag_search', 'function_call']));
-  const [linkedKnw, setLinkedKnw] = useState<Set<string>>(new Set(['KNW-201']));
-  const [pii, setPii] = useState(true);
-  const [redteam, setRedteam] = useState(true);
+  const [mainModel, setMainModel] = useState(pre?.mainModel ?? 'onprem/gpt-oss-120b');
+  const [fallbackModel, setFallbackModel] = useState(
+    pre?.fallbackModel ?? 'google/gemma-4-31B-it-assistant',
+  );
+  const [tools, setTools] = useState<Set<string>>(
+    () => new Set(pre?.tools ?? ['rag_search', 'function_call']),
+  );
+  const [linkedKnw, setLinkedKnw] = useState<Set<string>>(
+    () => new Set(pre?.linkedKnowledge ?? ['KNW-201']),
+  );
+  const [pii, setPii] = useState(pre?.pii ?? true);
+  const [redteam, setRedteam] = useState(pre?.redteam ?? true);
   const [submitting, setSubmitting] = useState(false);
 
   const toggleSet = (s: Set<string>, k: string, set: (n: Set<string>) => void) => {
@@ -85,6 +103,20 @@ export default function AgentTaskRegisterPage() {
           <p className="text-xs text-ink-mid font-semibold mt-1">
             프로젝트 내 에이전트 1개를 정의합니다 · 시스템 프롬프트·모델·연결 지식·도구·가드레일
           </p>
+          {/*
+            복제 출처를 남긴다 — RFP 2-1 「조직 내 재사용 자산 관리」는
+            '누가 저장한 무엇을 복제했는지' 가 보여야 관리라고 말할 수 있다.
+          */}
+          {pre && tpl && (
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className="pill bg-ok-bg text-ok border border-ok-border">
+                {tpl.id} 「{tpl.name}」에서 복제 · 저장 {tpl.savedBy} · {tpl.usedCount}회 사용
+              </span>
+              <span className="text-[11px] text-ink-mid font-semibold">
+                아래 값은 템플릿에서 채워졌습니다 — 그대로 기안하거나 수정해 쓰십시오
+              </span>
+            </div>
+          )}
         </div>
         <span className="text-xs text-ink-mid font-semibold flex items-center gap-2">
           <span className="w-1.5 h-1.5 bg-ok rounded-full" />

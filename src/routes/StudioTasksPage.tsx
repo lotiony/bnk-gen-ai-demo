@@ -10,7 +10,7 @@
  *   · 종류 필터                      : 에이전트 / 워크플로우 / 지식 / …
  */
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import StatusPill from '@/components/ui/StatusPill';
@@ -23,7 +23,7 @@ import {
   KIND_TONE,
   type StudioTaskKind,
 } from '@/data/studioTasks';
-import { useTemplates, markTemplateUsed } from '@/data/mockTemplates';
+import { useTemplates, markTemplateUsed, TEMPLATE_TARGET } from '@/data/mockTemplates';
 
 const KIND_ORDER: StudioTaskKind[] = [
   'agent',
@@ -73,6 +73,7 @@ const STARTERS: { label: string; desc: string; to: string; req: string }[] = [
 ];
 
 export default function StudioTasksPage() {
+  const navigate = useNavigate();
   const tenant = useTenant();
   const [kind, setKind] = useState<StudioTaskKind | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -157,7 +158,14 @@ export default function StudioTasksPage() {
                   onClick={() => {
                     // 재사용 자산 관리 지표 — 복제하면 사용 횟수가 실제로 올라간다.
                     markTemplateUsed(t.id);
-                    toast(`${t.name} 템플릿을 복제해 새 과제를 시작합니다`, `${t.id} · 저장 ${t.savedBy}`, 'ok');
+                    toast(
+                      `${t.name} 템플릿을 복제했습니다`,
+                      `${t.id} · 저장 ${t.savedBy} — 빌더에 구성이 채워진 상태로 열립니다`,
+                      'ok',
+                    );
+                    // 토스트로 끝내면 '복제' 가 말뿐이다. 해당 빌더를 템플릿 구성이
+                    // 채워진 상태로 연다(`?tpl=` 을 빌더가 해석한다).
+                    navigate(`${TEMPLATE_TARGET[t.kind]}?tpl=${t.id}`);
                   }}
                   className="text-[10.5px] font-extrabold text-info hover:underline"
                 >이 템플릿 사용하기 →</button>
