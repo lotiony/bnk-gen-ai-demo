@@ -562,10 +562,18 @@ function QueryView() {
 
   useEffect(() => clearTimers, [clearTimers]);
 
+  /**
+   * 우측 「추론 과정」 패널 접기.
+   * 그래프를 크게 보고 싶을 때 접는다. 실행하면 다시 편다 — 추론이 흐르는데
+   * 패널이 접혀 있으면 "확정 결과" 서사가 화면에 없다.
+   */
+  const [traceOpen, setTraceOpen] = useState(true);
+
   const run = useCallback(() => {
     clearTimers();
     setShown(0);
     setRunning(true);
+    setTraceOpen(true);
     scenario.steps.forEach((_, i) => {
       const t = window.setTimeout(() => {
         setShown(i + 1);
@@ -705,7 +713,7 @@ function QueryView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_400px] gap-3">
+      <div className={traceOpen ? 'grid grid-cols-[1fr_400px] gap-3' : 'grid grid-cols-[1fr_44px] gap-3'}>
         {/* 좌: 그래프 순회 */}
         <div>
           <div className="text-[10.5px] text-ink-mid font-semibold mb-1.5 flex items-center gap-2">
@@ -774,10 +782,36 @@ function QueryView() {
         </div>
 
         {/* 우: 추론 과정 */}
+        {!traceOpen ? (
+          <button
+            type="button"
+            onClick={() => setTraceOpen(true)}
+            title="추론 과정 펼치기"
+            className="border border-line-soft rounded bg-brand-bg h-[494px] flex flex-col items-center gap-2 pt-3 hover:bg-brand-tint"
+          >
+            <span className="text-[12px] font-extrabold text-ink">◀</span>
+            <span
+              className="text-[11px] font-extrabold text-ink tracking-wider"
+              style={{ writingMode: 'vertical-rl' }}
+            >
+              추론 과정{shown > 0 ? ` · ${shown}단계` : ''}
+            </span>
+          </button>
+        ) : (
         <div className="border border-line-soft rounded bg-white h-[494px] overflow-y-auto">
           {/* z-20 — 스텝 뱃지·필이 뒤따르는 형제라 z 없으면 헤더 위로 올라온다 */}
           <div className="px-3.5 py-2.5 border-b border-line-soft bg-brand-bg sticky top-0 z-20">
-            <div className="text-[11.5px] font-extrabold text-ink">추론 과정</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[11.5px] font-extrabold text-ink">추론 과정</div>
+              <button
+                type="button"
+                onClick={() => setTraceOpen(false)}
+                title="추론 과정 접기 — 그래프를 넓게 봅니다"
+                className="text-[11px] font-bold text-ink-mid hover:text-ink px-1.5 py-0.5 rounded hover:bg-white"
+              >
+                접기 ▶
+              </button>
+            </div>
             <div className="text-[10.5px] text-ink-dark font-semibold mt-0.5 leading-relaxed">
               🔒 LLM은 <b>질의문만</b> 작성합니다. 값·판정은 <b>그래프에서 실행한 확정 결과</b>입니다.
             </div>
@@ -865,6 +899,7 @@ function QueryView() {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
