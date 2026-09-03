@@ -4,6 +4,7 @@ import { useCurrentPersona } from '@/lib/persona';
 import { useTenant } from '@/lib/tenantStore';
 import { TENANTS } from '@/data/tenants';
 import { usePortal, visibleNav } from '@/lib/portalView';
+import { isAffiliateConsoleAdmin } from '@/lib/personaView';
 import PortalSwitcher from './PortalSwitcher';
 
 /*
@@ -36,7 +37,17 @@ export default function GNB() {
 
   const items = visibleNav(persona, portal);
   const tenantMeta = TENANTS.find((t) => t.name === tenant);
-  const ns = portal.nsScope === 'common' ? COMMON_NS.namespace : tenantMeta?.namespace;
+  /*
+   * 운영 포털은 공통 포털 웹 Namespace 에서 돈다 — 단, 계열사 관리자는 자기
+   * Namespace 범위로만 콘솔이 열리므로 그 사람에겐 소속 Namespace 를 적는다.
+   * "10개 계열사를 가로질러 관리" 라는 문구가 그 계정에 붙으면 화면이 거짓말을 한다.
+   */
+  const affiliateConsole = portal.id === 'ops' && isAffiliateConsoleAdmin(persona);
+  const ns =
+    portal.nsScope === 'common' && !affiliateConsole ? COMMON_NS.namespace : tenantMeta?.namespace;
+  const nsNote = affiliateConsole
+    ? `${tenant} Namespace 범위에서 운영 · 그룹 조망은 지주 관리자 권한`
+    : portal.nsNote;
 
   return (
     <nav className="sticky top-[50px] z-20 bg-white border-b-2 border-brand px-6">
@@ -68,7 +79,7 @@ export default function GNB() {
         <div className="ml-auto flex items-center gap-2 pl-4">
           <span className="text-[9.5px] font-mono font-semibold text-ink-light">{ns}</span>
           <span className="text-[10.5px] text-ink-mid font-semibold hidden xl:inline">
-            {portal.nsNote}
+            {nsNote}
           </span>
         </div>
       </div>

@@ -37,6 +37,7 @@ import { useTenant } from '@/lib/tenantStore';
 import { TENANTS } from '@/data/tenants';
 import { PORTAL_COUNT, type PortalDef } from '@/data/portals';
 import { visibleNav, visiblePortals } from '@/lib/portalView';
+import { isAffiliateConsoleAdmin } from '@/lib/personaView';
 import { PortalMark } from '@/components/layout/PortalSwitcher';
 
 const AFFILIATE_COUNT = TENANTS.filter((t) => t.kind === 'affiliate').length;
@@ -228,6 +229,8 @@ function Row({ k, children }: { k: string; children: React.ReactNode }) {
 /** 포털 카드 — 랜딩의 주인공. 시연에서 여기부터 손이 간다. */
 function PortalCard({ p, wide }: { p: PortalDef; wide: boolean }) {
   const persona = useCurrentPersona();
+  // 계열사 관리자에게 운영 포털은 "10개 계열사를 가로지르는" 곳이 아니다 — 자기 범위다.
+  const affiliateConsole = p.id === 'ops' && isAffiliateConsoleAdmin(persona);
   const navigate = useNavigate();
   const nav = visibleNav(persona, p);
 
@@ -265,7 +268,9 @@ function PortalCard({ p, wide }: { p: PortalDef; wide: boolean }) {
             {p.code}
           </span>
         </div>
-        <div className="text-[12px] text-ink-mid font-semibold mt-1">{p.tagline}</div>
+        <div className="text-[12px] text-ink-mid font-semibold mt-1">
+          {affiliateConsole ? '소속 계열사 범위의 운영 관리' : p.tagline}
+        </div>
       </div>
 
       <p className="text-[12.5px] text-ink-dark font-semibold leading-[1.75] mt-3">{p.desc}</p>
@@ -298,7 +303,8 @@ function PortalCard({ p, wide }: { p: PortalDef; wide: boolean }) {
 
       <div className="flex items-center gap-2 mt-auto pt-3.5 border-t border-line-soft">
         <span className="text-[10.5px] text-ink-mid font-semibold truncate">
-          {p.audience} · {p.nsScope === 'common' ? '공통 포털 웹' : '소속 계열사'} Namespace
+          {p.audience} ·{' '}
+          {p.nsScope === 'common' && !affiliateConsole ? '공통 포털 웹' : '소속 계열사'} Namespace
         </span>
         <span className="ml-auto text-[13px] font-extrabold text-brand whitespace-nowrap group-hover:translate-x-0.5 transition-transform">
           입장 →
