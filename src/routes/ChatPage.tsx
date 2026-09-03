@@ -518,6 +518,7 @@ export default function ChatPage() {
                 />
               )}
               <textarea
+                data-demo-chat-input="true"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {

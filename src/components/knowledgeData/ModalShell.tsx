@@ -47,6 +47,9 @@ export default function ModalShell({
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className={cn(
           'bg-white rounded-md shadow-xl border border-line-soft flex flex-col max-h-[90vh] w-full',
           size === 'lg' ? 'max-w-[920px]' : 'max-w-[640px]',
