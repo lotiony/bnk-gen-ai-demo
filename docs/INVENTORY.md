@@ -85,11 +85,11 @@ src/
 | 5 | `/projects/:id` | ProjectDetailPage (156) + 탭 7종 | 개요·과제·모델·멤버·결재·**트래픽**·**대화분석** | ●●● |
 | 6 | `…/tasks/knowledge/new` | KnowledgeDataTaskPage (1336) + 섹션 18파일 | 파싱→임베딩→색인→평가→배포 풀 파이프라인 | ●●● |
 | 7 | `…/tasks/knowledge/create` | KnowledgeTaskRegisterPage (300) | 지식과제 등록 | ●●○ |
-| 8 | `…/tasks/database/new` | DatabaseTaskPage (2005) | DB 테이블·계정 신청, **학습계(dev)/서빙계(prod) 권한 분리 + 3단계 결재** | ●●● |
+| 8 | `…/tasks/database/new` | DatabaseTaskPage (2005) | DB 테이블·계정 신청, **개발계(dev)/운영계(prod) 권한 분리 + 3단계 결재** | ●●● |
 | 9 | `…/tasks/pipeline/new` | SearchPipelineTaskPage (1178) | 검색 파이프라인 과제 등록 | ●●● |
-| 10 | `…/tasks/pipeline/:id` | SearchPipelineDetailPage (1520) | 리트리버 가공·평가·서빙계 프로모션 | ●●● |
+| 10 | `…/tasks/pipeline/:id` | SearchPipelineDetailPage (1520) | 리트리버 가공·평가·운영계 프로모션 | ●●● |
 | 11 | `…/tasks/agent/new` | AgentTaskRegisterPage (413) | 에이전트 등록 (프롬프트·모델·도구·지식) | ●●● |
-| 12 | `…/tasks/agent/:id` | AgentTaskDetailPage (2494) | 에이전트 상세 — 학습계/서빙계 토글, 성능평가, **거버넌스·레드팀**, **PII 정책** | ●●● |
+| 12 | `…/tasks/agent/:id` | AgentTaskDetailPage (2494) | 에이전트 상세 — 개발계/운영계 토글, 성능평가, **거버넌스·레드팀**, **PII 정책** | ●●● |
 | 13 | `…/tasks/component/:id` | ComponentTaskPage (408) | 공통 컴포넌트 과제 | ●●○ |
 | 14 | `…/tasks/devenv/:id` | DevenvTaskDetailPage (249) | 개발환경(Jupyter·Jenkins·ArgoCD) 목업 | ●●○ |
 | 15 | `…/tasks/model/:id` | ModelTaskDetailPage (361) | 모델 과제 — PTU 할당 vs 실사용 | ●●○ |
@@ -125,7 +125,7 @@ src/
 | 6 | 마켓플레이스 | **개조 재사용** | `CatalogPage.tsx`(311) + `mockCatalogAgents.ts`(241) — 계열사·빌더·호스팅 필터, 통합검색, 공유신청 결재 연동까지 있다. 추가 필요: **프롬프트·MCP 카탈로그 축**, 사용량·평가 랭킹, **5단계 공유범위(개인/부서/본부/계열사/그룹)**. 현재는 "같은 계열사만 공유 가능"으로 하드 제약(`CatalogPage.tsx:259`)이라 BNK의 그룹 공유 서사와 반대 — 반드시 뒤집어야 한다. |
 | 7 | 노코드 워크플로우 빌더 | **신규 제작** | **캔버스·드래그앤드롭 코드가 0건.** `UploadModal`의 파일 DnD가 전부다. `mockAgentTasks.ts`에 빌더 종류 `studio│pro-code│graph(LangGraph)` 라벨만 존재하고 실제 빌더 화면은 없다. 실행 Trace 패널도 없음. |
 | 8 | MCP Tool 자동 등록 | **신규 제작** | **`MCP`/`OpenAPI`/`Swagger`/`WSDL` 문자열 0건.** |
-| 9 | **승인 기반 배포 + DB 동적 라우팅 ★** | **개조 재사용 (가장 이득 큰 지점)** | 두 축이 이미 있다. ① `lib/deployApprovalStore.ts`(161) — **메모리 기반**(`useSyncExternalStore`) 결재 스토어에 `category: 'train'│'serv'`(학습계/서빙계), 다단계 `stage{current,total}`, 승인/반려 액션이 구현됨. **BNK의 localStorage 금지 규칙을 이미 만족**한다. ② `DatabaseTaskPage.tsx:113~135` — dev/prod 계정 권한 분기 + **기안 → 정보보호 그룹(개인정보) → DBA·플랫폼 관리 그룹 3단계 결재 스텝퍼**. ③ `RagApiSection`/`DeploySection`은 상태에 따라 dev 엔드포인트 ↔ prod 엔드포인트를 실제로 바꿔 보여준다. **신규 필요분은 "익명화 값 ↔ 복호화 원본"의 좌우 대비 레이아웃과 동의 권원 확인 단계뿐.** |
+| 9 | **승인 기반 배포 + DB 동적 라우팅 ★** | **개조 재사용 (가장 이득 큰 지점)** | 두 축이 이미 있다. ① `lib/deployApprovalStore.ts`(161) — **메모리 기반**(`useSyncExternalStore`) 결재 스토어에 `category: 'train'│'serv'`(개발계/운영계), 다단계 `stage{current,total}`, 승인/반려 액션이 구현됨. **BNK의 localStorage 금지 규칙을 이미 만족**한다. ② `DatabaseTaskPage.tsx:113~135` — dev/prod 계정 권한 분기 + **기안 → 정보보호 그룹(개인정보) → DBA·플랫폼 관리 그룹 3단계 결재 스텝퍼**. ③ `RagApiSection`/`DeploySection`은 상태에 따라 dev 엔드포인트 ↔ prod 엔드포인트를 실제로 바꿔 보여준다. **신규 필요분은 "익명화 값 ↔ 복호화 원본"의 좌우 대비 레이아웃과 동의 권원 확인 단계뿐.** |
 
 ### 3막 — 운영자 / 거버넌스 (자산 가장 두꺼움)
 

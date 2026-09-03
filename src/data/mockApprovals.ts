@@ -47,8 +47,8 @@ export const PROMOTE_CATEGORY = 'promote' as unknown as ApprovalItem['category']
  */
 export const APPROVAL_CHIP: Record<string, { cls: string; label: string }> = {
   register: { cls: 'bg-brand-tint text-brand border-brand-tint', label: '프로젝트 생성' },
-  train: { cls: 'bg-info-bg text-info border-info-border', label: '학습계' },
-  serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '서빙계 배포' },
+  train: { cls: 'bg-info-bg text-info border-info-border', label: '개발계' },
+  serv: { cls: 'bg-ok-bg text-ok border-ok-border', label: '운영계 배포' },
   discard: { cls: 'bg-accent-brown-bg text-accent-brown border-accent-brown-border', label: '폐기' },
   policy: { cls: 'bg-warn-bg text-warn border-warn-border', label: '정책' },
   table: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '테이블 생성' },
@@ -144,7 +144,7 @@ export const approvals: ApprovalItem[] = [
   {
     id: 'APV-2026-088',
     category: 'serv',
-    title: '에이전트 v1.7 → 서빙계 프로모션 (풀 번들)',
+    title: '에이전트 v1.7 → 운영계 프로모션 (풀 번들)',
     projectName: 'PB 에이전트 프로젝트',
     draftedBy: '김플랫',
     draftedAt: '2026-05-13 16:08',
@@ -155,7 +155,7 @@ export const approvals: ApprovalItem[] = [
   {
     id: 'APV-2026-086',
     category: 'train',
-    title: '에이전트 v1.7 → 학습계 배포',
+    title: '에이전트 v1.7 → 개발계 배포',
     projectName: 'PB 에이전트 프로젝트',
     draftedBy: '박서연 (SoD 자동 위임)',
     draftedAt: '2026-05-10 11:24',
@@ -771,7 +771,7 @@ export interface AgentDeployApproval {
   agentId: string;
   agentName: string;
   /** 어느 환경으로 올리는 결재인가. */
-  deployStage: '학습계' | '서빙계';
+  deployStage: '개발계' | '운영계';
   useScope: AgentUseScope;
   ownerTenant: Tenant;
   draftedBy: string;
@@ -847,7 +847,7 @@ export function previewDeployApprovers(ownerTenant: Tenant, drafter: string) {
 export interface AgentDeployDraft {
   agentId: string;
   agentName: string;
-  deployStage: '학습계' | '서빙계';
+  deployStage: '개발계' | '운영계';
   useScope: AgentUseScope;
   ownerTenant: Tenant;
   draftedBy: string;
@@ -878,7 +878,7 @@ export function submitAgentDeploy(draft: AgentDeployDraft): ApprovalItem {
 
   const item: ApprovalItem = {
     id,
-    category: draft.deployStage === '서빙계' ? 'serv' : 'train',
+    category: draft.deployStage === '운영계' ? 'serv' : 'train',
     title: `${draft.agentName} ${draft.deployStage} 배포`,
     draftedBy: `${draft.draftedBy} (${draft.draftedByRole})`,
     draftedAt: stamp,

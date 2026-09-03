@@ -172,7 +172,7 @@ const UNIFIED_AUDIT_RAW: UnifiedAuditRow[] = [
   },
   {
     at: '2026-05-29 10:44:07', actor: '강개발', tenant: '부산은행',
-    category: '모델배포', action: '서빙계 배포 시도', target: 'AGT-204 v0.9',
+    category: '모델배포', action: '운영계 배포 시도', target: 'AGT-204 v0.9',
     verdict: '차단', note: '개발자 본인 승인 불가 — 승인권자 결재 필요 (ONM-003)',
   },
   // ── 권한양도 ──

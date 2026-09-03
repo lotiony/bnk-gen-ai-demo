@@ -1,24 +1,24 @@
 /**
- * 에이전트 배포 mock — 학습계 배포 · 서빙계 프로모션 · API 키 · 부하 테스트.
+ * 에이전트 배포 mock — 개발계 배포 · 운영계 프로모션 · API 키 · 부하 테스트.
  *
  * ⚠️ **타임스탬프 순서가 곧 배포 게이트의 증명이다.**
  *   화면은 "평가·레드팀이 끝나지 않으면 결재 기안 자체가 불가"라고 말하는데,
  *   데이터의 시각이 그 순서를 어기면 발주처가 표만 훑어도 반증된다
  *   (RFP Ⅳ.4.1 — 제안서 = 계약서). 그래서 아래 순서를 **항상** 지킨다.
  *
- *     커밋/태그 → 학습계 배포 → 평가(mockAgentEvals)
+ *     커밋/태그 → 개발계 배포 → 평가(mockAgentEvals)
  *       → 레드팀 신청·수행(mockAgentRedTeam) → [미달 시 보강 후 재검]
- *       → 결재 → 서빙계 승격
+ *       → 결재 → 운영계 승격
  *
  *   AGT-204 의 실제 축(데모 세계관 오늘 = 2026-06-03):
- *     v3.5.0  태그 04-20 09:10 → 학습계 04-20 09:30 → 평가 04-20 11:20 → 승격 04-22 11:10
- *     v4.0.0  태그 05-08 10:30 → 학습계 05-08 12:08 → 평가 05-08 14:42
+ *     v3.5.0  태그 04-20 09:10 → 개발계 04-20 09:30 → 평가 04-20 11:20 → 승격 04-22 11:10
+ *     v4.0.0  태그 05-08 10:30 → 개발계 05-08 12:08 → 평가 05-08 14:42
  *             → 레드팀 05-09(RT-A·RT-B 미달) → 재검 05-10 통과 → 승격 05-12 10:24
- *     v4.1.0  태그 05-22 14:08 → 학습계 05-22 16:30 → 평가 05-22 17:10·17:34
+ *     v4.1.0  태그 05-22 14:08 → 개발계 05-22 16:30 → 평가 05-22 17:10·17:34
  *             → 레드팀 05-23(RT-A·RT-B 미달) → 재검 05-24 통과 → 승격 05-25 14:08
- *     v4.2.0  태그 05-29 16:42 → 학습계 05-29 17:08 → 평가 05-29 17:48·18:02
+ *     v4.2.0  태그 05-29 16:42 → 개발계 05-29 17:08 → 평가 05-29 17:48·18:02
  *             → 레드팀 05-30(RT-E 미달) → 재검 05-31 통과 → **결재 대기(승격 전)**
- *     v4.3.0-rc1 태그 05-30 14:12 → 학습계 미배포·평가 미완 → 결재 기안 불가
+ *     v4.3.0-rc1 태그 05-30 14:12 → 개발계 미배포·평가 미완 → 결재 기안 불가
  *
  *   날짜를 옮길 때는 세 파일(deploys · evals · redteam)을 **같은 오프셋으로**
  *   함께 옮긴다. 한 파일만 옮기면 검증이 태그보다 앞서는 상태가 다시 생긴다.
@@ -82,12 +82,12 @@ export interface AgentDeployData {
   repo: GitLabRepo;
   tags: GitTag[];
   history: DeployRecord[];
-  /** 현재 학습계 활성 태그명. */
+  /** 현재 개발계 활성 태그명. */
   currentTagName: string;
 }
 
-/* ---------- 서빙계 프로모션 ----------
- * 서빙계 배포 = 학습계에 배포되고 평가까지 완료된 버전 중 선택해서
+/* ---------- 운영계 프로모션 ----------
+ * 운영계 배포 = 개발계에 배포되고 평가까지 완료된 버전 중 선택해서
  *               배포 결재(다단계)를 올리는 흐름.
  *               RAG 자산은 별도 프로세스로 배포되므로 여기서는 에이전트만 다룬다.
  */
@@ -97,9 +97,9 @@ export type CandidateStatus = 'recommended' | 'ready' | 'caution' | 'blocked';
 export interface PromotionCandidate {
   tagName: string;
   evalVersion: string;
-  /** 학습계에 배포된 일시. 미배포면 '—'. */
+  /** 개발계에 배포된 일시. 미배포면 '—'. */
   trainDeployedAt: string;
-  /** 학습계에서 운영된 기간(요약 텍스트). */
+  /** 개발계에서 운영된 기간(요약 텍스트). */
   trainDuration: string;
   /** 평가 통과율 — undefined면 평가 미완. */
   evalPassRate?: number;
@@ -266,34 +266,34 @@ const SERVING_DATA: Record<string, ServingDeployData> = {
         tagName: 'v4.2.0',
         evalVersion: 'v4.2',
         trainDeployedAt: '2026-05-29 17:08',
-        trainDuration: '학습계 운영 5일',
+        trainDuration: '개발계 운영 5일',
         evalPassRate: 95.5,
         evalCompletedAt: '2026-05-29',
         redteamPassed: true,
         status: 'recommended',
-        note: '회귀 평가 통과 · 레드팀 윤리 셋(RT-E) 미달 → 가드레일 보강 후 재검 통과 · 학습계 무중단 5일',
+        note: '회귀 평가 통과 · 레드팀 윤리 셋(RT-E) 미달 → 가드레일 보강 후 재검 통과 · 개발계 무중단 5일',
       },
       {
         tagName: 'v4.1.0',
         evalVersion: 'v4.1',
         trainDeployedAt: '2026-05-22 16:30',
-        trainDuration: '서빙계 운영 중',
+        trainDuration: '운영계 운영 중',
         evalPassRate: 94.0,
         evalCompletedAt: '2026-05-22',
         redteamPassed: true,
         status: 'ready',
-        note: '현재 서빙계 활성 버전 · 레드팀 1차 미달분(RT-A·RT-B) 재검 통과 후 승격',
+        note: '현재 운영계 활성 버전 · 레드팀 1차 미달분(RT-A·RT-B) 재검 통과 후 승격',
       },
       {
         tagName: 'v4.3.0-rc1',
         evalVersion: 'v4.3',
         trainDeployedAt: '—',
-        trainDuration: '학습계 미배포',
+        trainDuration: '개발계 미배포',
         evalPassRate: undefined,
         evalCompletedAt: undefined,
         redteamPassed: false,
         status: 'blocked',
-        note: '학습계 배포 + 평가 미완 · 결재 기안 불가',
+        note: '개발계 배포 + 평가 미완 · 결재 기안 불가',
       },
     ],
     history: [

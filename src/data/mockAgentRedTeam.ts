@@ -2,8 +2,8 @@
  * 레드팀 검증 mock.
  *
  * 시각 규약은 `mockAgentDeploys.ts` 상단 주석의 배포 게이트 축을 따른다 —
- * 커밋/태그 → 학습계 배포 → 평가 → **레드팀** → [미달 시 보강 후 재검]
- * → 결재 → 서빙계 승격. 날짜를 옮길 때는 deploys · evals 와 같은 오프셋으로
+ * 커밋/태그 → 개발계 배포 → 평가 → **레드팀** → [미달 시 보강 후 재검]
+ * → 결재 → 운영계 승격. 날짜를 옮길 때는 deploys · evals 와 같은 오프셋으로
  * 함께 옮긴다.
  *
  * 통과 기준선은 차단율 **95%** 다(93.5·92.5·90.0 = 미달 / 95.0·96.0·97.0 = 통과).
@@ -55,9 +55,9 @@ export interface RedTeamRequest {
   status: RequestStatus;
   estimatedAt?: string;
   completedAt?: string;
-  /** 신청 사유 / 트리거 (서빙계 프로모션 직전 등). */
+  /** 신청 사유 / 트리거 (운영계 프로모션 직전 등). */
   reason?: string;
-  /** 검증 대상 학습계 버전 (어떤 학습계 빌드로 신청했는지). */
+  /** 검증 대상 개발계 버전 (어떤 개발계 빌드로 신청했는지). */
   targetVersion: string;
 }
 
@@ -112,7 +112,7 @@ const RUNS: Record<string, RedTeamRun[]> = {
     /*
      * 미달 셋은 **재검 회차**로 닫는다. 레드팀 게이트가 "미달이면 승격 못 한다"를
      * 말하려면 화면에 미달 → 보강 → 재검 통과가 다 남아 있어야 한다. 재검만
-     * 남기면 애초에 막힌 적이 없어 보이고, 미달만 남기면 지금 서빙계에 올라가
+     * 남기면 애초에 막힌 적이 없어 보이고, 미달만 남기면 지금 운영계에 올라가
      * 있는 버전이 게이트를 뚫고 올라간 것이 된다.
      * 재검은 에이전트 재빌드가 아니라 **플랫폼 가드레일 정책 보강**으로 닫았다
      * (mockGuardrailPolicy) — 그래서 태그 번호가 그대로다.
@@ -299,7 +299,7 @@ const REQUESTS: Record<string, RedTeamRequest[]> = {
       scope: ['RT-A', 'RT-B', 'RT-C', 'RT-D', 'RT-E'],
       status: 'done',
       completedAt: '2026-05-31 10:40',
-      reason: '서빙계 프로모션 사전 검증 · RT-E 미달분 재검 포함',
+      reason: '운영계 프로모션 사전 검증 · RT-E 미달분 재검 포함',
       targetVersion: 'v4.2.0',
     },
     {
@@ -310,7 +310,7 @@ const REQUESTS: Record<string, RedTeamRequest[]> = {
       scope: ['RT-A', 'RT-B', 'RT-C'],
       status: 'done',
       completedAt: '2026-05-24 10:38',
-      reason: '서빙계 프로모션 사전 검증 · RT-A·RT-B 미달분 재검 포함',
+      reason: '운영계 프로모션 사전 검증 · RT-A·RT-B 미달분 재검 포함',
       targetVersion: 'v4.1.0',
     },
     {
@@ -321,7 +321,7 @@ const REQUESTS: Record<string, RedTeamRequest[]> = {
       scope: ['RT-A', 'RT-B'],
       status: 'done',
       completedAt: '2026-05-10 10:20',
-      reason: '서빙계 프로모션 사전 검증 · 1차 미달 후 재검',
+      reason: '운영계 프로모션 사전 검증 · 1차 미달 후 재검',
       targetVersion: 'v4.0.0',
     },
   ],

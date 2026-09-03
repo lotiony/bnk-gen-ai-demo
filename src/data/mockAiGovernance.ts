@@ -119,7 +119,7 @@ export const LIFECYCLE: StageMeta[] = [
     approvals: [
       { seq: 1, role: '기안', org: '운영 담당', note: '배포·재평가 신청' },
       { seq: 2, role: '검토', org: '승인권자', note: '운영 적합성' },
-      { seq: 3, role: '승인', org: '플랫폼 관리 그룹', note: '서빙계 반영' },
+      { seq: 3, role: '승인', org: '플랫폼 관리 그룹', note: '운영계 반영' },
     ],
     outputs: ['월간 모니터링 리포트', '연간 재평가서', '이용자 고지문'],
     duties: ['생성형 AI 산출물 표시', '이용자 고지', '지속적 모니터링', '연 1회 재평가'],

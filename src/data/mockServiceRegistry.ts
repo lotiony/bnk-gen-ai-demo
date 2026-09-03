@@ -80,7 +80,7 @@ export const SERVICE_ITEMS: ServiceItem[] = [
   { id: 'MCP-034', kind: 'MCP', name: 'crm.customer_profile', tenant: '부산은행', operatingArea: '계열사 전용 운영영역', publishState: '게시 중', shareScope: '본부', deployStatus: '배포 완료', version: 'v1.1', lastActionBy: '조디비', lastActionAt: '2026-05-15 10:33' },
   // PRJ-BS-042 여신 디지털심사 과제의 롤백 산출물 — 중지 상태라 운영 카탈로그에 없다.
   { id: 'AGT-513', kind: 'Agent', name: '여신 기표 오류 사전 점검 봇', tenant: '부산은행', operatingArea: '계열사 전용 운영영역', publishState: '중지됨', shareScope: '부서', deployStatus: '롤백됨', version: 'v0.4', lastActionBy: '박서연', lastActionAt: '2026-05-25 16:02' },
-  // PRJ-SY-003 개발 생산성 향상 과제의 산출물 — 아직 학습계 테스트 중이라 게시 전이다.
+  // PRJ-SY-003 개발 생산성 향상 과제의 산출물 — 아직 개발계 테스트 중이라 게시 전이다.
   { id: 'AGT-410', kind: 'Agent', name: '코드 리뷰 · 시큐어코딩 점검', tenant: 'BNK시스템', operatingArea: '계열사 전용 운영영역', publishState: '게시 대기', shareScope: '부서', deployStatus: '테스트 중', version: 'v0.9-rc2', lastActionBy: '한지훈', lastActionAt: '2026-06-02 17:20' },
   { id: 'SVC-EMBED-2', kind: 'AI 서비스', name: '금융 특화 임베딩 서빙', tenant: '그룹 공통', operatingArea: '그룹 공통 운영영역', publishState: '게시 대기', shareScope: '그룹 전체', deployStatus: '배포 대기', version: 'v1.0', lastActionBy: '민모델', lastActionAt: '2026-06-02 09:12' },
   /*
@@ -95,7 +95,7 @@ export const SERVICE_ITEMS: ServiceItem[] = [
       { at: '2026-06-03 08:52', kind: '지연', text: '외부 신용조회 API(NICE 연동 Tool) 응답 P95 2.1s → 지연 구간이 전체 P95 의 62%', by: '자동 계측' },
       { at: '2026-06-03 08:40', kind: '오류', text: 'Tool 타임아웃 4건 — 재시도 후 3건 복구, 1건 사용자 재질의', by: '자동 계측' },
       { at: '2026-06-02 17:05', kind: '지연', text: 'P95 목표(3.0s) 초과 시작 — 17:00 이후 외부 API 응답 시간 상승', by: '자동 계측' },
-      { at: '2026-05-30 15:10', kind: '배포', text: 'v1.2 서빙계 배포 — 신용조회 결과 요약 프롬프트 개선', by: '서신용' },
+      { at: '2026-05-30 15:10', kind: '배포', text: 'v1.2 운영계 배포 — 신용조회 결과 요약 프롬프트 개선', by: '서신용' },
       { at: '2026-05-30 14:40', kind: '조치', text: 'v1.2 레드팀 재검 통과 (RT-C 보완)', by: '박거버' },
     ],
   },
@@ -104,7 +104,7 @@ export const SERVICE_ITEMS: ServiceItem[] = [
     sla: { p95Ms: 1900, sloTargetMs: 3000, attainmentPct: 99.8, errorRatePct: 0.3, calls7d: 4100 },
     activity: [
       { at: '2026-06-02 09:15', kind: '게시', text: '채권관리부 → 채권추심부 공개 범위 확장 (부서)', by: '문관제' },
-      { at: '2026-05-21 10:30', kind: '배포', text: 'v2.0 서빙계 배포 — 상담 유형 분류 12종으로 확대', by: '서신용' },
+      { at: '2026-05-21 10:30', kind: '배포', text: 'v2.0 운영계 배포 — 상담 유형 분류 12종으로 확대', by: '서신용' },
     ],
   },
 ];

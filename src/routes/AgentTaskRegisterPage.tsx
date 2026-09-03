@@ -50,7 +50,7 @@ export default function AgentTaskRegisterPage() {
   const pre = tpl?.preset?.kind === '에이전트' ? tpl.preset.agent : null;
 
   const [name, setName] = useState(pre?.name ?? '보이스피싱 1차 분류 에이전트');
-  const [stage, setStage] = useState<'학습계' | '서빙계'>(pre?.stage ?? '학습계');
+  const [stage, setStage] = useState<'개발계' | '운영계'>(pre?.stage ?? '개발계');
   const [builder, setBuilder] = useState<AgentBuilder>(pre?.builder ?? 'pro-code');
   const [systemPrompt, setSystemPrompt] = useState(
     pre?.systemPrompt ??
@@ -241,12 +241,12 @@ export default function AgentTaskRegisterPage() {
               </FormField>
               <FormField label="배포 단계" required>
                 <div className="flex gap-3">
-                  <RadioBox checked={stage === '학습계'} onChange={() => setStage('학습계')} label="학습계 (개발)" />
-                  <RadioBox checked={stage === '서빙계'} onChange={() => setStage('서빙계')} label="서빙계 (운영)" />
+                  <RadioBox checked={stage === '개발계'} onChange={() => setStage('개발계')} label="개발계" />
+                  <RadioBox checked={stage === '운영계'} onChange={() => setStage('운영계')} label="운영계" />
                 </div>
-                {stage === '서빙계' && (
+                {stage === '운영계' && (
                   <div className="mt-2 bg-warn-bg border border-warn-border rounded p-2.5 text-[11.5px] text-warn">
-                    <b>서빙계</b> 프로모션 시 별도 결재 트리거 · 레드팀 게이트 필수
+                    <b>운영계</b> 프로모션 시 별도 결재 트리거 · 레드팀 게이트 필수
                   </div>
                 )}
               </FormField>
@@ -416,7 +416,7 @@ export default function AgentTaskRegisterPage() {
             </FormField>
             <FormField
               label="레드팀 평가 게이트"
-              info={stage === '서빙계' ? '서빙계 프로모션 시 자동 필수' : '학습계는 선택 가능'}
+              info={stage === '운영계' ? '운영계 프로모션 시 자동 필수' : '개발계는 선택 가능'}
             >
               <div className="flex gap-3">
                 <RadioBox
@@ -426,7 +426,7 @@ export default function AgentTaskRegisterPage() {
                 />
                 <RadioBox
                   checked={!redteam}
-                  onChange={() => stage !== '서빙계' && setRedteam(false)}
+                  onChange={() => stage !== '운영계' && setRedteam(false)}
                   label="생략"
                 />
               </div>
@@ -459,11 +459,11 @@ export default function AgentTaskRegisterPage() {
                 label={approvers.owner.label}
                 note={`${approvers.owner.name} · ${approvers.owner.tenant}`}
               />
-              {stage === '서빙계' && (
-                <ApprLineStep seq="2" label="레드팀 게이트" tone="auto" note="(서빙계 필수)" />
+              {stage === '운영계' && (
+                <ApprLineStep seq="2" label="레드팀 게이트" tone="auto" note="(운영계 필수)" />
               )}
               <ApprLineStep
-                seq={stage === '서빙계' ? '3' : '2'}
+                seq={stage === '운영계' ? '3' : '2'}
                 label="플랫폼 관리 그룹 승인"
                 note={`${approvers.platform.name} · ${approvers.platform.tenant}`}
               />

@@ -1,4 +1,4 @@
-export type PipelineTaskState = '학습계 배포' | '평가 진행' | '서빙계 운영' | '기획';
+export type PipelineTaskState = '개발계 배포' | '평가 진행' | '운영계 운영' | '기획';
 export type RetrievalMethod = 'BM25' | 'Dense' | 'Hybrid' | 'Hybrid + Rerank';
 export type IndexBuildState = 'built' | 'building' | 'stale';
 export type IndexKind = 'hybrid' | 'vector' | 'bm25';
@@ -37,7 +37,7 @@ export interface PipelineIndexRef {
 }
 
 /**
- * 학습계 단일 API 키. 에이전트 과제의 ApiKey와 동일한 패턴 —
+ * 개발계 단일 API 키. 에이전트 과제의 ApiKey와 동일한 패턴 —
  * fullKey/lastFour로 보기·마스킹 토글, 재발급 시 누적 호출 0으로 초기화.
  */
 export interface PipelineApiKey {
@@ -89,7 +89,7 @@ export interface PipelineEvalMetric {
 
 export interface PipelineEvalRun {
   id: string;
-  /** 학습계 배포 버전 (어떤 인덱스 조합에 대해 평가한 회차인지). */
+  /** 개발계 배포 버전 (어떤 인덱스 조합에 대해 평가한 회차인지). */
   deployVersion?: string;
   runAt: string;
   trigger: '수동' | '자동' | '원천 변경';
@@ -146,13 +146,13 @@ export interface PipelineTask {
   consumers: PipelineConsumer[];
   /** 평가 콘솔(외부 도구) 연결 정보. */
   evalConsole?: PipelineEvalConsole;
-  /** 학습계 단일 API 키 (없으면 미발급 상태). */
+  /** 개발계 단일 API 키 (없으면 미발급 상태). */
   apiKey?: PipelineApiKey;
-  /** 학습계 배포 버전 이력 (최신이 [0]). */
+  /** 개발계 배포 버전 이력 (최신이 [0]). */
   devDeployments: PipelineDevDeployment[];
-  /** 학습계 endpoint URL. */
+  /** 개발계 endpoint URL. */
   endpointDev?: string;
-  /** 서빙계 endpoint URL (운영 중일 때만). */
+  /** 운영계 endpoint URL (운영 중일 때만). */
   endpointProd?: string;
   /** 일간 호출량 (7일 평균). */
   callsDaily?: number;
@@ -415,7 +415,7 @@ export const MOCK_PIPELINE_TASKS: PipelineTask[] = [
           { indexId: 'idx-vp-call-7m2k', indexName: '보이스피싱_탐지_지식인덱스', version: 'v3' },
         ],
         status: 'previous',
-        note: '최초 학습계 배포 (단일 인덱스 BM25)',
+        note: '최초 개발계 배포 (단일 인덱스 BM25)',
         approvalId: 'APV-2026-082',
       },
     ],

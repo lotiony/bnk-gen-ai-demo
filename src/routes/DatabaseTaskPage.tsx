@@ -96,9 +96,9 @@ function seedTables(env: AccountEnv): Table[] {
   ];
 }
 
-const INITIAL_TABLES: Table[] = [...seedTables('학습계'), ...seedTables('서빙계')];
+const INITIAL_TABLES: Table[] = [...seedTables('개발계'), ...seedTables('운영계')];
 
-type AccountEnv = '학습계' | '서빙계';
+type AccountEnv = '개발계' | '운영계';
 type AccountKind = '개인' | '애플리케이션';
 type AccountStatus = 'active' | 'pending' | 'deleting';
 interface Account {
@@ -116,14 +116,14 @@ const PERM_OPTIONS = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
 const APP_PERMS = PERM_OPTIONS.join(' · '); // 애플리케이션 계정: 모든 권한(DDL 제외)
 
 const ACCOUNTS_SEED: Account[] = [
-  // 학습계(dev) — 개인 계정(개발자/분석가/DBA 본인) + 애플리케이션 계정(개발 앱/배치)
-  { id: uid(), env: '학습계', kind: '개인', name: 'jeong.owner', owner: '정오너', perms: 'SELECT', period: '2026-11-04', password: 'Dev!jeong7291', status: 'active' },
-  { id: uid(), env: '학습계', kind: '개인', name: 'kim.jiwoo', owner: '김지우', perms: 'SELECT', period: '2026-11-04', password: 'Dev!jiwoo3840', status: 'active' },
-  { id: uid(), env: '학습계', kind: '개인', name: 'park.analyst', owner: '박서연', perms: 'SELECT', period: '2026-09-05', password: 'Dev!seoyeon15', status: 'active' },
-  { id: uid(), env: '학습계', kind: '애플리케이션', name: 'svc_pb_consult_ro_dev', owner: '개발 앱', perms: APP_PERMS, period: '상시', password: 'Svc!roDev40817', status: 'active' },
-  // 서빙계(prod) — 애플리케이션 계정 + 승인된 개인 계정(운영 조회)
-  { id: uid(), env: '서빙계', kind: '개인', name: 'jeong.owner', owner: '정오너', perms: 'SELECT', period: '2026-12-31', password: 'Prd!jeong4Q19', status: 'active' },
-  { id: uid(), env: '서빙계', kind: '애플리케이션', name: 'svc_pb_consult_ro', owner: 'PB 에이전트 앱', perms: APP_PERMS, period: '상시', password: 'Prd!ro9F2xQ7mK', status: 'active' },
+  // 개발계(dev) — 개인 계정(개발자/분석가/DBA 본인) + 애플리케이션 계정(개발 앱/배치)
+  { id: uid(), env: '개발계', kind: '개인', name: 'jeong.owner', owner: '정오너', perms: 'SELECT', period: '2026-11-04', password: 'Dev!jeong7291', status: 'active' },
+  { id: uid(), env: '개발계', kind: '개인', name: 'kim.jiwoo', owner: '김지우', perms: 'SELECT', period: '2026-11-04', password: 'Dev!jiwoo3840', status: 'active' },
+  { id: uid(), env: '개발계', kind: '개인', name: 'park.analyst', owner: '박서연', perms: 'SELECT', period: '2026-09-05', password: 'Dev!seoyeon15', status: 'active' },
+  { id: uid(), env: '개발계', kind: '애플리케이션', name: 'svc_pb_consult_ro_dev', owner: '개발 앱', perms: APP_PERMS, period: '상시', password: 'Svc!roDev40817', status: 'active' },
+  // 운영계(prod) — 애플리케이션 계정 + 승인된 개인 계정(운영 조회)
+  { id: uid(), env: '운영계', kind: '개인', name: 'jeong.owner', owner: '정오너', perms: 'SELECT', period: '2026-12-31', password: 'Prd!jeong4Q19', status: 'active' },
+  { id: uid(), env: '운영계', kind: '애플리케이션', name: 'svc_pb_consult_ro', owner: 'PB 에이전트 앱', perms: APP_PERMS, period: '상시', password: 'Prd!ro9F2xQ7mK', status: 'active' },
 ];
 
 const CHECKLIST = [
@@ -333,7 +333,7 @@ function SchemaTab({
     const id = uid();
     setTables((prev) => [
       ...prev,
-      { id, env: '학습계', table: '', desc: '', cols: [{ id: uid(), name: 'id', type: 'BIGINT', pii: false, mask: false, note: 'PK' }], indexes: [{ id: uid(), cols: 'id', kind: 'PK' }] },
+      { id, env: '개발계', table: '', desc: '', cols: [{ id: uid(), name: 'id', type: 'BIGINT', pii: false, mask: false, note: 'PK' }], indexes: [{ id: uid(), cols: 'id', kind: 'PK' }] },
     ]);
     setCreatingId(id);
     setOpenTableId(id);
@@ -424,9 +424,9 @@ function SchemaTab({
         </div>
       </div>
       <div className="px-[18px] py-[18px] flex flex-col gap-3">
-        {/* ── 목록 뷰 (학습계/서빙계 그룹) ── */}
+        {/* ── 목록 뷰 (개발계/운영계 그룹) ── */}
         {!openTable &&
-          (['학습계', '서빙계'] as AccountEnv[]).map((env) => {
+          (['개발계', '운영계'] as AccountEnv[]).map((env) => {
             const rows = tables.filter((t) => t.env === env);
             const meta = ENV_META[env];
             return (
@@ -527,8 +527,8 @@ function SchemaTab({
                   onChange={(e) => patchTable(t.id, { env: e.target.value as AccountEnv })}
                   className="h-7 px-2 border border-line rounded text-[11px] font-bold bg-white focus:outline-none focus:border-brand-dark"
                 >
-                  <option value="학습계">학습계</option>
-                  <option value="서빙계">서빙계</option>
+                  <option value="개발계">개발계</option>
+                  <option value="운영계">운영계</option>
                 </select>
               ) : (
                 <span className={cn('inline-flex items-center py-[2px] px-2 rounded-full border text-[10.5px] font-extrabold whitespace-nowrap', ENV_META[t.env].badge)}>
@@ -715,8 +715,8 @@ function SchemaTab({
 /* ---------------- 계정 · 권한 ---------------- */
 
 const ENV_META: Record<AccountEnv, { badge: string; ownerLabel: string }> = {
-  학습계: { badge: 'bg-info-bg text-info border-info-border', ownerLabel: '소유자' },
-  서빙계: { badge: 'bg-ok-bg text-ok border-ok-border', ownerLabel: '소유자' },
+  개발계: { badge: 'bg-info-bg text-info border-info-border', ownerLabel: '소유자' },
+  운영계: { badge: 'bg-ok-bg text-ok border-ok-border', ownerLabel: '소유자' },
 };
 
 const KIND_PILL: Record<AccountKind, string> = {
@@ -728,7 +728,7 @@ function genPassword(env: AccountEnv) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   let s = '';
   for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return `${env === '서빙계' ? 'Prd' : 'Dev'}!${s}`;
+  return `${env === '운영계' ? 'Prd' : 'Dev'}!${s}`;
 }
 
 function AccountTab({
@@ -738,7 +738,7 @@ function AccountTab({
   accounts: Account[];
   setAccounts: React.Dispatch<React.SetStateAction<Account[]>>;
 }) {
-  const envs: AccountEnv[] = ['학습계', '서빙계'];
+  const envs: AccountEnv[] = ['개발계', '운영계'];
   const persona = useCurrentPersona();
   const me = persona?.name ?? '';
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
@@ -1028,7 +1028,7 @@ function AddAccountModal({
   const kind: AccountKind = '개인';
   const permsLabel = 'SELECT';
   const owner = me; // 소유자 = 신청자 본인
-  const [env, setEnv] = useState<AccountEnv>('학습계');
+  const [env, setEnv] = useState<AccountEnv>('개발계');
   const [name, setName] = useState('');
   const [period, setPeriod] = useState('');
   const [pwMode, setPwMode] = useState<'auto' | 'manual'>('auto');
@@ -1047,10 +1047,10 @@ function AddAccountModal({
         </div>
 
         <div className="px-[18px] py-4 flex flex-col gap-3.5">
-          {/* 환경 — 학습계/서빙계 개인 계정 신청 가능 */}
+          {/* 환경 — 개발계/운영계 개인 계정 신청 가능 */}
           <Field label="환경">
             <div className="flex gap-1.5">
-              {(['학습계', '서빙계'] as AccountEnv[]).map((e) => (
+              {(['개발계', '운영계'] as AccountEnv[]).map((e) => (
                 <button
                   key={e}
                   onClick={() => setEnv(e)}
@@ -1250,17 +1250,17 @@ interface LoadJob {
 
 const LOAD_SEED: LoadJob[] = [
   {
-    id: uid(), source: '스키마 마이그레이션', env: '서빙계', table: 'customer', mode: '-', origin: 'grade 컬럼 추가 → 기본값 설정', version: 'V2', rows: 5200, status: 'done', at: '2026-08-05 22:35', by: '이도현',
+    id: uid(), source: '스키마 마이그레이션', env: '운영계', table: 'customer', mode: '-', origin: 'grade 컬럼 추가 → 기본값 설정', version: 'V2', rows: 5200, status: 'done', at: '2026-08-05 22:35', by: '이도현',
     lang: 'SQL',
     code: `-- V2: customer.grade 컬럼 추가 후 기본값/백필\nALTER TABLE customer ADD COLUMN grade VARCHAR(10) DEFAULT 'N';\nUPDATE customer SET grade = 'N' WHERE grade IS NULL;`,
   },
   {
-    id: uid(), source: '파일 업로드', env: '서빙계', table: 'customer', mode: 'upsert(병합)', origin: 'customer_seed.csv', rows: 5200, status: 'done', at: '2026-08-05 22:40', by: '정오너',
+    id: uid(), source: '파일 업로드', env: '운영계', table: 'customer', mode: 'upsert(병합)', origin: 'customer_seed.csv', rows: 5200, status: 'done', at: '2026-08-05 22:40', by: '정오너',
     lang: 'Python',
     code: `import pandas as pd\ndf = pd.read_csv('customer_seed.csv')\ndf['grade'] = df['grade'].fillna('N')\ndf.to_sql('customer', engine, if_exists='append', index=False)`,
   },
   {
-    id: uid(), source: '스키마 마이그레이션', env: '서빙계', table: 'consult_log', mode: '-', origin: 'channel 컬럼 추가 → UNKNOWN 백필', version: 'V3', rows: 0, status: 'pending', at: '2026-08-06 10:41', by: '이도현',
+    id: uid(), source: '스키마 마이그레이션', env: '운영계', table: 'consult_log', mode: '-', origin: 'channel 컬럼 추가 → UNKNOWN 백필', version: 'V3', rows: 0, status: 'pending', at: '2026-08-06 10:41', by: '이도현',
     lang: 'SQL',
     code: `-- V3: consult_log.channel 컬럼 추가 후 기존 행 백필\nALTER TABLE consult_log ADD COLUMN channel VARCHAR(20);\nUPDATE consult_log SET channel = 'UNKNOWN' WHERE channel IS NULL;`,
   },
@@ -1646,8 +1646,8 @@ function LoadJobModal({
   onClose: () => void;
   onSubmit: (draft: Omit<LoadJob, 'id' | 'status' | 'at' | 'by' | 'rows'>) => void;
 }) {
-  // 데이터 적재·마이그레이션은 서빙계(운영)만 대상
-  const env: AccountEnv = '서빙계';
+  // 데이터 적재·마이그레이션은 운영계만 대상
+  const env: AccountEnv = '운영계';
   const [source, setSource] = useState<LoadSource>('파일 업로드');
   const [mode, setMode] = useState<LoadMode>('추가(append)');
   const [origin, setOrigin] = useState('');
@@ -1699,10 +1699,10 @@ function LoadJobModal({
             </div>
           </Field>
 
-          {/* 대상 환경 — 서빙계(운영)만 */}
+          {/* 대상 환경 — 운영계만 */}
           <Field label="대상 환경">
-            <span className={cn('inline-flex items-center py-[3px] px-2.5 rounded border text-[12px] font-bold', ENV_META['서빙계'].badge)}>
-              서빙계
+            <span className={cn('inline-flex items-center py-[3px] px-2.5 rounded border text-[12px] font-bold', ENV_META['운영계'].badge)}>
+              운영계
             </span>
           </Field>
 
@@ -1926,7 +1926,7 @@ interface ConnInfo {
 }
 const CONNECTIONS: ConnInfo[] = [
   {
-    env: '학습계',
+    env: '개발계',
     host: 'pb-consult-db-dev.aip.group.local',
     port: 5432,
     database: 'pb_consult_dev',
@@ -1936,7 +1936,7 @@ const CONNECTIONS: ConnInfo[] = [
     network: '내부망(폐쇄망)',
   },
   {
-    env: '서빙계',
+    env: '운영계',
     host: 'pb-consult-db.aip.group.local',
     port: 5432,
     database: 'pb_consult',

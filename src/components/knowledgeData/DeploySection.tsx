@@ -23,7 +23,7 @@ const verLabel = (v: string) => `#${v.replace(/\D/g, '')}`;
 const nowLabel = () =>
   new Date().toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-/** 배포 탭 — 버전 파이프라인 표 중심. 학습계 배포 버전별 환경 상태·서빙계 승격을 한 표에서 관리. */
+/** 배포 탭 — 버전 파이프라인 표 중심. 개발계 배포 버전별 환경 상태·운영계 승격을 한 표에서 관리. */
 export default function DeploySection({ indexes }: Props) {
   const persona = useCurrentPersona();
   const all = useDeployApprovals();
@@ -41,7 +41,7 @@ export default function DeploySection({ indexes }: Props) {
     const item: DeployApproval = {
       id: `APV-SRV-${Date.now() % 100000}`,
       category: 'serv',
-      title: '지식 검색 API 서빙계 배포',
+      title: '지식 검색 API 운영계 배포',
       projectName: 'PB 에이전트 프로젝트',
       draftedBy: persona?.name ?? '정오너',
       draftedAt: nowLabel(),
@@ -66,13 +66,13 @@ export default function DeploySection({ indexes }: Props) {
       </div>
 
       <div className="px-[18px] py-[18px]">
-        {/* 환경별 상세 (상단) — 학습계/서빙계 운영 API·엔드포인트·배포 신청·승격 */}
+        {/* 환경별 상세 (상단) — 개발계/운영계 운영 API·엔드포인트·배포 신청·승격 */}
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">환경별 상세</span>
           <div className="inline-flex rounded-lg border border-line overflow-hidden">
             {([
-              { k: 'train', label: '학습계', sub: 'dev' },
-              { k: 'serv', label: '서빙계', sub: 'prod' },
+              { k: 'train', label: '개발계', sub: 'dev' },
+              { k: 'serv', label: '운영계', sub: 'prod' },
             ] as const).map((e) => (
               <button
                 key={e.k}
@@ -97,7 +97,7 @@ export default function DeploySection({ indexes }: Props) {
         {/* 배포 버전 파이프라인 표 */}
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">배포 버전 파이프라인</span>
-          <span className="text-[10px] text-ink-light font-semibold">· 학습계 배포 버전별 구성·환경 상태·서빙계 승격</span>
+          <span className="text-[10px] text-ink-light font-semibold">· 개발계 배포 버전별 구성·환경 상태·운영계 승격</span>
         </div>
         <div className="border border-line-soft rounded-lg overflow-x-auto mb-4">
           <table className="w-full text-[11.5px]">
@@ -107,8 +107,8 @@ export default function DeploySection({ indexes }: Props) {
                 <th className="text-left py-2 px-3 font-bold">인덱스 · 검색 구성</th>
                 <th className="text-left py-2 px-3 font-bold whitespace-nowrap">배포일</th>
                 <th className="text-left py-2 px-3 font-bold whitespace-nowrap">배포자</th>
-                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">학습계</th>
-                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">서빙계</th>
+                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">개발계</th>
+                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">운영계</th>
                 <th className="text-center py-2 px-3 font-bold whitespace-nowrap">액션</th>
               </tr>
             </thead>
@@ -121,7 +121,7 @@ export default function DeploySection({ indexes }: Props) {
                   <tr key={d.id} className="hover:bg-surface">
                     <td className="py-2 px-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="text-ink-mid font-semibold">학습계</span>
+                        <span className="text-ink-mid font-semibold">개발계</span>
                         <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-brand-tint text-ink border-brand-dark">
                           {verLabel(d.version)}
                         </span>
@@ -184,7 +184,7 @@ export default function DeploySection({ indexes }: Props) {
                           </Link>
                           <button
                             onClick={() => {
-                              if (window.confirm('서빙계 배포 신청을 취소할까요?')) cancelDeployApproval(servPending!.id);
+                              if (window.confirm('운영계 배포 신청을 취소할까요?')) cancelDeployApproval(servPending!.id);
                             }}
                             className="h-6 px-2 border border-line bg-white rounded text-[10.5px] font-bold text-ink-mid hover:text-bad hover:bg-bad-bg hover:border-bad-border"
                           >
@@ -195,10 +195,10 @@ export default function DeploySection({ indexes }: Props) {
                         <button
                           onClick={() => promote(d)}
                           disabled={!!servPending}
-                          title={servPending ? '이미 승인 대기 중인 서빙계 배포가 있습니다' : '이 버전을 서빙계로 승격'}
+                          title={servPending ? '이미 승인 대기 중인 운영계 배포가 있습니다' : '이 버전을 운영계로 승격'}
                           className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          ▶ 서빙계로 승격
+                          ▶ 운영계로 승격
                         </button>
                       )}
                     </td>
@@ -214,7 +214,7 @@ export default function DeploySection({ indexes }: Props) {
   );
 }
 
-/** 서빙계에 올라간 빌드가 어느 학습계 버전인지 매칭. */
+/** 운영계에 올라간 빌드가 어느 개발계 버전인지 매칭. */
 function trainVerOf(serv: DeployApproval, trainDeploys: DeployApproval[]): string {
   const v = serv.sources[0]?.version;
   const match = trainDeploys.find((t) => t.sources[0]?.version === v);

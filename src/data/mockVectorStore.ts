@@ -68,12 +68,12 @@ export const VECTOR_PRODUCTS: VectorProduct[] = [
     id: 'chroma',
     name: 'Chroma',
     version: '0.5.x',
-    deploy: '학습계(dev) 존 · 단일 노드',
+    deploy: '개발계(dev) 존 · 단일 노드',
     status: '검증 완료',
     collections: 0,
     indexTypes: 'HNSW',
     isolationUnit: 'Collection + Tenant/Database',
-    role: '학습계 실험·PoC 전용. 커넥터는 회귀 테스트까지 통과했으나 운영 컬렉션은 아직 없다',
+    role: '개발계 실험·PoC 전용. 커넥터는 회귀 테스트까지 통과했으나 운영 컬렉션은 아직 없다',
   },
 ];
 
@@ -214,7 +214,7 @@ export const DRIVER_MATRIX: DriverCapability[] = [
   { feature: '메타데이터 필터 검색', milvus: '○', pgvector: '○', chroma: '○', note: '필터 DSL 을 드라이버가 각 제품 문법으로 번역' },
   { feature: '스칼라 · 벡터 혼합 조인', milvus: '△', pgvector: '○', chroma: '×', note: 'pgvector 만 SQL 조인 — 정형 결합이 잦은 계열사에 pgvector 를 배정한 이유' },
   { feature: 'BM25 하이브리드 검색', milvus: '○', pgvector: '△', chroma: '×', note: '미지원 제품은 OpenSearch BM25 와 애플리케이션 단 RRF 결합으로 동일 결과' },
-  { feature: '파티션 · DB 단위 격리', milvus: '○', pgvector: '○', chroma: '△', note: 'Chroma 는 학습계 전용이라 격리 요건 대상이 아니다' },
+  { feature: '파티션 · DB 단위 격리', milvus: '○', pgvector: '○', chroma: '△', note: 'Chroma 는 개발계 전용이라 격리 요건 대상이 아니다' },
   { feature: '스냅샷 · 복구', milvus: '○', pgvector: '○', chroma: '△', note: 'Chroma 는 파일 복사 방식 — 운영 미적용' },
 ];
 

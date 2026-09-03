@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * 지식 파이프라인 과제 등록 — 지식데이터 과제에서 만든 인덱스를 골라
- * 검색엔진(retriever) 서비스로 가공·평가·서빙계 프로모션 까지 처리.
+ * 검색엔진(retriever) 서비스로 가공·평가·운영계 프로모션 까지 처리.
  * 에이전트/지식데이터 과제와 동일한 디자인 토큰·레이아웃 사용.
  */
 /** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
@@ -147,8 +147,8 @@ export default function SearchPipelineTaskPage() {
             지식 파이프라인 과제 등록
           </h1>
           <p className="text-xs text-ink-mid font-semibold mt-1">
-            지식데이터 과제의 인덱스를 골라 <b className="text-ink-dark">검색엔진(retriever)</b>을 학습계 배포 →
-            평가 → 서빙계 프로모션 까지 한 흐름으로 처리합니다
+            지식데이터 과제의 인덱스를 골라 <b className="text-ink-dark">검색엔진(retriever)</b>을 개발계 배포 →
+            평가 → 운영계 프로모션 까지 한 흐름으로 처리합니다
           </p>
         </div>
         <span className="text-xs text-ink-mid font-semibold flex items-center gap-2">
@@ -163,11 +163,11 @@ export default function SearchPipelineTaskPage() {
         <div className="flex items-center gap-1">
           <StageItem n={1} name="인덱스 선택·기획" meta="입력 명세 8영역" active />
           <StageArrow />
-          <StageItem n={2} name="학습계 배포·튜닝" meta="결재 · 간이" />
+          <StageItem n={2} name="개발계 배포·튜닝" meta="결재 · 간이" />
           <StageArrow />
           <StageItem n={3} name="평가·테스트" meta="골든셋 · 자동·휴먼" />
           <StageArrow />
-          <StageItem n={4} name="서빙계 프로모션" meta="결재 · 풀 + 품질 게이트" />
+          <StageItem n={4} name="운영계 프로모션" meta="결재 · 풀 + 품질 게이트" />
         </div>
       </div>
 
@@ -513,7 +513,7 @@ export default function SearchPipelineTaskPage() {
             defaultOpen
           >
             <div className="mb-3 bg-brand-tint border border-brand-dark rounded p-2.5 text-[11.5px] text-ink">
-              <b>품질 게이트 자동 동작</b> · 아래 임계값은 Stage 4 서빙계 프로모션 결재의 자동 게이트로 동작 ·
+              <b>품질 게이트 자동 동작</b> · 아래 임계값은 Stage 4 운영계 프로모션 결재의 자동 게이트로 동작 ·
               미달 시 결재 차단. 골든셋 <b>{goldenMin}건</b> 이상이어야 Stage 3 진입 가능.
             </div>
 
@@ -649,7 +649,7 @@ export default function SearchPipelineTaskPage() {
               <tfoot>
                 <tr className="bg-brand-tint">
                   <td className="py-2 px-3 font-extrabold text-ink text-[12px]" colSpan={3}>
-                    월간 합계 (학습계 + 서빙계)
+                    월간 합계 (개발계 + 운영계)
                   </td>
                   <td className="py-2 px-3 text-right font-extrabold text-ink text-[12px] tabular-nums">
                     ₩ {(usesPublicLLM ? 5090000 : 1250000).toLocaleString()}
@@ -686,7 +686,7 @@ export default function SearchPipelineTaskPage() {
               <AutoLine>
                 <b>보안 검토</b> ·{' '}
                 {maxSens >= 3
-                  ? '민감도 ≥ 3이므로 서빙계 프로모션 결재에 자동 추가'
+                  ? '민감도 ≥ 3이므로 운영계 프로모션 결재에 자동 추가'
                   : '자동 추가 없음'}
               </AutoLine>
             </div>
@@ -722,7 +722,7 @@ export default function SearchPipelineTaskPage() {
               />
               <AttachRow
                 name="평가 리포트"
-                cond="Stage 3 산출물 — 서빙계 프로모션 결재 시 자동 첨부"
+                cond="Stage 3 산출물 — 운영계 프로모션 결재 시 자동 첨부"
                 attached={false}
                 disabled
                 disabledLabel="Stage 3 이후"
@@ -768,7 +768,7 @@ export default function SearchPipelineTaskPage() {
 
           <SidebarCard title="자동 결재선">
             <div className="text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.4px] mb-1.5">
-              학습계 배포 (간이)
+              개발계 배포 (간이)
             </div>
             <div className="space-y-1.5 mb-3">
               <ApprStep seq="0" label="기안 — 프로젝트 오너 그룹" tone="draft" />
@@ -778,7 +778,7 @@ export default function SearchPipelineTaskPage() {
               )}
             </div>
             <div className="text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.4px] mb-1.5">
-              서빙계 프로모션 (풀 · Stage 4)
+              운영계 프로모션 (풀 · Stage 4)
             </div>
             <div className="space-y-1.5">
               <ApprStep seq="0" label="기안 — 프로젝트 오너 그룹" tone="draft" />
@@ -827,7 +827,7 @@ export default function SearchPipelineTaskPage() {
             </Link>
             <Button>임시 저장</Button>
             <Button variant="primary" disabled={!requiredFilled || submitting} onClick={submit}>
-              {submitting ? '기안 중…' : '학습계 배포 결재 상신 →'}
+              {submitting ? '기안 중…' : '개발계 배포 결재 상신 →'}
             </Button>
           </div>
         </div>

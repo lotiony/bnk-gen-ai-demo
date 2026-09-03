@@ -1286,10 +1286,10 @@ export default function KnowledgeDataTaskPage() {
         />
       )}
 
-      {/* 평가 tab — 학습계 검색 API를 골든셋으로 평가 */}
+      {/* 평가 tab — 개발계 검색 API를 골든셋으로 평가 */}
       {tab === 'eval' && <EvalSection />}
 
-      {/* 배포 tab — 학습계(dev) / 서빙계(prod) 환경 토글 */}
+      {/* 배포 tab — 개발계(dev) / 운영계(prod) 환경 토글 */}
       {tab === 'deploy' && <DeploySection indexes={indexes} />}
 
       {/* Footer actions */}

@@ -50,9 +50,9 @@ type Values = Record<string, number>;
 interface Run {
   id: string;
   at: string;
-  /** 평가 대상 = 그 시점 배포된 학습계 버전(배포 일시). */
+  /** 평가 대상 = 그 시점 배포된 개발계 버전(배포 일시). */
   deployAt: string;
-  /** 평가 대상 학습계 배포 버전 라벨 (#2 등). */
+  /** 평가 대상 개발계 배포 버전 라벨 (#2 등). */
   deployVer: string;
   by: string;
   values: Values;
@@ -188,13 +188,13 @@ interface QueueJob {
 const SEED_QUEUE: QueueJob[] = [];
 
 /**
- * 평가 탭 — 현재 배포된 학습계 검색 API를 정답 라벨 기준으로 평가.
+ * 평가 탭 — 현재 배포된 개발계 검색 API를 정답 라벨 기준으로 평가.
  * Recall@5 · MRR · nDCG@10 (LLM 미사용, 결정적). 실행할 때마다 이력이 누적된다.
  */
 export default function EvalSection() {
   const persona = useCurrentPersona();
   const deploys = useDeployApprovals();
-  // 평가는 현재 배포된(승인 완료) 학습계 API를 대상으로 한다. 목록은 최신순.
+  // 평가는 현재 배포된(승인 완료) 개발계 API를 대상으로 한다. 목록은 최신순.
   const deployed = deploys.find((d) => d.state === 'done');
   const deployedIndex = deployed
     ? deployed.sources.map((s) => `${s.name} · ${s.version}`).join(', ')
@@ -236,7 +236,7 @@ export default function EvalSection() {
   const runningCount = queue.filter((j) => j.status === 'running').length;
   const queuedCount = queue.filter((j) => j.status === 'queued').length;
 
-  // 학습계 배포 버전(#N)별 그룹 — 이력 최신순 유지.
+  // 개발계 배포 버전(#N)별 그룹 — 이력 최신순 유지.
   const deployGroups: { ver: string; items: Run[] }[] = [];
   runs.forEach((r) => {
     const g = deployGroups.find((x) => x.ver === r.deployVer);
@@ -263,7 +263,7 @@ export default function EvalSection() {
     ]);
   };
 
-  // 현재 배포된 학습계 버전 라벨 (#N).
+  // 현재 배포된 개발계 버전 라벨 (#N).
   const deployedVer = `#${(deployed?.version ?? 'd1').replace(/\D/g, '')}`;
 
   // ── 라이브 큐 틱 — 실행 중 잡의 진행률을 올리고, 100%에서 완료→이력 이동, 대기 잡은 워커가 비면 실행 시작.
@@ -372,7 +372,7 @@ export default function EvalSection() {
                   </span>
                   <span className="text-ink-dark font-bold truncate">{job.setName}</span>
                   <span className="text-ink-light hidden sm:inline">·</span>
-                  <span className="text-ink-mid font-semibold hidden sm:inline">학습계 배포 {job.deployAt}</span>
+                  <span className="text-ink-mid font-semibold hidden sm:inline">개발계 배포 {job.deployAt}</span>
                   <span className="text-ink-light hidden md:inline">·</span>
                   <span className="text-ink-mid font-semibold hidden md:inline">{job.by}</span>
                   <span className="flex-1" />
@@ -395,24 +395,24 @@ export default function EvalSection() {
           )}
         </div>
 
-        {/* 평가 대상 (현재 배포된 학습계 API) · 평가셋 */}
+        {/* 평가 대상 (현재 배포된 개발계 API) · 평가셋 */}
         <div className="border border-line-soft rounded-lg bg-white overflow-hidden mb-3">
           <div className="flex items-center gap-2.5 flex-wrap py-2.5 px-3.5 text-[12px] border-b border-line-soft">
             <span className="text-ink-mid font-semibold">대상</span>
             <span className="font-extrabold text-ink">{deployed?.apiName ?? '지식 검색 API'}</span>
             <span className="inline-flex items-center py-[2px] px-2 rounded-full border border-info-border bg-info-bg text-info text-[10px] font-extrabold">
-              학습계
+              개발계
             </span>
             {deployed ? (
               <>
                 <span className="text-ink-light">·</span>
-                <span className="text-ink-mid font-semibold">학습계 버전</span>
+                <span className="text-ink-mid font-semibold">개발계 버전</span>
                 <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-brand-tint text-ink border-brand-dark">
                   {deployedVer}
                 </span>
               </>
             ) : (
-              <span className="text-[11px] font-bold text-warn">배포된 학습계 API 없음</span>
+              <span className="text-[11px] font-bold text-warn">배포된 개발계 API 없음</span>
             )}
           </div>
           <div className="py-2.5 px-3.5">
@@ -428,7 +428,7 @@ export default function EvalSection() {
               <button
                 onClick={runEval}
                 disabled={running || !deployed}
-                title={!deployed ? '배포된 학습계 API가 없습니다' : '선택한 평가셋으로 현재 배포된 학습계 API 평가 실행'}
+                title={!deployed ? '배포된 개발계 API가 없습니다' : '선택한 평가셋으로 현재 배포된 개발계 API 평가 실행'}
                 className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {running ? '평가 중…' : '▶ 평가 실행'}
@@ -474,10 +474,10 @@ export default function EvalSection() {
 
         {(
           <>
-            {/* 학습계 버전별 성능 비교 표 */}
+            {/* 개발계 버전별 성능 비교 표 */}
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">
-                학습계 버전별 성능
+                개발계 버전별 성능
               </span>
               <span className="text-[10px] text-ink-light font-semibold">
                 · 버전을 클릭하면 아래에 상세가 표시됩니다 · 종합은 각 버전 최신 평가 기준
@@ -487,7 +487,7 @@ export default function EvalSection() {
               <table className="w-full text-[11.5px]">
                 <thead>
                   <tr className="bg-surface-soft text-ink-mid text-[10.5px] font-bold">
-                    <th className="text-left py-2 px-3 font-bold whitespace-nowrap">학습계 버전</th>
+                    <th className="text-left py-2 px-3 font-bold whitespace-nowrap">개발계 버전</th>
                     <th className="text-center py-2 px-3 font-bold whitespace-nowrap">평가</th>
                     <th className="text-center py-2 px-3 font-bold whitespace-nowrap">종합</th>
                     <th className="text-center py-2 px-3 font-bold whitespace-nowrap">Recall@5</th>
@@ -510,7 +510,7 @@ export default function EvalSection() {
                       >
                         <td className="py-2 px-3 whitespace-nowrap">
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="text-ink-mid font-semibold">학습계</span>
+                            <span className="text-ink-mid font-semibold">개발계</span>
                             <span className="inline-flex items-center justify-center text-[10.5px] font-extrabold py-[1px] px-2 rounded-full border bg-brand-tint text-ink border-brand-dark">
                               {g.ver}
                             </span>
@@ -544,7 +544,7 @@ export default function EvalSection() {
             <div className="flex items-center gap-1.5 mb-2">
               <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">선택 버전 상세</span>
               <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-ink">
-                <span className="text-ink-mid font-semibold">학습계</span>
+                <span className="text-ink-mid font-semibold">개발계</span>
                 <span className="inline-flex items-center justify-center text-[10px] font-extrabold py-[1px] px-1.5 rounded-full border bg-brand-tint text-ink border-brand-dark">
                   {selected.deployVer}
                 </span>
@@ -635,7 +635,7 @@ export default function EvalSection() {
                 onClick={() => setShowHistory((s) => !s)}
                 className="w-full flex items-center justify-between py-2 px-3.5 text-[11.5px] font-bold text-ink-dark hover:bg-surface"
               >
-                <span>📈 학습계 {selected.deployVer} 평가 이력 {selectedGroup.items.length}회</span>
+                <span>📈 개발계 {selected.deployVer} 평가 이력 {selectedGroup.items.length}회</span>
                 <span className={cn('text-[10px] transition-transform', showHistory && 'rotate-180')}>▾</span>
               </button>
               {showHistory && (
@@ -712,7 +712,7 @@ function RunDetailModal({
       <div className="border border-line-soft rounded-lg overflow-hidden mb-3">
         <InfoRow k="실행 일시" v={run.at} />
         <InfoRow k="실행자" v={run.by} />
-        <InfoRow k="대상 학습계 버전" v={`${run.deployVer} · 배포 ${run.deployAt}`} />
+        <InfoRow k="대상 개발계 버전" v={`${run.deployVer} · 배포 ${run.deployAt}`} />
         <InfoRow k="평가셋" v={`${setName} · ${golden.length} 문항`} />
         <InfoRow k="채점 방식" v="정답 근거 구절(청크) 기준 · Recall@5 · MRR · nDCG@10 (LLM 미사용)" last />
       </div>
@@ -734,7 +734,7 @@ function RunDetailModal({
               </b>
               {prev && (
                 <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
-                  이전 {compositeOf(prev.values).toFixed(2)} → {composite.toFixed(2)} (학습계 {prev.deployVer})
+                  이전 {compositeOf(prev.values).toFixed(2)} → {composite.toFixed(2)} (개발계 {prev.deployVer})
                 </div>
               )}
             </div>
@@ -832,7 +832,7 @@ function RunRow({
         {showDeploy && version && (
           <>
             <span className="text-ink-light">·</span>
-            <span className="text-ink-mid font-semibold">학습계</span>
+            <span className="text-ink-mid font-semibold">개발계</span>
             <span className="font-extrabold text-ink">{version}</span>
           </>
         )}

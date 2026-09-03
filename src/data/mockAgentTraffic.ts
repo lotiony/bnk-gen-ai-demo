@@ -5,7 +5,7 @@
  *  · 트래픽 — RPS/RPM/TPS, 총 요청 수, 세션/동시 세션, Turn 수, DAU/WAU/MAU
  *  · 지연  — P50/P95/P99, TTFT, 타임아웃 발생률
  *  · 결과  — 성공률/실패율, Fallback 발동 횟수
- *  · 환경  — 학습계 vs 서빙계 트래픽 분포, SLO 충족률
+ *  · 환경  — 개발계 vs 운영계 트래픽 분포, SLO 충족률
  *  · 자원  — CPU/Memory 사용률, replica 수, Pod Ready/Pending
  *  · LLM   — 입출력 토큰(모델별), 토큰 쿼터 소진율, TPM 한도 도달률
  */
@@ -65,9 +65,9 @@ export interface AgentTrafficSnapshot {
   fallbackCount24h: number;
 
   // ── A4. 환경 분배 ───────────────────────────────────────
-  /** 학습계 RPS. */
+  /** 개발계 RPS. */
   trainRps: number;
-  /** 서빙계 RPS. */
+  /** 운영계 RPS. */
   servRps: number;
 
   // ── SLO ────────────────────────────────────────────────

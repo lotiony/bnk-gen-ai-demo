@@ -74,7 +74,7 @@ export function getVisibleApprovals(persona: PersonaLike): ApprovalItem[] {
   // 막아서 하사용(경남은행)·표사용(BNK캐피탈)로 전환하면 **타 계열사 결재 건까지
   // 전부 보였다** — SEC-001 격리 서사가 그 자리에서 깨진다. 그룹 단위로 막는다.
   if (persona?.group === '사용자') return [];
-  // 서빙계 배포 결재(스토어)를 기존 정적 결재와 합쳐서 노출.
+  // 운영계 배포 결재(스토어)를 기존 정적 결재와 합쳐서 노출.
   let list: ApprovalItem[] = [...getDeployApprovals(), ...approvals];
   // 개발자 그룹: 본인 기안 건 + **본인이 처리해야 할 단계인 승격 건**.
   // (draftedBy에 "(SoD 자동 위임)" 같은 접미사가 붙을 수 있어 prefix 비교)

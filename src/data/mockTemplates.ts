@@ -34,7 +34,7 @@ export type TemplateKind = '에이전트' | '워크플로우' | '프롬프트';
  */
 export interface AgentPreset {
   name: string;
-  stage: '학습계' | '서빙계';
+  stage: '개발계' | '운영계';
   /** 빌더 종류는 에이전트 과제 쪽 리터럴을 그대로 쓴다 — 두 화면이 다른 말을 하면 안 된다. */
   builder: AgentBuilder;
   systemPrompt: string;
@@ -81,7 +81,7 @@ const SEED_TEMPLATES: TemplateItem[] = [
       kind: '에이전트',
       agent: {
         name: '민원 분류·회신 초안 에이전트 (복제본)',
-        stage: '학습계',
+        stage: '개발계',
         builder: 'studio',
         systemPrompt:
           '당신은 접수된 민원을 분류하고 표준 회신 초안을 작성하는 어시스턴트입니다. ' +

@@ -23,7 +23,7 @@ const STATUS_CHIP: Record<ModelStatus, { cls: string; dot: string }> = {
   maint: { cls: 'bg-surface-soft text-ink-mid border-line-soft', dot: 'bg-ink-mid' },
 };
 
-/** 모델 탭 — 카테고리별 그룹 + 행마다 학습계/서빙계 PTU 사용량 바 */
+/** 모델 탭 — 카테고리별 그룹 + 행마다 개발계/운영계 PTU 사용량 바 */
 export default function ModelsTab({ models }: Props) {
   const groups: { label: string; note?: string; items: ModelEntry[] }[] = [
     {
@@ -41,7 +41,7 @@ export default function ModelsTab({ models }: Props) {
       <div className="flex items-baseline gap-2.5 mb-3.5 flex-wrap">
         <span className="text-[15px] font-extrabold text-ink tracking-tight">모델</span>
         <span className="text-[11.5px] text-ink-mid font-medium">
-          사용 가능 모델 화이트리스트 · 학습계/서빙계 사용 비율
+          사용 가능 모델 화이트리스트 · 개발계/운영계 사용 비율
         </span>
         {/*
           `href="#"` 는 HashRouter 에서 해시를 비워 홈으로 튕긴다. 모델 카탈로그는
@@ -127,7 +127,7 @@ function ModelRow({ model, rank }: { model: ModelEntry; rank: number }) {
                     : 'bg-ok-bg text-ok border-ok-border',
                 )}
               >
-                {u.env === 'train' ? '학습계' : '서빙계'}
+                {u.env === 'train' ? '개발계' : '운영계'}
               </span>
               <div className="h-1.5 bg-white border border-line-soft rounded-sm overflow-hidden">
                 <div

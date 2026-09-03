@@ -179,7 +179,7 @@ function buildStudioTasks(): StudioTask[] {
     id: 'WKF-501',
     kind: 'workflow',
     name: '여신 상담 워크플로우',
-    state: '학습계 배포',
+    state: '개발계 배포',
     ownerName: '강개발',
     ownerInitial: '강',
     updatedAt: '2026-05-28',

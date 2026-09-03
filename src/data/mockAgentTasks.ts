@@ -16,9 +16,9 @@ export type AgentTaskState =
   | '운영 중'
   | '보류'
   /** 기안 직후 상태 — 배포 결재가 걸려 있어 아직 아무 데도 안 올라갔다. */
-  | '학습계 결재 진행 중'
-  | '서빙계 결재 진행 중';
-export type AgentDeployStage = '학습계' | '서빙계';
+  | '개발계 결재 진행 중'
+  | '운영계 결재 진행 중';
+export type AgentDeployStage = '개발계' | '운영계';
 /** Studio(노코드) · Code(pro-code) · LangGraph 3종. */
 export type AgentBuilder = 'studio' | 'pro-code' | 'graph';
 
@@ -67,7 +67,7 @@ export const MOCK_AGENT_TASKS: AgentTask[] = [
     id: 'AGT-204',
     name: 'PB 자산진단 어시스턴트',
     state: '운영 중',
-    stage: '서빙계',
+    stage: '운영계',
     builder: 'pro-code',
     mainModel: 'onprem/qwen3-32b',
     fallbackModel: 'onprem/gpt-oss-120b',
@@ -149,7 +149,7 @@ export function addAgentTask(input: NewAgentInput): AgentTask {
     id: `${NEW_ID_PREFIX}${String(++counter).padStart(3, '0')}`,
     name: input.name,
     // 기안했다고 배포된 게 아니다 — 결재가 끝나야 올라간다(ONM-003).
-    state: input.stage === '서빙계' ? '서빙계 결재 진행 중' : '학습계 결재 진행 중',
+    state: input.stage === '운영계' ? '운영계 결재 진행 중' : '개발계 결재 진행 중',
     stage: input.stage,
     builder: input.builder,
     mainModel: input.mainModel,
@@ -187,9 +187,9 @@ export function markAgentDeployDecision(
   const task = MOCK_AGENT_TASKS.find((t) => t.id === agentId);
   if (!task) return;
   if (kind === 'approve') {
-    task.state = stage === '서빙계' ? '운영 중' : '실행 중';
+    task.state = stage === '운영계' ? '운영 중' : '실행 중';
     task.changeNote = `${stage} 배포 승인 완료`;
-    task.progress = stage === '서빙계' ? 100 : 60;
+    task.progress = stage === '운영계' ? 100 : 60;
   } else {
     task.state = '보류';
     task.changeNote = `${stage} 배포 결재 반려 — 보완 후 재기안`;

@@ -63,7 +63,7 @@ export interface IndexEnvStatus {
   vectors: number;
   sizeMB: number;
   builtAt?: string;
-  /** 서빙계 프로모션 결재 상태 (prod만). */
+  /** 운영계 프로모션 결재 상태 (prod만). */
   approval?: 'none' | 'pending' | 'approved';
 }
 
@@ -73,7 +73,7 @@ export interface IndexInfo {
   modelId: EmbedModelId;
   kind: IndexKind;
   dev: IndexEnvStatus;
-  /** 학습계 빌드 이후 추가된 새 청크 (재빌드 대기 카운트). */
+  /** 개발계 빌드 이후 추가된 새 청크 (재빌드 대기 카운트). */
   pendingChunks: number;
 }
 
@@ -110,7 +110,7 @@ export interface FileEmbedStatus {
   note?: string;
 }
 
-/** 페이지 진입 시 mock — 이미 학습계에 빌드된 (대표) 인덱스. EmbedSection이 누적하는 대상. */
+/** 페이지 진입 시 mock — 이미 개발계에 빌드된 (대표) 인덱스. EmbedSection이 누적하는 대상. */
 export function buildIndexMock(): IndexInfo {
   return {
     indexId: 'idx-vp-call-7m2k',

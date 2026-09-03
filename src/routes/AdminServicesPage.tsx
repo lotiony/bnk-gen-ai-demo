@@ -343,7 +343,7 @@ function ServiceDetailPanel({ item, onClose }: { item: ServiceItem; onClose: () 
             bad={warn}
           />
           <Metric label="오류율 (7일)" value={`${sla.errorRatePct.toFixed(1)}%`} sub="타임아웃 포함" bad={sla.errorRatePct >= 1} />
-          <Metric label="호출 (7일)" value={sla.calls7d.toLocaleString('ko-KR')} sub="서빙계 실측" />
+          <Metric label="호출 (7일)" value={sla.calls7d.toLocaleString('ko-KR')} sub="운영계 실측" />
         </div>
       ) : (
         <div className="text-[11.5px] text-ink-mid font-semibold mb-3.5">

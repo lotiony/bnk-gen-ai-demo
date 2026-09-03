@@ -85,7 +85,7 @@ export interface RoutingTarget {
   stateLabel: string;
   namespace: string;
   endpoint: string;
-  /** 접속 계정 — 학습계/서빙계 분리(DatabaseTaskPage 계정 규칙과 동일 체계). */
+  /** 접속 계정 — 개발계/운영계 분리(DatabaseTaskPage 계정 규칙과 동일 체계). */
   account: string;
   /** 데이터 상태 한 줄. */
   dataState: string;
@@ -98,7 +98,7 @@ export interface RoutingTarget {
 export const ROUTING_TARGETS: Record<'dev' | 'prod', RoutingTarget> = {
   dev: {
     kind: 'dev',
-    title: '개발 DB (학습계)',
+    title: '개발 DB (개발계)',
     stateLabel: 'Draft',
     namespace: 'ns-bank-bs-dev',
     endpoint: 'consult-db-dev.aip.group.local:5432 / pb_consult',
@@ -109,7 +109,7 @@ export const ROUTING_TARGETS: Record<'dev' | 'prod', RoutingTarget> = {
   },
   prod: {
     kind: 'prod',
-    title: '운영 DB (서빙계)',
+    title: '운영 DB (운영계)',
     stateLabel: 'Approved',
     namespace: 'ns-bank-bs-prod',
     endpoint: 'consult-db.aip.group.local:5432 / pb_consult',

@@ -57,7 +57,7 @@ export const ONBOARDING: Record<RfpRole, OnboardingStep[]> = {
     },
     {
       title: '평가 통과 후 배포 기안',
-      desc: '회귀 평가와 레드팀 검증을 통과해야 서빙계 배포 결재를 올릴 수 있다. 승인 시점에 운영 DB 접근이 열린다.',
+      desc: '회귀 평가와 레드팀 검증을 통과해야 운영계 배포 결재를 올릴 수 있다. 승인 시점에 운영 DB 접근이 열린다.',
       to: '/studio',
     },
   ],

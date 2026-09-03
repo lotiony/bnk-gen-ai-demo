@@ -230,8 +230,8 @@ function GuideView({ comp }: { comp: CustomComponent }) {
 
 function DeployView({ comp }: { comp: CustomComponent }) {
   const [env, setEnv] = useState<'train' | 'serv'>('train');
-  const trainDeploys = comp.deploys.filter((d) => d.env === '학습계');
-  const servDeploys = comp.deploys.filter((d) => d.env === '서빙계');
+  const trainDeploys = comp.deploys.filter((d) => d.env === '개발계');
+  const servDeploys = comp.deploys.filter((d) => d.env === '운영계');
   const versions = [...new Set(comp.deploys.map((d) => d.version))];
   const envDetail = env === 'train' ? trainDeploys[0] : servDeploys.find((d) => d.status === '운영 중') ?? servDeploys[0];
 
@@ -247,8 +247,8 @@ function DeployView({ comp }: { comp: CustomComponent }) {
           <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">환경별 상세</span>
           <div className="inline-flex rounded-lg border border-line overflow-hidden">
             {([
-              { k: 'train', label: '학습계', sub: 'dev' },
-              { k: 'serv', label: '서빙계', sub: 'prod' },
+              { k: 'train', label: '개발계', sub: 'dev' },
+              { k: 'serv', label: '운영계', sub: 'prod' },
             ] as const).map((e) => (
               <button
                 key={e.k}
@@ -296,7 +296,7 @@ function DeployView({ comp }: { comp: CustomComponent }) {
         {/* 배포 버전 파이프라인 표 */}
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">배포 버전 파이프라인</span>
-          <span className="text-[10px] text-ink-light font-semibold">· 버전별 커밋·환경 상태·서빙계 승격</span>
+          <span className="text-[10px] text-ink-light font-semibold">· 버전별 커밋·환경 상태·운영계 승격</span>
         </div>
         <div className="border border-line-soft rounded-lg overflow-x-auto">
           <table className="w-full text-[11.5px]">
@@ -306,8 +306,8 @@ function DeployView({ comp }: { comp: CustomComponent }) {
                 <th className="text-left py-2 px-3 font-bold">커밋 · 구성</th>
                 <th className="text-left py-2 px-3 font-bold whitespace-nowrap">배포일</th>
                 <th className="text-left py-2 px-3 font-bold whitespace-nowrap">배포자</th>
-                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">학습계</th>
-                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">서빙계</th>
+                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">개발계</th>
+                <th className="text-center py-2 px-3 font-bold whitespace-nowrap">운영계</th>
                 <th className="text-center py-2 px-3 font-bold whitespace-nowrap">액션</th>
               </tr>
             </thead>
@@ -378,9 +378,9 @@ function DeployView({ comp }: { comp: CustomComponent }) {
                       ) : (
                         <button
                           className="h-6 px-2.5 bg-brand border border-brand-dark rounded text-[10.5px] font-extrabold text-white hover:bg-brand-dark"
-                          title="이 버전을 서빙계로 승격"
+                          title="이 버전을 운영계로 승격"
                         >
-                          ▶ 서빙계로 승격
+                          ▶ 운영계로 승격
                         </button>
                       )}
                     </td>

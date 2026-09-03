@@ -45,7 +45,7 @@ import { canDecideApproval, canViewApproval, canViewPtuPool } from '@/lib/person
  *      ONM-004(누가·언제·무엇을 승인했는가 감사 추적)
  *
  * 세 가지 상세를 한 라우트에서 분기한다.
- *   ① 서빙계·학습계 **배포** 결재  → DeployApprovalDetail
+ *   ① 운영계·개발계 **배포** 결재  → DeployApprovalDetail
  *   ② 공유범위 **승격** 결재       → ScopePromotionDetail (RFP 1.3.2)
  *   ③ 그 외 프로젝트 결재          → 아래 기본 아코디언 (PRJ-101_approval.html 포팅)
  *
@@ -61,7 +61,7 @@ export default function ApprovalDetailPage() {
   useApprovalRevision();
   const [note, setNote] = useState('');
 
-  // 서빙계 배포 결재는 전용 상세로 렌더.
+  // 운영계 배포 결재는 전용 상세로 렌더.
   const deployApprovals = useDeployApprovals();
   const dep = deployApprovals.find((d) => d.id === approvalId);
   if (dep) {
@@ -629,7 +629,7 @@ function PoolRow({
   );
 }
 
-/* ---------------- 서빙계 배포 결재 상세 ---------------- */
+/* ---------------- 운영계 배포 결재 상세 ---------------- */
 
 function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployApproval[] }) {
   const navigate = useNavigate();
@@ -639,7 +639,7 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
   // 승인 자격 — 기안자 자기결재와 비(非)승인권자를 함께 막는다(ONM-003).
   const right = canDecideApproval(persona, dep);
   const isServ = dep.category === 'serv';
-  const env = isServ ? '서빙계' : '학습계';
+  const env = isServ ? '운영계' : '개발계';
   // 비교용 현재 = 같은 환경(train/serv)의 최신 승인(done) 배포 (이 건 제외).
   const current = all.find((d) => d.category === dep.category && d.state === 'done' && d.id !== dep.id);
 
@@ -711,7 +711,7 @@ function DeployApprovalDetail({ dep, all }: { dep: DeployApproval; all: DeployAp
             <FormRow k="과제" v={dep.projectName ?? '-'} />
             <FormRow k="RAG API" v={`${dep.apiName}  ·  ${dep.apiId}`} />
             <FormRow k="배포 버전" v={`${dep.version} → ${env}`} />
-            {isServ && <FormRow k="승격 원본" v={`학습계 빌드 · ${dep.sources.map((s) => `${s.name} ${s.version}`).join(', ')}`} />}
+            {isServ && <FormRow k="승격 원본" v={`개발계 빌드 · ${dep.sources.map((s) => `${s.name} ${s.version}`).join(', ')}`} />}
             <FormRow k="Endpoint" v={<code className="text-[11px] font-mono text-ink-dark break-all">{dep.endpoint}</code>} />
           </FormSection>
 

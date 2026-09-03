@@ -30,7 +30,7 @@ function grafanaPanelUrl(projectId: string, panel: number): string {
  *  · 요청량 — RPS/RPM/TPS, 총 요청, 세션/Turn, DAU/WAU/MAU
  *  · 지연  — P50/P95/P99, TTFT, 타임아웃 발생률
  *  · 결과  — 성공률/실패율, Fallback 발동 횟수
- *  · 환경  — 학습계 vs 서빙계 트래픽, SLO 충족률·Error Budget
+ *  · 환경  — 개발계 vs 운영계 트래픽, SLO 충족률·Error Budget
  *  · 자원  — Replica/Ready/Pending, CPU/Memory 평균·P95
  *  · LLM   — 입출력 토큰(모델별), 토큰 쿼터 소진율, TPM 한도 도달률
  */
@@ -122,22 +122,22 @@ export default function TrafficTab({ projectId }: Props) {
           <LineChart series={snap.rpsSeries} height={120} valueFormatter={(v) => v.toFixed(1)} />
         </ChartCard>
         <ChartCard
-          title="학습계 vs 서빙계"
+          title="개발계 vs 운영계"
           subtitle="현재 RPS 분배"
           grafanaHref={grafanaPanelUrl(projectId, 2)}
         >
           <SplitBar
-            left={{ label: '학습계', value: snap.trainRps, pct: trainShare, tone: 'info' }}
-            right={{ label: '서빙계', value: snap.servRps, pct: servShare, tone: 'ok' }}
+            left={{ label: '개발계', value: snap.trainRps, pct: trainShare, tone: 'info' }}
+            right={{ label: '운영계', value: snap.servRps, pct: servShare, tone: 'ok' }}
             unit="RPS"
           />
           <div className="mt-3 pt-3 border-t border-line-soft text-[11px] text-ink-mid space-y-1">
             <div className="flex justify-between">
-              <span>학습계 RPS</span>
+              <span>개발계 RPS</span>
               <b className="text-ink-dark tabular-nums">{snap.trainRps.toFixed(2)}</b>
             </div>
             <div className="flex justify-between">
-              <span>서빙계 RPS</span>
+              <span>운영계 RPS</span>
               <b className="text-ink-dark tabular-nums">{snap.servRps.toFixed(2)}</b>
             </div>
           </div>

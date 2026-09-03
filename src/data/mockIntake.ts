@@ -88,20 +88,20 @@ export const INTAKE_REQUESTS: IntakeRequest[] = [
     requestedBy: '민모델',
     requestedAt: '2026-05-21 10:12',
     reason: '한국어 금융 도메인 응답 품질 비교 후보 · 현행 대비 요약 정확도 개선 기대',
-    destination: '모델 카탈로그 · 학습계 서빙',
+    destination: '모델 카탈로그 · 개발계 서빙',
     size: '32.5B · 65GB (safetensors)',
     /*
      * 게시판 공지(`mockContent` NTC-039 「kanana-flag-32.5B 반입 완료 안내」,
      * 2026-05-28 게시)가 이미 "반입 완료" 를 알리고 있다. 이 건이 '승인 대기' 로
      * 남아 있으면 같은 사실을 두 화면이 다르게 말한다. 공지보다 하루 앞선
      * 05-27 에 **조건부 승인** 으로 닫는다 — 편향 셋이 기준 미달(warn)이라
-     * 학습계 한정으로만 열었고, 그 조건이 `mockModels` 의 화이트리스트 표기와
+     * 개발계 한정으로만 열었고, 그 조건이 `mockModels` 의 화이트리스트 표기와
      * 이어진다.
      */
     state: '승인',
     decidedBy: '임정보',
     decidedAt: '2026-05-27 16:40',
-    note: '학습계 한정 조건부 승인 — 편향 셋 기준 미달로 대고객 서빙계 승격은 별도 결재 필요',
+    note: '개발계 한정 조건부 승인 — 편향 셋 기준 미달로 대고객 운영계 승격은 별도 결재 필요',
     checks: [
       {
         name: '라이선스 검토',

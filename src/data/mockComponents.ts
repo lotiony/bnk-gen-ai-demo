@@ -6,7 +6,7 @@ export interface PipelineStep {
   detail: string;
 }
 
-export type CompDeployEnv = '학습계' | '서빙계';
+export type CompDeployEnv = '개발계' | '운영계';
 export type CompDeployStatus = '운영 중' | '이전' | '배포 중' | '실패';
 export type CiStatus = 'passed' | 'running' | 'failed';
 
@@ -88,9 +88,9 @@ export const CUSTOM_COMPONENTS: CustomComponent[] = [
       { stage: 'deploy', status: 'passed' },
     ],
     deploys: [
-      { version: 'v1.3', env: '서빙계', commit: 'a3f9c21', status: '운영 중', at: '2026-06-01 18:40', by: '이도현' },
-      { version: 'v1.3', env: '학습계', commit: 'a3f9c21', status: '운영 중', at: '2026-06-01 18:30', by: '김지우' },
-      { version: 'v1.2', env: '서빙계', commit: '7c1b0e4', status: '이전', at: '2026-05-25 11:10', by: '이도현' },
+      { version: 'v1.3', env: '운영계', commit: 'a3f9c21', status: '운영 중', at: '2026-06-01 18:40', by: '이도현' },
+      { version: 'v1.3', env: '개발계', commit: 'a3f9c21', status: '운영 중', at: '2026-06-01 18:30', by: '김지우' },
+      { version: 'v1.2', env: '운영계', commit: '7c1b0e4', status: '이전', at: '2026-05-25 11:10', by: '이도현' },
     ],
     code: `import pdfplumber
 
@@ -134,9 +134,9 @@ def parse(path: str) -> list[dict]:
       { stage: 'deploy', status: 'running' },
     ],
     deploys: [
-      { version: 'v2.0', env: '학습계', commit: 'e82d5f0', status: '운영 중', at: '2026-06-02 14:20', by: '박서연' },
-      { version: 'v2.0', env: '서빙계', commit: 'e82d5f0', status: '배포 중', at: '방금', by: '이도현' },
-      { version: 'v1.4', env: '서빙계', commit: 'b1290aa', status: '이전', at: '2026-05-27 09:41', by: '이도현' },
+      { version: 'v2.0', env: '개발계', commit: 'e82d5f0', status: '운영 중', at: '2026-06-02 14:20', by: '박서연' },
+      { version: 'v2.0', env: '운영계', commit: 'e82d5f0', status: '배포 중', at: '방금', by: '이도현' },
+      { version: 'v1.4', env: '운영계', commit: 'b1290aa', status: '이전', at: '2026-05-27 09:41', by: '이도현' },
     ],
     code: `import re
 
@@ -179,8 +179,8 @@ def chunk(text: str, size=800, overlap=80) -> list[str]:
       { stage: 'deploy', status: 'passed' },
     ],
     deploys: [
-      { version: 'v1.1', env: '학습계', commit: 'f40ab99', status: '운영 중', at: '2026-06-03 10:05', by: '정오너' },
-      { version: 'v1.0', env: '학습계', commit: 'cc7712d', status: '이전', at: '2026-05-29 16:20', by: '정오너' },
+      { version: 'v1.1', env: '개발계', commit: 'f40ab99', status: '운영 중', at: '2026-06-03 10:05', by: '정오너' },
+      { version: 'v1.0', env: '개발계', commit: 'cc7712d', status: '이전', at: '2026-05-29 16:20', by: '정오너' },
     ],
     code: `name: 규정검색 컴플라이언스
 parser:

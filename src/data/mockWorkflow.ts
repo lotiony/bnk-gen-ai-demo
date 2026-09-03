@@ -124,7 +124,7 @@ export const SEED_NODES: WfNode[] = [
     id: 'n4', kind: 'agent', title: '비대면 여신 사전심사 보조', x: 610, y: 112,
     config: [
       { k: '에이전트', v: 'AGT-512 비대면 여신 사전심사 보조' },
-      { k: '배포 상태', v: 'Approved (서빙계)' },
+      { k: '배포 상태', v: 'Approved (운영계)' },
       { k: '타임아웃', v: '30s' },
     ],
   },

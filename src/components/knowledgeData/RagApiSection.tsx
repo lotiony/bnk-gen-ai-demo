@@ -102,7 +102,7 @@ function buildApiMock(): RagApi {
   };
 }
 
-/** 학습계(RAG API) 탭 — 검색 API 발급·관리, 서빙계 배포 신청은 결재함으로 연동. */
+/** 개발계(RAG API) 탭 — 검색 API 발급·관리, 운영계 배포 신청은 결재함으로 연동. */
 const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ indexes }, ref) {
   const [api, setApi] = useState<RagApi | null>(() => buildApiMock());
   const [modalOpen, setModalOpen] = useState(false);
@@ -136,7 +136,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
 
   const rotateKey = () => setApi((cur) => (cur ? { ...cur, apiKey: randKey() } : cur));
 
-  /** 배포 신청 — 학습계 설정 반영 + 결재함에 서빙계 배포 결재 생성(승인 대기). */
+  /** 배포 신청 — 개발계 설정 반영 + 결재함에 운영계 배포 결재 생성(승인 대기). */
   const submitDeployRequest = (payload: {
     name: string;
     indexIds: string[];
@@ -180,7 +180,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
     addDeployApproval({
       id: `APV-DEP-${Date.now()}`,
       category: 'train',
-      title: `${payload.name} 학습계 배포 (${ver})`,
+      title: `${payload.name} 개발계 배포 (${ver})`,
       projectName: 'PB 에이전트 프로젝트',
       draftedBy: '정오너',
       draftedAt: nowLabel(),
@@ -242,7 +242,7 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
       {/* 헤더 */}
       <div className="flex items-center justify-between gap-3.5 py-3 px-[18px] border-b border-line-soft">
         <div className="flex items-center gap-2.5 text-sm font-extrabold text-ink">
-          학습계
+          개발계
         </div>
         {!api && (
           <button
@@ -268,10 +268,10 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
             <div className="flex items-center gap-2.5 py-2.5 px-3.5 border-b border-line-soft">
               <span className="text-[13.5px] font-extrabold text-ink truncate">{api.name}</span>
               <span
-                title="이 인스턴스는 학습계(dev) 환경입니다. 학습계 배포 신청 → 결재 승인 후 반영됩니다."
+                title="이 인스턴스는 개발계(dev) 환경입니다. 개발계 배포 신청 → 결재 승인 후 반영됩니다."
                 className="inline-flex items-center py-[2px] px-2 rounded-full border border-info-border bg-info-bg text-info text-[10px] font-extrabold"
               >
-                학습계
+                개발계
               </span>
               <span className="text-[10.5px] text-ink-mid font-mono">{api.id}</span>
               <span className="flex-1" />
@@ -291,10 +291,10 @@ const RagApiSection = forwardRef<HTMLElement, Props>(function RagApiSection({ in
               <button
                 onClick={() => setModalOpen(true)}
                 disabled={pending}
-                title={pending ? '이미 승인 대기 중인 배포 신청이 있습니다' : '설정을 확인·변경하고 학습계 배포를 신청'}
+                title={pending ? '이미 승인 대기 중인 배포 신청이 있습니다' : '설정을 확인·변경하고 개발계 배포를 신청'}
                 className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {pending ? '승인 대기 중' : '▶ 학습계 배포 신청'}
+                {pending ? '승인 대기 중' : '▶ 개발계 배포 신청'}
               </button>
             </div>
 
@@ -548,10 +548,10 @@ function IssueApiModal({
     <ModalShell
       open
       onClose={onClose}
-      title={existing ? '학습계 배포 신청' : 'RAG API 발급'}
+      title={existing ? '개발계 배포 신청' : 'RAG API 발급'}
       subtitle={
         existing
-          ? '설정을 확인·변경한 뒤 학습계 배포를 신청합니다 (결재함에서 승인 후 반영)'
+          ? '설정을 확인·변경한 뒤 개발계 배포를 신청합니다 (결재함에서 승인 후 반영)'
           : '인덱스를 소스로 묶어 검색 API를 구성합니다'
       }
       size="md"
@@ -575,7 +575,7 @@ function IssueApiModal({
             }
             className="py-2 px-3.5 bg-brand border border-brand-dark rounded text-[12.5px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {existing ? '▶ 학습계 배포 신청' : '▶ API 발급'}
+            {existing ? '▶ 개발계 배포 신청' : '▶ API 발급'}
           </button>
         </div>
       }

@@ -23,7 +23,7 @@ const STATE_PILL: Record<string, { className: string; label: string }> = {
   rejected: { className: 'bg-bad-bg text-bad border-bad-border', label: '반려' },
 };
 
-/** 서빙계(운영) 탭 — 학습계에서 검증된 빌드를 운영에 배포. 서빙계 배포 신청은 결재함으로 연동. */
+/** 운영계 탭 — 개발계에서 검증된 빌드를 운영에 배포. 운영계 배포 신청은 결재함으로 연동. */
 export default function ServingApiSection() {
   const persona = useCurrentPersona();
   const all = useDeployApprovals();
@@ -43,13 +43,13 @@ export default function ServingApiSection() {
     window.setTimeout(() => setCopied((c) => (c === id ? null : c)), 1200);
   };
 
-  // 서빙계 배포 신청 — 현재 학습계 빌드를 운영으로 승격 + 결재함에 서빙계 배포 결재 생성.
+  // 운영계 배포 신청 — 현재 개발계 빌드를 운영으로 승격 + 결재함에 운영계 배포 결재 생성.
   const requestDeploy = () => {
     if (!trainLatest || servPending) return;
     const item: DeployApproval = {
       id: `APV-SRV-${Date.now() % 100000}`,
       category: 'serv',
-      title: '지식 검색 API 서빙계 배포',
+      title: '지식 검색 API 운영계 배포',
       projectName: 'PB 에이전트 프로젝트',
       draftedBy: persona?.name ?? '정오너',
       draftedAt: nowLabel(),
@@ -71,7 +71,7 @@ export default function ServingApiSection() {
     <section className="card shadow-sm mb-3.5 scroll-mt-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between gap-3.5 py-3 px-[18px] border-b border-line-soft">
-        <div className="flex items-center gap-2.5 text-sm font-extrabold text-ink">서빙계</div>
+        <div className="flex items-center gap-2.5 text-sm font-extrabold text-ink">운영계</div>
       </div>
 
       <div className="px-[18px] py-[18px]">
@@ -80,10 +80,10 @@ export default function ServingApiSection() {
           <div className="flex items-center gap-2.5 py-2.5 px-3.5 border-b border-line-soft">
             <span className="text-[13.5px] font-extrabold text-ink truncate">지식 검색 API</span>
             <span
-              title="이 인스턴스는 서빙계(운영) 환경입니다. 학습계 빌드를 서빙계 배포 신청 → 결재 승인 후 운영에 반영됩니다."
+              title="이 인스턴스는 운영계 환경입니다. 개발계 빌드를 운영계 배포 신청 → 결재 승인 후 운영에 반영됩니다."
               className="inline-flex items-center py-[2px] px-2 rounded-full border border-ok-border bg-ok-bg text-ok text-[10px] font-extrabold"
             >
-              서빙계
+              운영계
             </span>
             <span className="text-[10.5px] text-ink-mid font-mono">api-pb-7m2k</span>
             <span className="flex-1" />
@@ -103,14 +103,14 @@ export default function ServingApiSection() {
               disabled={servPending || !trainLatest}
               title={
                 servPending
-                  ? '이미 승인 대기 중인 서빙계 배포 신청이 있습니다'
+                  ? '이미 승인 대기 중인 운영계 배포 신청이 있습니다'
                   : !trainLatest
-                  ? '먼저 학습계에 배포된 빌드가 필요합니다'
-                  : '현재 학습계 빌드를 서빙계(운영)로 배포 신청'
+                  ? '먼저 개발계에 배포된 빌드가 필요합니다'
+                  : '현재 개발계 빌드를 운영계로 배포 신청'
               }
               className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {servPending ? '승인 대기 중' : '▶ 서빙계 배포 신청'}
+              {servPending ? '승인 대기 중' : '▶ 운영계 배포 신청'}
             </button>
           </div>
 

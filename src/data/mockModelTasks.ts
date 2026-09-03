@@ -14,7 +14,7 @@ export type ModelTaskState =
   | '반려'
   | '보류';
 
-export type ModelTaskEnv = '학습계' | '서빙계' | '학습계+서빙계';
+export type ModelTaskEnv = '개발계' | '운영계' | '개발계+운영계';
 
 export interface ModelTaskApproval {
   /** 단계 라벨. */
@@ -28,9 +28,9 @@ export interface ModelTaskApproval {
   note?: string;
 }
 
-/** 환경별 PTU 할당/실사용 — 학습계, 서빙계. */
+/** 환경별 PTU 할당/실사용 — 개발계, 운영계. */
 export interface ModelPtuAllocation {
-  env: '학습계' | '서빙계';
+  env: '개발계' | '운영계';
   /** 약정·할당된 PTU 수 (또는 시간). */
   allocated: number;
   /** 어제 기준 평균 사용량. */
@@ -89,17 +89,17 @@ export const MOCK_MODEL_TASKS: ModelTask[] = [
     modelKind: 'llm',
     name: 'onprem/gpt-oss-120b 사용 신청',
     state: '사용 중',
-    env: '학습계+서빙계',
+    env: '개발계+운영계',
     ptu: [
       {
-        env: '학습계',
+        env: '개발계',
         allocated: 8,
         used: 5.2,
         unit: 'PTU',
         weeklyUtilPct: [58, 62, 71, 65, 60, 64, 65],
       },
       {
-        env: '서빙계',
+        env: '운영계',
         allocated: 40,
         used: 28,
         unit: 'PTU',
@@ -153,10 +153,10 @@ export const MOCK_MODEL_TASKS: ModelTask[] = [
     modelKind: 'llm',
     name: 'onprem/qwen3-32b 사용 신청 — 멀티모달 PB 진단',
     state: '사용 중',
-    env: '서빙계',
+    env: '운영계',
     ptu: [
       {
-        env: '서빙계',
+        env: '운영계',
         allocated: 20,
         used: 14.5,
         unit: 'PTU',

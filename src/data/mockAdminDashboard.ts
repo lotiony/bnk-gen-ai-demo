@@ -94,7 +94,7 @@ export interface PlatformAgent {
   monthTokenInput: number;
   monthTokenOutput: number;
   p95Ms: number;
-  /** 서빙계에 실제로 떠 있는가. */
+  /** 운영계에 실제로 떠 있는가. */
   serving: boolean;
   /** PII 발생률 산정용 민감도 1~4. */
   sensitivity: number;
@@ -123,7 +123,7 @@ export const PLATFORM_AGENTS: PlatformAgent[] = [
       monthTokenInput: monthCalls * t.input,
       monthTokenOutput: monthCalls * t.output,
       p95Ms: a.p95Ms ?? MODEL_P95_MS[a.mainModel] ?? 2000,
-      serving: a.stage === '서빙계',
+      serving: a.stage === '운영계',
       sensitivity: a.sensitivity as number,
     };
   }),
@@ -281,7 +281,7 @@ export interface CostCategory {
  */
 export function getCostBreakdownByCategory(): CostCategory[] {
   const gpu = getTotalGpuCost();
-  const platformGpu = Math.round(gpu * 0.18); // 학습계·평가·임베딩 등 공용 GPU
+  const platformGpu = Math.round(gpu * 0.18); // 개발계·평가·임베딩 등 공용 GPU
   const storage = Math.round(gpu * 0.06); // 지식 인덱스·벡터DB·아카이브
   const network = Math.round(gpu * 0.04); // 게이트웨이 트래픽
   const obs = Math.round(gpu * 0.03); // 관측·로깅·감사
@@ -318,7 +318,7 @@ export interface TaskUsageRow {
   status: '운영 중' | '개발 중' | '보류';
   namespace: string;
 
-  /** 서빙계에 떠 있는 산출 에이전트 수. */
+  /** 운영계에 떠 있는 산출 에이전트 수. */
   servingAgents: number;
   /** 게시 대기·중지 산출물까지 포함한 총 에이전트 수. */
   totalAgents: number;
@@ -793,7 +793,7 @@ export const ACTIVITY_FEED: ActivityItem[] = [
   {
     id: 'ACT-1031',
     kind: 'serv_promotion',
-    title: 'GRP-007 지식·상품 어시스턴트 v0.9-rc1 검증 통과 · 서빙계 프로모션 결재 상신',
+    title: 'GRP-007 지식·상품 어시스턴트 v0.9-rc1 검증 통과 · 운영계 프로모션 결재 상신',
     who: '남데이터 · 경남은행 (PRJ-KN-031)',
     at: '2026-06-03 14:08',
     href: '/admin/tasks',
@@ -816,7 +816,7 @@ export const ACTIVITY_FEED: ActivityItem[] = [
   {
     id: 'ACT-1028',
     kind: 'train_deploy',
-    title: 'AGT-410 코드 리뷰·시큐어코딩 점검 v0.9-rc2 학습계 배포',
+    title: 'AGT-410 코드 리뷰·시큐어코딩 점검 v0.9-rc2 개발계 배포',
     who: '한지훈 · BNK시스템 (PRJ-SY-003)',
     at: '2026-06-02 17:20',
     href: '/admin/services',
@@ -884,7 +884,7 @@ export const GPU_CHANGE_EVENTS: GpuChangeEvent[] = [
     model: 'google/gemma-4-31B-it-assistant',
     from: 3,
     to: 4,
-    reason: '연금 상담 디지털화 과제(PRJ-SV-007) 학습계 PoC 1장 배정',
+    reason: '연금 상담 디지털화 과제(PRJ-SV-007) 개발계 PoC 1장 배정',
     approver: '노운영',
     costDeltaKrw: gpuDelta('google/gemma-4-31B-it-assistant', 3, 4),
   },
@@ -931,7 +931,7 @@ export function getSafetyEventTrend(): {
 
 /** 결재 분석 — 종류별 분포. */
 export interface ApprovalAnalytics {
-  category: '과제 등록' | '학습계' | '서빙계' | '폐기' | '정책' | 'GPU 증설';
+  category: '과제 등록' | '개발계' | '운영계' | '폐기' | '정책' | 'GPU 증설';
   pending: number;
   done7d: number;
   rejected7d: number;
@@ -939,8 +939,8 @@ export interface ApprovalAnalytics {
 }
 export const APPROVAL_ANALYTICS: ApprovalAnalytics[] = [
   { category: '과제 등록', pending: 1, done7d: 4, rejected7d: 0, avgLeadTimeHours: 6.2 },
-  { category: '학습계', pending: 2, done7d: 12, rejected7d: 1, avgLeadTimeHours: 4.8 },
-  { category: '서빙계', pending: 3, done7d: 6, rejected7d: 2, avgLeadTimeHours: 28.4 },
+  { category: '개발계', pending: 2, done7d: 12, rejected7d: 1, avgLeadTimeHours: 4.8 },
+  { category: '운영계', pending: 3, done7d: 6, rejected7d: 2, avgLeadTimeHours: 28.4 },
   { category: '폐기', pending: 0, done7d: 1, rejected7d: 0, avgLeadTimeHours: 11.0 },
   { category: '정책', pending: 2, done7d: 3, rejected7d: 0, avgLeadTimeHours: 18.2 },
   { category: 'GPU 증설', pending: 0, done7d: 2, rejected7d: 0, avgLeadTimeHours: 9.6 },
@@ -1116,7 +1116,7 @@ const TENANT_NAMESPACES: NamespaceUsage[] = TENANTS.map((t) => {
     tenant: t.name,
     description:
       rows.length > 0
-        ? `${t.name} · 과제 ${rows.length}건 (학습계 + 서빙계) · GPU ${gpuCards}장`
+        ? `${t.name} · 과제 ${rows.length}건 (개발계 + 운영계) · GPU ${gpuCards}장`
         : `${t.name} · 자체 과제 없음 — 그룹 공통 자산 이용 (포털 프록시 · ${t.idp})`,
     pods: {
       running,

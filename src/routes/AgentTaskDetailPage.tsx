@@ -64,7 +64,7 @@ const STATE_TONE: Record<string, string> = {
 };
 
 /**
- * 에이전트 과제 상세 — 헤더 + 3개 탭(개요 · 학습계 배포 · 평가).
+ * 에이전트 과제 상세 — 헤더 + 3개 탭(개요 · 개발계 배포 · 평가).
  */
 export default function AgentTaskDetailPage() {
   const { projectId, agentId } = useParams();
@@ -157,15 +157,15 @@ export default function AgentTaskDetailPage() {
       {/* 실행 Trace — AGB-009 단계별 실행 로그·입출력·CoT (포탈 내장 뷰) */}
       {tab === 'trace' && <TraceTab />}
 
-      {/* 배포 — 학습계/서빙계 + 결재 */}
+      {/* 배포 — 개발계/운영계 + 결재 */}
       {tab === 'deploy' && (
         <section>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[11px] font-extrabold text-ink-mid uppercase tracking-[0.3px]">환경</span>
             <div className="inline-flex rounded-lg border border-line overflow-hidden">
               {([
-                { k: 'train', label: '학습계', sub: 'dev' },
-                { k: 'serv', label: '서빙계', sub: 'prod' },
+                { k: 'train', label: '개발계', sub: 'dev' },
+                { k: 'serv', label: '운영계', sub: 'prod' },
               ] as const).map((e) => (
                 <button
                   key={e.k}
@@ -323,7 +323,7 @@ function OpsTab({ task, hasRuns }: { task: AgentTask; hasRuns: boolean }) {
       <section className="card px-5 py-14 text-center">
         <div className="text-[26px] mb-2">📊</div>
         <div className="text-[13px] font-extrabold text-ink mb-1">운영 데이터가 아직 없습니다</div>
-        <div className="text-[11.5px] text-ink-mid">서빙계 배포 후 호출이 발생하면 사용량·성능 지표가 표시됩니다.</div>
+        <div className="text-[11.5px] text-ink-mid">운영계 배포 후 호출이 발생하면 사용량·성능 지표가 표시됩니다.</div>
       </section>
     );
   }
@@ -789,7 +789,7 @@ function LangfuseCard({ project }: { project: NonNullable<ReturnType<typeof getL
   );
 }
 
-/* ---------- Deploy (학습계) tab ---------- */
+/* ---------- Deploy (개발계) tab ---------- */
 
 function DeployTab({ agentId }: { agentId: string }) {
   const data = getDeployData(agentId);
@@ -850,7 +850,7 @@ function DeployTab({ agentId }: { agentId: string }) {
           ●
         </span>
         <div className="flex-1">
-          <div className="text-[11px] text-ink-mid font-bold uppercase tracking-[0.3px]">학습계 현재 배포</div>
+          <div className="text-[11px] text-ink-mid font-bold uppercase tracking-[0.3px]">개발계 현재 배포</div>
           <div className="flex items-baseline gap-2 mt-0.5">
             <span className="text-[16px] font-extrabold text-ink">{currentTagName}</span>
             <span className="text-[11.5px] text-ink-mid">
@@ -860,7 +860,7 @@ function DeployTab({ agentId }: { agentId: string }) {
         </div>
       </div>
 
-      {/* 학습계 API 키 */}
+      {/* 개발계 API 키 */}
       <ApiKeyPanel agentId={agentId} env="train" />
 
       {/* 태그 — 통합 목록 (행에서 바로 배포 기안) */}
@@ -911,7 +911,7 @@ function DeployTab({ agentId }: { agentId: string }) {
                   ) : (
                     <button
                       disabled={!allPreflightPass}
-                      title={!allPreflightPass ? '사전 점검 미통과 항목이 있으면 기안할 수 없습니다' : '학습계 배포 기안'}
+                      title={!allPreflightPass ? '사전 점검 미통과 항목이 있으면 기안할 수 없습니다' : '개발계 배포 기안'}
                       className="h-7 px-2.5 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                     >
                       배포 기안 →
@@ -930,7 +930,7 @@ function DeployTab({ agentId }: { agentId: string }) {
       {/* 배포 이력 */}
       <div className="card px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[15px] font-extrabold text-ink">학습계 배포 이력</h2>
+          <h2 className="text-[15px] font-extrabold text-ink">개발계 배포 이력</h2>
           <span className="text-[11.5px] text-ink-mid">최근 {history.length}건</span>
         </div>
         <table className="w-full text-xs border-separate border-spacing-0">
@@ -969,10 +969,10 @@ function DeployTab({ agentId }: { agentId: string }) {
                         );
                         if (!prev) return;
                         const msg =
-                          `학습계 배포를 롤백합니다.\n\n` +
+                          `개발계 배포를 롤백합니다.\n\n` +
                           `현재: ${h.tagName} (${h.deployedAt})\n` +
                           `→ 복귀: ${prev.tagName} (${prev.deployedAt} · ${prev.deployedBy})\n\n` +
-                          `학습계 트래픽이 ${prev.tagName}로 되돌아가며 감사 원장에 기록됩니다. 계속하시겠습니까?`;
+                          `개발계 트래픽이 ${prev.tagName}로 되돌아가며 감사 원장에 기록됩니다. 계속하시겠습니까?`;
                         if (window.confirm(msg)) {
                           toast(`${prev.tagName}로 롤백 진행 (목업)`);
                         }
@@ -1024,7 +1024,7 @@ function DeployStatusPill({ status }: { status: 'active' | 'replaced' | 'rolled-
   return <span className="pill bg-bad-bg text-bad border border-bad-border">롤백됨</span>;
 }
 
-/* ---------- Serving (서빙계) deploy tab ---------- */
+/* ---------- Serving (운영계) deploy tab ---------- */
 
 /** Blue/Green 컷오버 전 워밍업 시간(분) 옵션. */
 const WARMUP_MINUTES = [5, 10, 15, 30] as const;
@@ -1042,7 +1042,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
   if (!data) {
     return (
       <section className="card px-5 py-4">
-        <Empty label="서빙계 배포 데이터가 없습니다 · 학습계 배포 + 평가 완료된 버전이 있어야 결재 기안이 가능합니다" />
+        <Empty label="운영계 배포 데이터가 없습니다 · 개발계 배포 + 평가 완료된 버전이 있어야 결재 기안이 가능합니다" />
       </section>
     );
   }
@@ -1062,14 +1062,14 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
 
   return (
     <section className="space-y-3.5">
-      {/* 현재 서빙계 배포 */}
+      {/* 현재 운영계 배포 */}
       <div className="card px-5 py-3.5 flex items-center gap-3 bg-ok-bg/40 border-ok-border">
         <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-ok-bg border border-ok-border text-ok text-base">
           ●
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-[11px] text-ink-mid font-bold uppercase tracking-[0.3px]">
-            서빙계 현재 배포
+            운영계 현재 배포
             {data.externalFacing && (
               <span className="ml-2 pill bg-warn-bg text-warn border border-warn-border">대고객</span>
             )}
@@ -1124,7 +1124,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
         )}
       </div>
 
-      {/* 서빙계 API 키 */}
+      {/* 운영계 API 키 */}
       <ApiKeyPanel agentId={agentId} env="serv" />
 
       {/* 배포 후보 + 액션 (단일 카드) */}
@@ -1132,7 +1132,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
         <div className="flex items-baseline justify-between mb-1">
           <h2 className="text-[15px] font-extrabold text-ink">배포 후보</h2>
           <span className="text-[11px] text-ink-mid">
-            <b className="text-ink-dark">학습계 배포 + 평가 완료</b>된 버전만 결재 기안 가능
+            <b className="text-ink-dark">개발계 배포 + 평가 완료</b>된 버전만 결재 기안 가능
           </span>
         </div>
 
@@ -1159,7 +1159,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-[14px] font-extrabold text-ink font-mono">{c.tagName}</span>
                   {isCurrent && (
-                    <span className="pill bg-ok-bg text-ok border border-ok-border">서빙계 현재</span>
+                    <span className="pill bg-ok-bg text-ok border border-ok-border">운영계 현재</span>
                   )}
                 </div>
                 <div className="space-y-1 text-[11.5px]">
@@ -1200,7 +1200,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
               </span>
               <span className="text-[15px] font-extrabold text-ink font-mono">{candidate.tagName}</span>
               <span className="text-[11.5px] text-ink-mid ml-2">
-                학습계 배포 {candidate.trainDeployedAt}
+                개발계 배포 {candidate.trainDeployedAt}
                 <span className="mx-1.5 text-line">·</span>
                 {candidate.trainDuration}
               </span>
@@ -1208,7 +1208,7 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
 
             {isCurrentInServing ? (
               <div className="bg-info-bg border border-info-border rounded p-2.5 text-[12px] text-info font-bold">
-                이 버전은 이미 서빙계에서 운영 중입니다.
+                이 버전은 이미 운영계에서 운영 중입니다.
               </div>
             ) : (
               <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
@@ -1296,10 +1296,10 @@ function ServingDeployTab({ agentId }: { agentId: string }) {
         currentTagName={data.currentTagName}
       />
 
-      {/* 서빙계 배포 이력 */}
+      {/* 운영계 배포 이력 */}
       <div className="card px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[15px] font-extrabold text-ink">서빙계 배포 이력</h2>
+          <h2 className="text-[15px] font-extrabold text-ink">운영계 배포 이력</h2>
           <span className="text-[11.5px] text-ink-mid">최근 {data.history.length}건</span>
         </div>
         <table className="w-full text-xs border-separate border-spacing-0">
@@ -1408,7 +1408,7 @@ function GovernanceTab({ task }: { task: AgentTask }) {
           <SummaryItem label="데이터 민감도" value="4등급 (기밀)" tone="bad" />
           <SummaryItem
             label="보안 영향도"
-            value={task.stage === '서빙계' ? '2등급' : '1등급'}
+            value={task.stage === '운영계' ? '2등급' : '1등급'}
             tone="warn"
           />
           <SummaryItem label="개인정보·신용정보" value="포함" tone="bad" />
@@ -1510,7 +1510,7 @@ function RedTeamTab({ agentId }: { agentId: string }) {
             >
               <code className="font-mono text-[11.5px] font-extrabold text-ink-dark">{req.id}</code>
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-ink-mid font-bold uppercase tracking-[0.3px]">학습계</span>
+                <span className="text-[10px] text-ink-mid font-bold uppercase tracking-[0.3px]">개발계</span>
                 <code className="font-mono text-[12px] font-extrabold text-ink-dark">{req.targetVersion}</code>
               </div>
               <div className="min-w-0">
@@ -1767,7 +1767,7 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
         </span>
         <div className="flex-1">
           <div className="text-[12.5px] font-extrabold text-ink">
-            {env === 'train' ? '학습계' : '서빙계'} API 키 미발급
+            {env === 'train' ? '개발계' : '운영계'} API 키 미발급
           </div>
           <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
             발급 후 엔드포인트 호출이 가능합니다.
@@ -1811,14 +1811,14 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
   };
 
   const handleReissue = () => {
-    const envLabel = env === 'train' ? '학습계' : '서빙계';
+    const envLabel = env === 'train' ? '개발계' : '운영계';
     const msg =
       `${envLabel} API 키를 재발급합니다.\n\n` +
       `현재 키: ${key.fullKey.slice(0, 12)}…${key.lastFour}\n` +
       `발급일: ${key.issuedAt}\n` +
       `누적 호출: ${key.callCount.toLocaleString()}건\n\n` +
       `재발급 시 기존 키는 즉시 무효화되며, 이 키를 사용하는 모든 클라이언트에 즉시 새 키를 배포해야 합니다.${
-        isProduction ? '\n\n⚠ 서빙계 키 재발급은 운영 트래픽에 영향이 갑니다.' : ''
+        isProduction ? '\n\n⚠ 운영계 키 재발급은 운영 트래픽에 영향이 갑니다.' : ''
       }\n\n계속하시겠습니까?`;
     if (!window.confirm(msg)) return;
     const newKey: ApiKey = {
@@ -1853,7 +1853,7 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-bold text-ink-mid uppercase tracking-[0.3px]">
-              {env === 'train' ? '학습계' : '서빙계'} API 키
+              {env === 'train' ? '개발계' : '운영계'} API 키
             </span>
             {isProduction && (
               <span className="pill bg-bad-bg text-bad border border-bad-border">운영</span>
@@ -2367,7 +2367,7 @@ function LoadTestPanel({
       `대상: ${target}\n` +
       `동시 사용자: ${concurrent}명 · 램프업: ${RAMP_OPTIONS.find((r) => r.value === ramp)?.label} · 지속: ${duration}분\n` +
       `시나리오: ${SCENARIO_LABEL[scenario]}\n\n` +
-      `테스트는 서빙계 환경에서 실행되며, 서비스 트래픽에 영향이 갈 수 있습니다. 계속하시겠습니까?`;
+      `테스트는 운영계 환경에서 실행되며, 서비스 트래픽에 영향이 갈 수 있습니다. 계속하시겠습니까?`;
     if (window.confirm(msg)) {
       toast(`부하 테스트 실행 (목업)`);
     }
@@ -2393,7 +2393,7 @@ function LoadTestPanel({
           {targetOptions.map((t) => (
             <option key={t} value={t}>
               {t}
-              {t === currentTagName ? ' (서빙계 현재)' : ''}
+              {t === currentTagName ? ' (운영계 현재)' : ''}
             </option>
           ))}
         </select>
@@ -2448,7 +2448,7 @@ function LoadTestPanel({
           ▶ 부하 테스트 시작
         </Button>
         <span className="text-[11px] text-warn font-semibold">
-          ⚠ 서빙계 인프라를 사용하므로 운영 트래픽에 영향이 갈 수 있습니다
+          ⚠ 운영계 인프라를 사용하므로 운영 트래픽에 영향이 갈 수 있습니다
         </span>
       </div>
 

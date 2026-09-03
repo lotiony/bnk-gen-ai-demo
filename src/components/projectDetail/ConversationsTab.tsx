@@ -17,7 +17,7 @@ import {
  *
  * 노출 필드(요건):
  *  · 사용자 마스킹 ID + 부서
- *  · 에이전트 + 버전 (서빙계 고정 배지)
+ *  · 에이전트 + 버전 (운영계 고정 배지)
  *  · 사용자 피드백 (👍/👎/미평가 + 코멘트)
  *  · 대화 이력(Turn-by-turn) + 토큰
  *  · 사용자 메시지 PII 마스킹 시각화
@@ -69,7 +69,7 @@ export default function ConversationsTab() {
     <section className="space-y-3.5">
       {/* 헤더 안내 줄 */}
       <div className="text-[11.5px] text-ink-mid">
-        서빙계 운영 트래픽 한정 ·{' '}
+        운영계 운영 트래픽 한정 ·{' '}
         <span className="text-ink-dark font-bold">사용자 메시지는 PII 마스킹 표시</span>{' '}
         · 상세 트레이스는 Langfuse에서 확인
       </div>
@@ -304,7 +304,7 @@ function ConversationDetailPanel({ session }: { session: ConversationSession }) 
               <span className="font-mono text-[12px] text-ink-mid">
                 {session.agentId} · {session.agentVersion}
               </span>
-              <span className="pill bg-ok-bg text-ok border border-ok-border">서빙계</span>
+              <span className="pill bg-ok-bg text-ok border border-ok-border">운영계</span>
             </div>
             <div className="text-[11.5px] text-ink-mid">
               시작 <b className="text-ink-dark tabular-nums">{session.startedAt}</b>

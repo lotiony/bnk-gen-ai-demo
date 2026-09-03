@@ -390,7 +390,7 @@ function OverviewTab({ rows }: { rows: TaskUsageRow[] }) {
           /* 상단 부제의 "에이전트 23종"은 카탈로그 등재분이고, 여기 총계는 아직 등재
              전인 개발 중 자산까지 센다. 같은 화면에 23 과 25 가 나란히 뜨므로
              무엇을 세는 수인지 라벨에 밝혀 둔다. */
-          sub={`서빙계 ${kpis.totalServingAgents} · 카탈로그 ${kpis.catalogAgents} + 개발 중 ${kpis.pendingAgents}`}
+          sub={`운영계 ${kpis.totalServingAgents} · 카탈로그 ${kpis.catalogAgents} + 개발 중 ${kpis.pendingAgents}`}
           tone="ok"
         />
         <KpiCard
@@ -599,8 +599,8 @@ function SignalCard({
 function ActivityRow({ item }: { item: ActivityItem }) {
   const kindStyle: Record<ActivityKind, { label: string; cls: string }> = {
     task_register: { label: '등록', cls: 'bg-brand-tint text-brand border-brand-tint' },
-    train_deploy: { label: '학습계', cls: 'bg-info-bg text-info border-info-border' },
-    serv_promotion: { label: '서빙계', cls: 'bg-ok-bg text-ok border-ok-border' },
+    train_deploy: { label: '개발계', cls: 'bg-info-bg text-info border-info-border' },
+    serv_promotion: { label: '운영계', cls: 'bg-ok-bg text-ok border-ok-border' },
     policy_violation: { label: '정책', cls: 'bg-warn-bg text-warn border-warn-border' },
     incident: { label: '인시던트', cls: 'bg-bad-bg text-bad border-bad-border' },
     gpu_change: { label: 'GPU', cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border' },
@@ -1589,7 +1589,7 @@ function InfraTab() {
         />
         <DeploymentTable
           title="계열사 Namespace 워크로드 — Deployments"
-          subtitle="11개 테넌트 Namespace 안의 서빙계 · 학습계 워크로드"
+          subtitle="11개 테넌트 Namespace 안의 운영계 · 개발계 워크로드"
           deployments={DEPLOYMENTS.filter((d) =>
             namespaces.some(
               (n) => n.name === d.namespace && (n.category === 'affiliate' || n.category === 'group'),

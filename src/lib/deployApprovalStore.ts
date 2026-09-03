@@ -21,7 +21,7 @@ export interface DeploySourceSnap {
   model: string;
 }
 
-/** 서빙계 배포 결재 — ApprovalItem(결재함 표시) + 배포 상세 스냅샷. */
+/** 운영계 배포 결재 — ApprovalItem(결재함 표시) + 배포 상세 스냅샷. */
 export interface DeployApproval extends ApprovalItem {
   apiName: string;
   apiId: string;
@@ -31,7 +31,7 @@ export interface DeployApproval extends ApprovalItem {
   version: string;
   sources: DeploySourceSnap[];
   search: SearchConfig;
-  /** 현재 서빙계 요약(비교용). */
+  /** 현재 운영계 요약(비교용). */
   currentSummary?: string;
   reviewer?: string;
   reviewNote?: string;
@@ -51,7 +51,7 @@ let items: DeployApproval[] = [
   {
     id: 'APV-DEP-002',
     category: 'train',
-    title: '지식 검색 API 학습계 배포 (d2)',
+    title: '지식 검색 API 개발계 배포 (d2)',
     projectName: 'PB 에이전트 프로젝트',
     draftedBy: '정오너',
     draftedAt: '2026-06-02 10:30',
@@ -71,7 +71,7 @@ let items: DeployApproval[] = [
   {
     id: 'APV-DEP-001',
     category: 'train',
-    title: '지식 검색 API 학습계 배포 (d1)',
+    title: '지식 검색 API 개발계 배포 (d1)',
     projectName: 'PB 에이전트 프로젝트',
     draftedBy: '박서연',
     draftedAt: '2026-05-20 14:02',
@@ -91,7 +91,7 @@ let items: DeployApproval[] = [
   {
     id: 'APV-SRV-001',
     category: 'serv',
-    title: '지식 검색 API 서빙계 배포',
+    title: '지식 검색 API 운영계 배포',
     projectName: 'PB 에이전트 프로젝트',
     draftedBy: '정오너',
     draftedAt: '2026-05-27 09:30',
@@ -105,7 +105,7 @@ let items: DeployApproval[] = [
     sources: [{ name: 'PB_상담_지식인덱스', version: 'v2', model: 'bge-m3-ko' }],
     search: { queryType: 'vector', semanticRanker: false, vectorAlgo: 'hnsw', topK: 3, captions: false },
     reviewer: '이도현',
-    reviewNote: '서빙계 최초 배포 승인',
+    reviewNote: '운영계 최초 배포 승인',
     decidedAt: '2026-05-27 10:15',
   },
 ];

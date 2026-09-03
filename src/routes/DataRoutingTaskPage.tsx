@@ -573,7 +573,7 @@ function RoutingDiagram({ unlocked }: { unlocked: boolean }) {
       />
       <DiagramNode
         x={754} y={14} w={306} h={64}
-        title="개발 DB (학습계)" sub="ns-bank-bs-dev"
+        title="개발 DB (개발계)" sub="ns-bank-bs-dev"
         foot="익명화 복제본 · 재식별 불가"
         fill={devOn ? C.infoBg : '#FFFFFF'}
         stroke={devOn ? C.info : C.line}
@@ -582,7 +582,7 @@ function RoutingDiagram({ unlocked }: { unlocked: boolean }) {
       />
       <DiagramNode
         x={754} y={132} w={306} h={64}
-        title={prodOn ? '운영 DB (서빙계)' : '🔒 운영 DB (서빙계)'}
+        title={prodOn ? '운영 DB (운영계)' : '🔒 운영 DB (운영계)'}
         sub="ns-bank-bs-prod"
         foot="데이터 가상화 경유(zero-copy) · 복호화"
         fill={prodOn ? C.okBg : C.surface}

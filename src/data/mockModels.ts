@@ -142,7 +142,7 @@ export const MOCK_MODELS: CatalogModel[] = [
      * 게시판 공지(NTC-039 「kanana-flag-32.5B 반입 완료 안내」, 2026-05-28)가
      * 가리키는 대상이 이 항목이다 — 반입 승인 화면·공지·화이트리스트 셋이
      * 같은 모델을 같은 상태로 말해야 한다.
-     * 편향 셋 기준 미달로 **학습계 한정** 조건이 붙어 있어 신뢰등급을 낮게 둔다.
+     * 편향 셋 기준 미달로 **개발계 한정** 조건이 붙어 있어 신뢰등급을 낮게 둔다.
      */
     id: 'mdl-009',
     name: 'kakao/kanana-flag-32.5b-it',
@@ -155,7 +155,7 @@ export const MOCK_MODELS: CatalogModel[] = [
     usedByCount: 0,
     whitelistedAt: '2026-05-28',
     trustGrade: 3,
-    recommendedFor: '한국어 요약·문서 정리 (학습계 한정 · 대고객 서빙 별도 결재)',
+    recommendedFor: '한국어 요약·문서 정리 (개발계 한정 · 대고객 서빙 별도 결재)',
   },
 ];
 

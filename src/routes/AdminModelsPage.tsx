@@ -376,7 +376,7 @@ function VersionsTab({
                       onClick={() =>
                         toast(
                           `${v.v} 로 롤백을 상신했습니다`,
-                          `${model.name} · 서빙계 배포 결재 대기`,
+                          `${model.name} · 운영계 배포 결재 대기`,
                           'warn',
                         )
                       }
@@ -396,7 +396,7 @@ function VersionsTab({
 
         <div className="mt-2 pt-3 border-t border-line-soft flex items-center gap-2">
           <span className="text-[10.5px] text-ink-mid font-semibold">
-            롤백·승격은 서빙계 배포 결재로 이어진다
+            롤백·승격은 운영계 배포 결재로 이어진다
           </span>
           <Link
             to="/approvals"

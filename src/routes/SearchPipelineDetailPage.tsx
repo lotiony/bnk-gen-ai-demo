@@ -23,9 +23,9 @@ import { toast } from '@/lib/toast';
 type TabId = 'overview' | 'indexes' | 'dev' | 'eval' | 'serving';
 
 const STATE_TONE: Record<string, string> = {
-  '서빙계 운영': 'bg-ok-bg text-ok border-ok-border',
+  '운영계 운영': 'bg-ok-bg text-ok border-ok-border',
   '평가 진행': 'bg-info-bg text-info border-info-border',
-  '학습계 배포': 'bg-warn-bg text-warn border-warn-border',
+  '개발계 배포': 'bg-warn-bg text-warn border-warn-border',
   기획: 'bg-surface-soft text-ink-mid border-line-soft',
 };
 
@@ -37,7 +37,7 @@ const SENS_TONE: Record<number, string> = {
 };
 
 /**
- * 지식 파이프라인 과제 상세 — 헤더 + 4단계 stepper + 5개 탭(개요·인덱스·학습계·평가·서빙계).
+ * 지식 파이프라인 과제 상세 — 헤더 + 4단계 stepper + 5개 탭(개요·인덱스·개발계·평가·운영계).
  * 에이전트 과제 상세와 동일한 max-w/padding/Header card/TabBtn 패턴.
  */
 /** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */
@@ -56,7 +56,7 @@ export default function SearchPipelineDetailPage() {
   const task = pipelineId ? findPipelineTask(pipelineId) : undefined;
   const [tab, setTab] = useState<TabId>('overview');
   /**
-   * 시나리오에서 요구하는 학습계 결재 상태를 이 상세 화면에서도 확인할 수 있게
+   * 시나리오에서 요구하는 개발계 결재 상태를 이 상세 화면에서도 확인할 수 있게
    * 하는 데모 전용 상태다. 실제 결재 API를 가장하지 않고, 브라우저 세션 안에서만
    * 상신 전/후 화면을 전환한다.
    */
@@ -115,20 +115,20 @@ export default function SearchPipelineDetailPage() {
               disabled={!passedAll || trainingApprovalSubmitted}
               onClick={() => {
                 setTrainingApprovalSubmitted(true);
-                toast('학습계 배포 결재를 상신했습니다 · 결재선 검토가 시작됩니다 (데모)');
+                toast('개발계 배포 결재를 상신했습니다 · 결재선 검토가 시작됩니다 (데모)');
               }}
             >
-              {trainingApprovalSubmitted ? '✓ 학습계 배포 결재 상신 완료' : '＋ 학습계 배포 결재 상신'}
+              {trainingApprovalSubmitted ? '✓ 개발계 배포 결재 상신 완료' : '＋ 개발계 배포 결재 상신'}
             </Button>
             <Button
               variant={servingApprovalSubmitted ? 'ghost' : 'primary'}
               disabled={!passedAll || servingApprovalSubmitted}
               onClick={() => {
                 setServingApprovalSubmitted(true);
-                toast('서빙계 프로모션 결재를 상신했습니다 · 레드팀 게이트가 결재선에 추가됩니다 (데모)');
+                toast('운영계 프로모션 결재를 상신했습니다 · 레드팀 게이트가 결재선에 추가됩니다 (데모)');
               }}
             >
-              {servingApprovalSubmitted ? '✓ 서빙계 프로모션 결재 상신 완료' : '＋ 서빙계 프로모션 결재'}
+              {servingApprovalSubmitted ? '✓ 운영계 프로모션 결재 상신 완료' : '＋ 운영계 프로모션 결재'}
             </Button>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function SearchPipelineDetailPage() {
           <TabCount>{task.indexes.length}</TabCount>
         </TabBtn>
         <TabBtn active={tab === 'dev'} onClick={() => setTab('dev')}>
-          학습계
+          개발계
         </TabBtn>
         <TabBtn active={tab === 'eval'} onClick={() => setTab('eval')}>
           평가
@@ -154,7 +154,7 @@ export default function SearchPipelineDetailPage() {
           </TabCount>
         </TabBtn>
         <TabBtn active={tab === 'serving'} onClick={() => setTab('serving')}>
-          서빙계
+          운영계
           {task.currentStage < 4 && <TabCount>대기</TabCount>}
         </TabBtn>
       </nav>
@@ -202,7 +202,7 @@ function OverviewTab({
           tone={(task.metrics[0].current ?? 0) >= task.metrics[0].threshold ? 'ok' : 'warn'}
         />
         <KpiCard
-          label="P95 응답 (학습계)"
+          label="P95 응답 (개발계)"
           value={task.p95Ms ? String(task.p95Ms) : '—'}
           unit="ms"
           delta={{ text: '목표 ≤ 800ms', tone: (task.p95Ms ?? 0) <= 800 ? 'up' : 'down' }}
@@ -475,7 +475,7 @@ function IndexRowCard({
     >
       {/* 헤더 */}
       <div className="flex items-center gap-2.5 py-3 px-3.5">
-        <label className="inline-flex items-center cursor-pointer flex-shrink-0" title="학습계 배포에 포함">
+        <label className="inline-flex items-center cursor-pointer flex-shrink-0" title="개발계 배포에 포함">
           <input
             type="checkbox"
             checked={selected}
@@ -681,14 +681,14 @@ function ChangeRow({
   );
 }
 
-/* ============ Tab: Dev (학습계) ============ */
+/* ============ Tab: Dev (개발계) ============ */
 function DevTab({ task }: { task: PipelineTask }) {
   return (
     <section className="space-y-3.5">
       {/* Endpoint + API 키 */}
       <div className="card px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[15px] font-extrabold text-ink">학습계 endpoint</h2>
+          <h2 className="text-[15px] font-extrabold text-ink">개발계 endpoint</h2>
           <span className="pill bg-ok-bg text-ok border border-ok-border font-extrabold">
             <span className="mr-1">●</span>활성
           </span>
@@ -697,7 +697,7 @@ function DevTab({ task }: { task: PipelineTask }) {
           {task.endpointDev}
         </div>
         <div className="text-[10.5px] text-ink-mid">
-          학습계 호출 시 <b className="text-ink-dark">API 키 + SSO 인증</b> 필요 · 일일 호출 한도 10,000건 · 응답 SLA
+          개발계 호출 시 <b className="text-ink-dark">API 키 + SSO 인증</b> 필요 · 일일 호출 한도 10,000건 · 응답 SLA
           P95 <b className="text-ink-dark">{task.p95Ms}ms</b>
         </div>
       </div>
@@ -711,7 +711,7 @@ function DevTab({ task }: { task: PipelineTask }) {
   );
 }
 
-/** 단일 학습계 API 키 패널 — 에이전트 과제 ApiKeyPanel과 동일 패턴. */
+/** 단일 개발계 API 키 패널 — 에이전트 과제 ApiKeyPanel과 동일 패턴. */
 function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint: string }) {
   const [key, setKey] = useState<PipelineApiKey | undefined>(initial);
   const [revealed, setRevealed] = useState(false);
@@ -743,9 +743,9 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
           🔑
         </span>
         <div className="flex-1">
-          <div className="text-[12.5px] font-extrabold text-ink">학습계 API 키 미발급</div>
+          <div className="text-[12.5px] font-extrabold text-ink">개발계 API 키 미발급</div>
           <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
-            발급 후 학습계 endpoint 호출이 가능합니다.
+            발급 후 개발계 endpoint 호출이 가능합니다.
           </div>
         </div>
         <button
@@ -777,7 +777,7 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
 
   const handleReissue = () => {
     const msg =
-      `학습계 API 키를 재발급합니다.\n\n` +
+      `개발계 API 키를 재발급합니다.\n\n` +
       `현재 키: ${key.fullKey.slice(0, 12)}…${key.lastFour}\n` +
       `발급일: ${key.issuedAt}\n` +
       `누적 호출: ${key.callCount.toLocaleString()}건\n\n` +
@@ -796,7 +796,7 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-bold text-ink-mid uppercase tracking-[0.3px]">
-              학습계 API 키
+              개발계 API 키
             </span>
           </div>
           <code className="text-[11px] text-ink-mid font-mono truncate block mt-0.5">
@@ -878,7 +878,7 @@ function DevDeploymentHistory({ deployments }: { deployments: PipelineTask['devD
         <div>
           <h2 className="text-[15px] font-extrabold text-ink">배포 버전 이력</h2>
           <p className="text-[11px] text-ink-mid mt-0.5">
-            학습계 배포 이력 · 어떤 인덱스 버전 조합으로 언제 누가 배포했는지
+            개발계 배포 이력 · 어떤 인덱스 버전 조합으로 언제 누가 배포했는지
           </p>
         </div>
         <span className="text-[11px] text-ink-mid">
@@ -968,7 +968,7 @@ function DevDeploymentRow({ d }: { d: PipelineTask['devDeployments'][number] }) 
 
 /* ============ Tab: Eval (에이전트 EvalTab 패턴 재사용) ============ */
 function EvalTab({ task, passedAll }: { task: PipelineTask; passedAll: boolean }) {
-  // 학습계 배포 버전 목록 (필터 옵션)
+  // 개발계 배포 버전 목록 (필터 옵션)
   const deployVersions = task.devDeployments.map((d) => d.version);
   const [versionFilter, setVersionFilter] = useState<string>('all');
 
@@ -991,7 +991,7 @@ function EvalTab({ task, passedAll }: { task: PipelineTask; passedAll: boolean }
           <div>
             <h2 className="text-[15px] font-extrabold text-ink">품질 게이트 현황</h2>
             <p className="text-[11px] text-ink-mid mt-0.5">
-              서빙계 프로모션 결재의 자동 게이트 · 미달 시 결재 차단
+              운영계 프로모션 결재의 자동 게이트 · 미달 시 결재 차단
             </p>
           </div>
           <span
@@ -1059,7 +1059,7 @@ function EvalTab({ task, passedAll }: { task: PipelineTask; passedAll: boolean }
           <div>
             <h2 className="text-[15px] font-extrabold text-ink">평가 이력</h2>
             <p className="text-[11.5px] text-ink-mid font-semibold mt-0.5">
-              학습계 배포 버전 × 골든셋 조합으로 누적된 회귀 평가 결과 · Recall@10 · MRR@10 · nDCG@10
+              개발계 배포 버전 × 골든셋 조합으로 누적된 회귀 평가 결과 · Recall@10 · MRR@10 · nDCG@10
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1348,9 +1348,9 @@ function ServingTab({ task }: { task: PipelineTask }) {
       <div className="card px-5 py-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-[15px] font-extrabold text-ink">서빙계 endpoint</h2>
+            <h2 className="text-[15px] font-extrabold text-ink">운영계 endpoint</h2>
             <p className="text-[11px] text-ink-mid mt-0.5">
-              {isLive ? '운영 중인 검색엔진' : '평가 통과 후 서빙계 프로모션 결재로 활성화'}
+              {isLive ? '운영 중인 검색엔진' : '평가 통과 후 운영계 프로모션 결재로 활성화'}
             </p>
           </div>
           <span
@@ -1375,7 +1375,7 @@ function ServingTab({ task }: { task: PipelineTask }) {
               평가 게이트를 모두 통과하면 endpoint가 발급됩니다
             </div>
             <div className="text-[11px] text-ink-mid">
-              현재 Stage {task.currentStage} / 4 · 다음 단계는 <b className="text-ink-dark">서빙계 프로모션 결재</b>
+              현재 Stage {task.currentStage} / 4 · 다음 단계는 <b className="text-ink-dark">운영계 프로모션 결재</b>
             </div>
           </div>
         )}

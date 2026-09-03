@@ -23,7 +23,7 @@
  * 과제 stage 와 산출물 상태는 앞뒤가 맞아야 한다 — 등록·검토 단계 과제가 이미
  * '게시 중 v2.3' 짜리 에이전트를 달고 있으면 그 자체가 지적 대상이다.
  *   · `이행 중`·`완료` 과제만 운영 중 산출물을 갖는다.
- *   · `검토` 과제는 학습계 PoC(운영 호출 0)까지만 갖는다.
+ *   · `검토` 과제는 개발계 PoC(운영 호출 0)까지만 갖는다.
  *   · `등록`·`결재`·`반려` 과제는 산출물이 없다.
  *
  * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
@@ -109,7 +109,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     primaryModel: 'onprem/gpt-oss-120b',
     namespace: 'ns-bank-bs',
     summary:
-      '여신 서류 검증·심사 보조 에이전트 3종 구축 · 서빙계 배포 완료 (기표 오류 점검 봇 AGT-513 은 v0.4 에서 롤백·중지)',
+      '여신 서류 검증·심사 보조 에이전트 3종 구축 · 운영계 배포 완료 (기표 오류 점검 봇 AGT-513 은 v0.4 에서 롤백·중지)',
   },
   {
     id: 'PRJ-BS-061',
@@ -157,7 +157,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     pendingAgentIds: [],
     primaryModel: 'onprem/qwen3-32b',
     namespace: 'ns-bank-bs',
-    summary: '보유 자산 진단·시황 브리핑 에이전트 2종 서빙계 운영 중',
+    summary: '보유 자산 진단·시황 브리핑 에이전트 2종 운영계 운영 중',
   },
   {
     id: 'PRJ-BS-088',
@@ -305,7 +305,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     primaryModel: 'onprem/gpt-oss-120b',
     namespace: 'ns-bank-kn',
     summary:
-      'AGB-006 ⑦지식/상품 어시스턴트 · v0.9-rc1 게시 대기(검증 중) — 서빙계 프로모션 결재 대기',
+      'AGB-006 ⑦지식/상품 어시스턴트 · v0.9-rc1 게시 대기(검증 중) — 운영계 프로모션 결재 대기',
   },
 
   /* ───────── BNK캐피탈 ───────── */
@@ -356,7 +356,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     pendingAgentIds: [],
     primaryModel: 'onprem/gpt-oss-120b',
     namespace: 'ns-capital',
-    summary: '진단서·소견서·영수증 자동 분류 에이전트 — 학습계 검증 통과 후 서빙계 확대 중',
+    summary: '진단서·소견서·영수증 자동 분류 에이전트 — 개발계 검증 통과 후 운영계 확대 중',
   },
 
   /* ───────── BNK투자증권 · BNK저축은행 ───────── */
@@ -395,7 +395,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     budget: 48_000_000,
     spent: 3_200_000,
     monthlyInfraBudget: 2_000_000,
-    resource: 'GPU 1장(학습계) · google/gemma-4-31B-it-assistant',
+    resource: 'GPU 1장(개발계) · google/gemma-4-31B-it-assistant',
     gpuCards: 1,
     approvals: [
       { seq: 1, role: '부서장 검토', status: '진행' },
@@ -407,7 +407,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     primaryModel: 'google/gemma-4-31B-it-assistant',
     namespace: 'ns-savings',
     summary:
-      '연금 상품 비교·수령액 시뮬레이션 — 학습계 PoC 만 진행(운영 호출 0) · 서빙계 배포는 결재 후',
+      '연금 상품 비교·수령액 시뮬레이션 — 개발계 PoC 만 진행(운영 호출 0) · 운영계 배포는 결재 후',
   },
 
   /* ───────── BNK시스템 ───────── */
@@ -434,7 +434,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     primaryModel: 'onprem/gpt-oss-120b',
     namespace: 'ns-system',
     summary:
-      '코드 리뷰 · 시큐어코딩 점검 에이전트(AGT-410) v0.9-rc2 학습계 테스트 중 — 게시 대기 · 운영 계측 전',
+      '코드 리뷰 · 시큐어코딩 점검 에이전트(AGT-410) v0.9-rc2 개발계 테스트 중 — 게시 대기 · 운영 계측 전',
   },
   {
     id: 'PRJ-SY-018',
@@ -498,7 +498,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     budget: 240_000_000,
     spent: 6_800_000,
     monthlyInfraBudget: 5_000_000,
-    resource: 'GPU 1장(학습계) · onprem/gpt-oss-120b',
+    resource: 'GPU 1장(개발계) · onprem/gpt-oss-120b',
     gpuCards: 1,
     approvals: [
       { seq: 1, role: '부서장 검토', status: '진행' },
@@ -510,7 +510,7 @@ export const ADMIN_TASKS: AdminTask[] = [
     primaryModel: 'onprem/gpt-oss-120b',
     namespace: 'ns-group-common',
     summary:
-      '이상거래 패턴 질의응답 + STR 초안 지원 — 학습계 PoC 진행(운영 호출 0) · 사업 타당성 검토 중',
+      '이상거래 패턴 질의응답 + STR 초안 지원 — 개발계 PoC 진행(운영 호출 0) · 사업 타당성 검토 중',
   },
 ];
 

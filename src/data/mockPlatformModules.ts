@@ -208,7 +208,7 @@ export const CHANGE_SCENARIOS: ChangeScenario[] = [
     detail: 'Workflow 모듈 안에 새 버전 레코드가 적재된다. 기존 버전은 보존되고, 진행 중인 대화는 이전 버전으로 계속 수행된다.',
     target: 'workflow',
     breaksContract: false,
-    mitigation: '버전 스냅샷으로 적재 → 승인된 버전만 서빙계에 게시(AGB-011)',
+    mitigation: '버전 스냅샷으로 적재 → 승인된 버전만 운영계에 게시(AGB-011)',
     requirement: 'AGB-011 · LSM-009',
   },
   {
