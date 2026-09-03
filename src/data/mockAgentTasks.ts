@@ -8,8 +8,16 @@
  * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
  */
 import { DEMO_TODAY } from '@/data/demoClock';
+import type { Tenant } from '@/data/tenants';
 
-export type AgentTaskState = '실행 중' | '계획' | '운영 중' | '보류';
+export type AgentTaskState =
+  | '실행 중'
+  | '계획'
+  | '운영 중'
+  | '보류'
+  /** 기안 직후 상태 — 배포 결재가 걸려 있어 아직 아무 데도 안 올라갔다. */
+  | '학습계 결재 진행 중'
+  | '서빙계 결재 진행 중';
 export type AgentDeployStage = '학습계' | '서빙계';
 /** Studio(노코드) · Code(pro-code) · LangGraph 3종. */
 export type AgentBuilder = 'studio' | 'pro-code' | 'graph';
@@ -31,6 +39,11 @@ export interface AgentTask {
   tools: string[];
   ownerName: string;
   ownerInitial: string;
+  /**
+   * 소속 계열사. 기안자의 Namespace 를 그대로 물려받는다 — 부산은행 개발자가
+   * 만든 에이전트가 그룹 공통으로 뜨면 SEC-001 격리가 화면에서 무너진다.
+   */
+  tenant?: Tenant;
   updatedAt: string;
   changeNote: string;
   progress: number;
@@ -62,6 +75,7 @@ export const MOCK_AGENT_TASKS: AgentTask[] = [
     tools: ['rag_search', 'function_call', 'db_query'],
     ownerName: '박서연',
     ownerInitial: '서연',
+    tenant: '부산은행',
     updatedAt: '2026-05-29 16:42',
     changeNote: '시스템 프롬프트 v4.2 · 응답 형식 JSON 강제 추가',
     progress: 100,
@@ -89,6 +103,20 @@ export const MOCK_AGENT_TASKS: AgentTask[] = [
 const NEW_ID_PREFIX = 'AGT-2026-';
 let counter = 0;
 
+/* ── 구독 ──
+ * AI Studio 과제 목록(`studioTasks`)이 기안 결과를 바로 반영하려면 이쪽 변경을
+ * 알려야 한다. studioTasks 를 여기서 import 하면 순환 참조가 되므로, 알림만
+ * 내보내고 구독은 저쪽이 건다.
+ */
+const agentTaskListeners = new Set<() => void>();
+
+export function subscribeAgentTasks(l: () => void): () => void {
+  agentTaskListeners.add(l);
+  return () => {
+    agentTaskListeners.delete(l);
+  };
+}
+
 type NewAgentInput = {
   name: string;
   stage: AgentDeployStage;
@@ -102,6 +130,10 @@ type NewAgentInput = {
   maxOutputTokens: number;
   piiMasking: boolean;
   redteam: boolean;
+  /** 기안자 — 로그인 페르소나에서 온다. */
+  ownerName: string;
+  ownerInitial: string;
+  tenant: Tenant;
 };
 
 /** 등록 폼에서 호출 — 신규 에이전트 과제를 in-memory list에 추가하고 반환. */
@@ -116,17 +148,19 @@ export function addAgentTask(input: NewAgentInput): AgentTask {
   const task: AgentTask = {
     id: `${NEW_ID_PREFIX}${String(++counter).padStart(3, '0')}`,
     name: input.name,
-    state: '계획',
+    // 기안했다고 배포된 게 아니다 — 결재가 끝나야 올라간다(ONM-003).
+    state: input.stage === '서빙계' ? '서빙계 결재 진행 중' : '학습계 결재 진행 중',
     stage: input.stage,
     builder: input.builder,
     mainModel: input.mainModel,
     fallbackModel: input.fallbackModel,
     linkedKnowledge: input.linkedKnowledge,
     tools: input.tools,
-    ownerName: '김플랫',
-    ownerInitial: '플랫',
+    ownerName: input.ownerName,
+    ownerInitial: input.ownerInitial,
+    tenant: input.tenant,
     updatedAt: stamp,
-    changeNote: '신규 기안 · 결재 진행 중',
+    changeNote: `신규 기안 · ${input.stage} 배포 결재 진행 중`,
     progress: 0,
     systemPrompt: input.systemPrompt,
     temperature: input.temperature,
@@ -135,7 +169,32 @@ export function addAgentTask(input: NewAgentInput): AgentTask {
     redteam: input.redteam,
   };
   MOCK_AGENT_TASKS.unshift(task);
+  agentTaskListeners.forEach((l) => l());
   return task;
+}
+
+/**
+ * 배포 결재 결과를 과제 상태에 반영한다.
+ *
+ * 승인 전까지 과제는 「결재 진행 중」에 머문다. 최종 승인에서만 실제 배포 상태로
+ * 넘어간다 — 결재를 그려 놓고 상태가 먼저 바뀌면 화면이 거짓말을 한다(LSM-009).
+ */
+export function markAgentDeployDecision(
+  agentId: string,
+  kind: 'approve' | 'reject',
+  stage: AgentDeployStage,
+): void {
+  const task = MOCK_AGENT_TASKS.find((t) => t.id === agentId);
+  if (!task) return;
+  if (kind === 'approve') {
+    task.state = stage === '서빙계' ? '운영 중' : '실행 중';
+    task.changeNote = `${stage} 배포 승인 완료`;
+    task.progress = stage === '서빙계' ? 100 : 60;
+  } else {
+    task.state = '보류';
+    task.changeNote = `${stage} 배포 결재 반려 — 보완 후 재기안`;
+  }
+  agentTaskListeners.forEach((l) => l());
 }
 
 export function findAgentTask(id: string): AgentTask | undefined {

@@ -15,9 +15,10 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import StatusPill from '@/components/ui/StatusPill';
 import { useTenant } from '@/lib/tenantStore';
+import { useCurrentPersona } from '@/lib/persona';
 import { TENANT_SHORT } from '@/data/tenants';
 import {
-  STUDIO_TASKS,
+  useStudioTasks,
   scopeTasks,
   KIND_LABEL,
   KIND_TONE,
@@ -81,7 +82,16 @@ export default function StudioTasksPage() {
   // 워크플로우 빌더·에이전트 빌더에서 저장한 템플릿이 여기에 그대로 나타난다.
   const templates = useTemplates();
 
-  const scoped = useMemo(() => scopeTasks(STUDIO_TASKS, tenant), [tenant]);
+  const allTasks = useStudioTasks();
+  const persona = useCurrentPersona();
+  /*
+   * 전체 조망은 공동존을 운영·감독하는 역할만 받는다. 지주 개발자는 그룹 공통
+   * Namespace 에 있어도 남의 계열사 과제를 보지 않는다(SEC-001).
+   */
+  const scoped = useMemo(
+    () => scopeTasks(allTasks, tenant, persona?.canSwitchTenant ?? false),
+    [allTasks, tenant, persona],
+  );
   const visible = useMemo(() => {
     let arr = scoped;
     if (kind !== 'all') arr = arr.filter((t) => t.kind === kind);

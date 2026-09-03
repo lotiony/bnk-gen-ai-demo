@@ -12,6 +12,16 @@ import { cn } from '@/lib/utils';
 import { MOCK_KNOWLEDGE_TASKS } from '@/data/mockKnowledgeTasks';
 import { addAgentTask, BUILDER_LABEL, type AgentBuilder } from '@/data/mockAgentTasks';
 import { getTemplate } from '@/data/mockTemplates';
+import { useCurrentPersona } from '@/lib/persona';
+import DeploySubmitModal from '@/components/studio/DeploySubmitModal';
+import {
+  AGENT_USE_SCOPES,
+  submitAgentDeploy,
+  previewDeployApprovers,
+  findAgentDeploy,
+  type AgentUseScope,
+  type AgentDeployApproval,
+} from '@/data/mockApprovals';
 
 /**
  * 에이전트 과제 등록 — 프로젝트 내 에이전트 1개를 정의 (시스템 프롬프트·모델·도구·연결 지식).
@@ -59,6 +69,26 @@ export default function AgentTaskRegisterPage() {
   const [pii, setPii] = useState(pre?.pii ?? true);
   const [redteam, setRedteam] = useState(pre?.redteam ?? true);
   const [submitting, setSubmitting] = useState(false);
+  /*
+   * 사용 범위 — **개인·부서까지만** 여기서 정한다. 계열사 이상은 마켓플레이스의
+   * 승격 결재로 넘어간다(RFP 1.3.2 「관리자 승인 절차 기반 공유 범위 통제」).
+   * 등록 폼에서 계열사 공개까지 끝내 버리면 그 통제가 화면에서 우회된다.
+   */
+  const [useScope, setUseScope] = useState<AgentUseScope>('부서');
+  /** 상신 완료 팝업 — 확인해야 이동한다. */
+  const [submitted, setSubmitted] = useState<AgentDeployApproval | null>(null);
+
+  // 기안자·소속은 로그인 페르소나에서 온다. 하드코딩하면 계정을 바꿔도 같은
+  // 사람이 담당자로 찍혀 SoD 서사가 화면에서 무너진다.
+  const persona = useCurrentPersona();
+  const drafter = persona?.name ?? '강개발';
+  const drafterRole = persona?.role ?? '에이전트 개발자';
+  const drafterInitial = persona?.initial ?? '강';
+  const ownerTenant = persona?.tenant ?? '부산은행';
+  const approvers = useMemo(
+    () => previewDeployApprovers(ownerTenant, drafter),
+    [ownerTenant, drafter],
+  );
 
   const toggleSet = (s: Set<string>, k: string, set: (n: Set<string>) => void) => {
     const next = new Set(s);
@@ -72,10 +102,16 @@ export default function AgentTaskRegisterPage() {
     [name, systemPrompt, mainModel],
   );
 
+  /**
+   * 기안 — 과제를 만들고 **배포 결재를 상신한다**.
+   *
+   * 예전에는 과제만 만들고 끝났다. 그러면 화면이 "승인 기반 배포"(LSM-009)를
+   * 말하면서 실제로는 아무 승인도 걸리지 않는 상태가 된다.
+   */
   const submit = () => {
     if (!requiredFilled || submitting) return;
     setSubmitting(true);
-    addAgentTask({
+    const task = addAgentTask({
       name,
       stage,
       builder,
@@ -88,9 +124,47 @@ export default function AgentTaskRegisterPage() {
       maxOutputTokens: 1024,
       piiMasking: pii,
       redteam,
+      ownerName: drafter,
+      ownerInitial: drafterInitial,
+      tenant: ownerTenant,
     });
-    // 약간의 지연으로 기안 처리 느낌
-    window.setTimeout(() => navigate(`/projects/${pid}`), 350);
+    const item = submitAgentDeploy({
+      agentId: task.id,
+      agentName: name,
+      deployStage: stage,
+      useScope,
+      ownerTenant,
+      draftedBy: drafter,
+      draftedByRole: drafterRole,
+      mainModel,
+      builderLabel: BUILDER_LABEL[builder],
+      templateFrom: tpl ? { id: tpl.id, name: tpl.name } : undefined,
+      linkedKnowledge: MOCK_KNOWLEDGE_TASKS.filter((k) => linkedKnw.has(k.id)).map((k) => ({
+        id: k.id,
+        name: k.name,
+        owner: k.ownerName,
+        updatedAt: k.updatedAt,
+      })),
+      checks: [
+        { k: '에이전트명', v: name, pass: true },
+        { k: '시스템 프롬프트', v: `${systemPrompt.length}자`, pass: systemPrompt.trim().length > 0 },
+        { k: '주력 모델', v: mainModel, pass: true },
+        { k: '연결 지식', v: `${linkedKnw.size}건`, pass: linkedKnw.size > 0 },
+        { k: 'PII 마스킹', v: pii ? '활성화' : '비활성화', pass: pii },
+        { k: '레드팀 게이트', v: redteam ? '통과 필수' : '생략', pass: redteam },
+      ],
+    });
+    setSubmitting(false);
+    setSubmitted(findAgentDeploy(item.id) ?? null);
+  };
+
+  /**
+   * 팝업 확인 후 이동. AI Studio 셸에서 들어왔으면 과제 목록으로 돌아간다 —
+   * 예전에는 존재하지 않는 `PRJ-101` 로 보내 「열람 권한 없음」 화면이 떴다.
+   */
+  const closeAndGo = () => {
+    setSubmitted(null);
+    navigate(projectId ? `/projects/${projectId}` : '/studio');
   };
 
   return (
@@ -141,12 +215,12 @@ export default function AgentTaskRegisterPage() {
               </FormField>
             </Row>
             <Row>
-              <FormField label="담당자" required>
+              <FormField label="담당자" required info="기안자는 로그인 계정으로 확정됩니다">
                 <div className="mb-2">
-                  <ChipReadonly primary role="책임자">
-                    김플랫
+                  <ChipReadonly primary role="기안·책임자">
+                    {drafter}
                   </ChipReadonly>
-                  <ChipReadonly>박서연</ChipReadonly>
+                  <ChipReadonly>{ownerTenant}</ChipReadonly>
                 </div>
                 <div className="relative">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-mid">🔍</span>
@@ -176,6 +250,27 @@ export default function AgentTaskRegisterPage() {
                       label={BUILDER_LABEL[b]}
                     />
                   ))}
+                </div>
+              </FormField>
+              <FormField label="사용 범위" required info="누가 이 에이전트를 쓸 수 있는가">
+                <div className="flex gap-3">
+                  {AGENT_USE_SCOPES.map((sc) => (
+                    <RadioBox
+                      key={sc}
+                      checked={useScope === sc}
+                      onChange={() => setUseScope(sc)}
+                      label={sc === '개인' ? '개인 (본인만)' : `부서 (${ownerTenant})`}
+                    />
+                  ))}
+                </div>
+                {/*
+                  계열사 이상은 여기서 못 고른다. 자기 부서를 넘어 남이 보는 자산이
+                  되는 순간부터는 마켓플레이스의 승격 결재를 거쳐야 한다(RFP 1.3.2).
+                */}
+                <div className="mt-2 bg-surface-soft border border-line-soft rounded p-2.5 text-[11px] text-ink-mid font-semibold leading-relaxed">
+                  <b className="text-ink-dark">계열사 · 그룹 공개는 여기서 정하지 않습니다.</b>{' '}
+                  배포 후 마켓플레이스에서 <b className="text-ink-dark">공개 범위 승격</b>을 별도
+                  상신해 소유 계열사 관리자·그룹 거버넌스 승인을 받습니다.
                 </div>
               </FormField>
             </Row>
@@ -253,6 +348,10 @@ export default function AgentTaskRegisterPage() {
                           <span className="text-[10px] font-bold text-info">{k.assetKind}</span>
                         </div>
                         <div className="text-[12.5px] font-extrabold text-ink truncate">{k.name}</div>
+                        {/* 어떤 데이터에 기반해 답이 나오는지 — 소유자와 최신 갱신일을 함께 본다. */}
+                        <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5 truncate">
+                          소유 {k.ownerName} · 최신 갱신 {k.updatedAt}
+                        </div>
                       </div>
                       <span className="text-[10.5px] text-ink-mid font-semibold">{k.state}</span>
                     </button>
@@ -336,12 +435,29 @@ export default function AgentTaskRegisterPage() {
             </div>
           </SidebarCard>
 
+          {/*
+            결재선은 상신 시 배정될 **실제 사람**을 미리 보여 준다. 역할명만 적어
+            두면 기안한 뒤 결재함에 뜬 이름과 달라진다.
+          */}
           <SidebarCard title="결재선 미리보기">
             <div className="space-y-1.5 text-[11.5px]">
-              <ApprLineStep seq="0" label="기안 — 담당자" tone="draft" />
-              <ApprLineStep seq="1" label="프로젝트 오너 그룹" />
-              {stage === '서빙계' && <ApprLineStep seq="2" label="레드팀 게이트" tone="auto" note="(서빙계)" />}
-              <ApprLineStep seq={stage === '서빙계' ? '3' : '2'} label="플랫폼 관리 그룹" />
+              <ApprLineStep seq="0" label={`기안 — ${drafter}`} tone="draft" note={`(${drafterRole})`} />
+              <ApprLineStep
+                seq="1"
+                label={approvers.owner.label}
+                note={`${approvers.owner.name} · ${approvers.owner.tenant}`}
+              />
+              {stage === '서빙계' && (
+                <ApprLineStep seq="2" label="레드팀 게이트" tone="auto" note="(서빙계 필수)" />
+              )}
+              <ApprLineStep
+                seq={stage === '서빙계' ? '3' : '2'}
+                label="플랫폼 관리 그룹 승인"
+                note={`${approvers.platform.name} · ${approvers.platform.tenant}`}
+              />
+            </div>
+            <div className="mt-2 text-[10.5px] text-ink-mid font-semibold leading-relaxed">
+              직무 분리(SoD) — 기안자는 승인 단계에 배정되지 않습니다 · ONM-003
             </div>
           </SidebarCard>
         </aside>
@@ -360,7 +476,7 @@ export default function AgentTaskRegisterPage() {
             자동 저장 활성
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link to={`/projects/${pid}`}>
+            <Link to={projectId ? `/projects/${projectId}` : '/studio'}>
               <Button variant="ghost">취소</Button>
             </Link>
             <Button onClick={() => toast(`"${name}" 을(를) 템플릿으로 저장했습니다 — 다른 팀도 복제해 시작할 수 있습니다`)}>
@@ -373,6 +489,8 @@ export default function AgentTaskRegisterPage() {
           </div>
         </div>
       </div>
+
+      {submitted && <DeploySubmitModal dep={submitted} onClose={closeAndGo} />}
     </div>
   );
 }

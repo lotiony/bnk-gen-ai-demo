@@ -29,8 +29,11 @@ export type PersonaId =
   | 'governance_admin'
   | 'security_admin'
   | 'operator'
+  // 지주 (그룹 공통 Namespace 에서 개발한다 — 계열사는 넘나들지 않는다)
+  | 'group_dev'
   // 부산은행
   | 'bs_admin'
+  | 'bs_loan_dev'
   | 'project_owner'
   | 'agent_lead'
   | 'agent_dev'
@@ -146,6 +149,32 @@ export const PERSONAS: Persona[] = [
     hint: '서비스 등록·게시·중지, 장애 대응',
   },
 
+  /* ─── 지주 (그룹 공통 Namespace) ─── */
+  /**
+   * 지주 개발자 — **그룹 공동 배포용 자산을 만드는 개발자**.
+   *
+   * 그룹 공통에 소속된 유일한 비관리자다. 여기가 필요한 이유는 ONM-003 이다 —
+   * 그룹 공동 자산의 배포를 지주 관리자(김플랫·박거버)가 승인하는데, 그 자산을
+   * 만드는 사람까지 관리자면 기안자와 승인권자가 같아진다.
+   *
+   * `canSwitchTenant` 는 **false** 다. 테넌트를 넘나드는 권한은 공동존을
+   * 운영·감독하는 역할의 것이지 개발자의 것이 아니다(SEC-001). 그래서 이 계정은
+   * 그룹 공통 Namespace 에 고정되고, 과제 목록에서도 그룹 공통 자산만 본다
+   * (`scopeTasks` 의 wide=false 경로).
+   */
+  {
+    id: 'group_dev',
+    role: '지주 개발자',
+    rfpRole: '에이전트 개발자',
+    name: '주개발',
+    initial: '주',
+    dept: '지주 · IT개발부',
+    group: '개발자',
+    tenant: '그룹 공통',
+    canSwitchTenant: false,
+    hint: '그룹 공동 배포용 에이전트·워크플로우 제작',
+  },
+
   /* ─── 부산은행 ─── */
   /**
    * 계열사 AI서비스 관리자 — **소유 계열사의 승인권자**.
@@ -217,6 +246,26 @@ export const PERSONAS: Persona[] = [
     tenant: '부산은행',
     canSwitchTenant: false,
     hint: '에이전트 프롬프트·도구·배포 기안',
+  },
+  /**
+   * 부서 개발 담당 — **현업 부서에 속한 개발자**.
+   *
+   * IT개발부(강개발)와 다른 자리다. 여신 업무를 아는 사람이 자기 부서 업무용
+   * 에이전트를 검증된 템플릿에서 만들어 쓴다. 만드는 범위도 거기까지다 —
+   * 사용 범위는 개인·부서까지만 고를 수 있고, 계열사부터는 별도 승격 결재로
+   * 넘어간다(에이전트 등록 폼의 「사용 범위」).
+   */
+  {
+    id: 'bs_loan_dev',
+    role: '부서 개발 담당',
+    rfpRole: '에이전트 개발자',
+    name: '차여신',
+    initial: '차',
+    dept: '부산은행 · 여신기획부',
+    group: '개발자',
+    tenant: '부산은행',
+    canSwitchTenant: false,
+    hint: '여신팀 부서 업무 에이전트 제작 (템플릿 기반)',
   },
   {
     id: 'modeler',
@@ -360,4 +409,14 @@ export const AFFILIATE_APPROVER_IDS: PersonaId[] = ['bs_admin', 'kn_admin'];
 /** 해당 계열사의 승인권자(관리자 그룹). 없으면 undefined. */
 export function affiliateApprover(t: Tenant): Persona | undefined {
   return PERSONAS.find((p) => p.tenant === t && p.group === '관리자');
+}
+
+/**
+ * 해당 계열사의 **과제 오너** — 배포 결재 1단계의 기본 처리자.
+ *
+ * 과제를 만든 개발자가 아니라 그 과제를 책임지는 사람이 먼저 본다(ONM-003).
+ * 계열사에 과제 오너 계정이 없으면 그 계열사 승인권자로 내려간다.
+ */
+export function taskOwnerOf(t: Tenant): Persona | undefined {
+  return PERSONAS.find((p) => p.tenant === t && p.role === '과제 오너') ?? affiliateApprover(t);
 }

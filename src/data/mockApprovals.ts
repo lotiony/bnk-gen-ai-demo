@@ -18,9 +18,11 @@ import { useSyncExternalStore } from 'react';
 import type { ApprovalItem } from '@/types';
 import type { Tenant } from '@/data/tenants';
 import { TENANTS } from '@/data/tenants';
-import { affiliateApprover } from '@/data/mockPersonas';
+import { affiliateApprover, taskOwnerOf } from '@/data/mockPersonas';
+import { markAgentDeployDecision } from '@/data/mockAgentTasks';
 import type { AssetKind, ShareScope } from '@/data/mockCatalog';
 import { promoteAssetScope } from '@/data/mockCatalog';
+import { DEMO_TODAY } from '@/data/demoClock';
 
 /**
  * 공유범위 승격 결재의 `category` 값.
@@ -250,7 +252,13 @@ export interface PromotionStep {
  * 두 단계 모두 **관리자 그룹**이 처리한다. RFP 1.3.2 의 문구도 "**관리자** 승인
  * 절차 기반 배포·공유 범위 통제" 다.
  */
-export type PromotionStageKind = 'affiliate-admin' | 'group-governance';
+export type PromotionStageKind =
+  | 'affiliate-admin'
+  | 'group-governance'
+  /** 에이전트 배포 결재 1단계 — 과제를 책임지는 사람. */
+  | 'task-owner'
+  /** 에이전트 배포 결재 2단계 — 공동존 플랫폼 관리 그룹. */
+  | 'platform-admin';
 
 /**
  * 결재선 한 단계의 **승인 주체**.
@@ -571,14 +579,28 @@ export function getApprovalDecision(id: string): ApprovalDecision | undefined {
   return decisions[id];
 }
 
-export const nowLabel = (): string =>
-  new Date().toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+/**
+ * 기안 시각 — **세계관의 오늘**로 찍는다.
+ *
+ * 예전에는 `new Date()` 였다. 그러면 2026-09-09 시연 당일에 방금 상신한 결재만
+ * '2026-09-09' 를 찍고, 같은 화면의 과제 카드·감사 원장은 전부 2026-06-03 을
+ * 찍는다. 리허설에서는 절대 안 잡히는 유형이라 실시간 시계를 걷어낸다
+ * (`demoClock` 의 원칙, `mockAgentTasks.addAgentTask` 와 같은 값).
+ */
+export const nowLabel = (): string => `${DEMO_TODAY} 09:40`;
+
+/**
+ * 결재 처리 시각 — 기안보다 뒤이면서 **처리할 때마다 앞으로 나아가야** 한다.
+ *
+ * 2단계 결재를 연달아 승인했는데 두 단계가 같은 분(分)을 찍으면 결재선이
+ * 순서를 증명하지 못한다. 그렇다고 실시간 시계를 쓰면 위와 같은 문제가 난다.
+ * 그래서 세계관 안에서 정해진 시각을 차례로 소비한다 — 리허설과 본 시연이
+ * 항상 같은 화면을 만든다.
+ */
+const DECISION_TIMES = ['10:05', '11:20', '13:40', '14:55', '16:10', '17:25'];
+let decisionTick = 0;
+const decisionLabel = (): string =>
+  `${DEMO_TODAY} ${DECISION_TIMES[decisionTick++ % DECISION_TIMES.length]}`;
 
 /**
  * 결재 승인·반려·보류.
@@ -601,7 +623,10 @@ export function decideApproval(
   if (!target) return;
   const trimmed = note?.trim() || undefined;
   const promo = promotions.find((p) => p.approvalId === id);
-  const stamp = nowLabel();
+  // 승격이든 배포든 단계 진행 규칙은 하나다 — `stages` 를 가진 쪽을 집는다.
+  const staged: { stages: PromotionStage[] } | undefined =
+    promo ?? agentDeploys.find((d) => d.approvalId === id);
+  const stamp = decisionLabel();
 
   if (kind === 'hold') {
     decisions[id] = { kind, reviewer, reviewerRole, note: trimmed, decidedAt: stamp };
@@ -610,25 +635,26 @@ export function decideApproval(
   }
 
   // 처리한 사람을 단계에 새긴다 — 승인이든 반려든 '누가' 가 남아야 한다(ONM-004).
-  const stage = promo ? currentPromotionStage(promo) : undefined;
+  const stage = staged?.stages.find((st) => st.state === 'current');
   if (stage) {
     stage.decidedBy = `${reviewer} (${reviewerRole})`;
     stage.decidedAt = stamp;
     stage.note = trimmed;
   }
 
-  if (promo && stage && kind === 'approve') {
+  if (staged && stage && kind === 'approve') {
     stage.state = 'done';
-    const next = promo.stages.find((s) => s.state === 'upcoming');
+    const next = staged.stages.find((s) => s.state === 'upcoming');
     if (next) {
       // 아직 완결이 아니다. 다음 단계의 승인권자에게 넘어간다.
       next.state = 'current';
-      target.stage = { current: next.seq, total: promo.stages.length + 1, label: next.label };
+      target.stage = { current: next.seq, total: staged.stages.length + 1, label: next.label };
       emit();
       return;
     }
   }
 
+  const dep = agentDeploys.find((d) => d.approvalId === id);
   decisions[id] = { kind, reviewer, reviewerRole, note: trimmed, decidedAt: stamp };
   if (kind === 'approve') {
     target.state = 'done';
@@ -636,9 +662,12 @@ export function decideApproval(
     target.mine = false;
     // 최종 승인에서만 카탈로그의 공유 범위가 넓어진다 — 승인과 화면이 어긋나면 안 된다.
     if (promo) promoteAssetScope(promo.assetId, promo.toScope);
+    // 마찬가지로 최종 승인에서만 과제가 「결재 진행 중」을 벗어난다.
+    if (dep) markAgentDeployDecision(dep.agentId, 'approve', dep.deployStage);
   } else {
     target.state = 'rejected';
     target.mine = false;
+    if (dep) markAgentDeployDecision(dep.agentId, 'reject', dep.deployStage);
   }
   emit();
 }
@@ -768,4 +797,203 @@ export function createScopePromotion(d: PromotionDraft): ApprovalItem {
   approvals.unshift(item);
   emit();
   return item;
+}
+
+
+/* ═══════════════ 에이전트 배포 결재 (AI Studio 기안) ═══════════════ */
+
+/**
+ * AI Studio 에서 에이전트를 기안하면 생기는 **배포 결재**.
+ *
+ * RFP 근거
+ *  · LSM-009 「승인 기반 에이전트 배포」 — 만들었다고 올라가지 않는다
+ *  · ONM-003 「직무 분리(SoD) 기반 RBAC」 — 개발자와 승인권자는 반드시 다른 사람
+ *
+ * 승격 결재(`ScopePromotion`)와 **같은 `stages` 기계**를 쓴다. 단계 진행·승인
+ * 자격 판정이 한 곳에서만 돌아가야 두 화면이 다른 말을 하지 않는다.
+ */
+
+/**
+ * 에이전트 등록 시 고를 수 있는 사용 범위.
+ *
+ * **계열사 이상은 여기서 고를 수 없다.** 자기 부서를 넘어 남이 보는 자산이 되는
+ * 순간부터는 마켓플레이스의 승격 결재(`ScopePromotion`)로 넘어간다 — 등록 폼에서
+ * 계열사 공개까지 한 번에 끝내면 RFP 1.3.2 의 "관리자 승인 절차 기반 공유 범위
+ * 통제" 가 화면에서 우회된다.
+ */
+export type AgentUseScope = '개인' | '부서';
+export const AGENT_USE_SCOPES: AgentUseScope[] = ['개인', '부서'];
+
+export interface AgentDeployKnowledge {
+  id: string;
+  name: string;
+  owner: string;
+  updatedAt: string;
+}
+
+export interface AgentDeployApproval {
+  approvalId: string;
+  agentId: string;
+  agentName: string;
+  /** 어느 환경으로 올리는 결재인가. */
+  deployStage: '학습계' | '서빙계';
+  useScope: AgentUseScope;
+  ownerTenant: Tenant;
+  draftedBy: string;
+  draftedByRole: string;
+  draftedAt: string;
+  mainModel: string;
+  builderLabel: string;
+  /** 템플릿에서 복제했다면 그 출처 — 재사용 자산 관리 이력(2-1). */
+  templateFrom?: { id: string; name: string };
+  linkedKnowledge: AgentDeployKnowledge[];
+  /** 기안 시점에 확인된 필수 항목. 결재자가 판단 근거로 본다. */
+  checks: { k: string; v: string; pass: boolean }[];
+  stages: PromotionStage[];
+}
+
+const agentDeploys: AgentDeployApproval[] = [];
+
+export function getAgentDeploys(): AgentDeployApproval[] {
+  return agentDeploys;
+}
+
+export function findAgentDeploy(approvalId: string | undefined): AgentDeployApproval | undefined {
+  if (!approvalId) return undefined;
+  return agentDeploys.find((d) => d.approvalId === approvalId);
+}
+
+/** 플랫폼 관리 그룹 승인 단계의 담당자 — mockPersonas 의 `platform_admin`. */
+const PLATFORM_APPROVER = { name: '김플랫', tenant: '그룹 공통' as Tenant };
+
+/**
+ * 배포 결재 1단계(과제 오너 그룹)의 실제 처리자.
+ * 기안자 본인이 과제 오너면 소유 계열사 승인권자로, 그것도 겹치면 거버넌스로 넘긴다.
+ */
+function resolveTaskOwnerApprover(
+  ownerTenant: Tenant,
+  drafter: string,
+): { name: string; tenant: Tenant; label: string } {
+  const owner = taskOwnerOf(ownerTenant);
+  if (owner && owner.name !== drafter) {
+    return { name: owner.name, tenant: owner.tenant, label: '과제 오너 그룹 승인' };
+  }
+  const admin = affiliateApprover(ownerTenant);
+  if (admin && admin.name !== drafter) {
+    return { name: admin.name, tenant: admin.tenant, label: '과제 오너 그룹 승인 (계열사 승인권자 대결)' };
+  }
+  const g = GROUP_GOVERNANCE_APPROVER;
+  return {
+    ...g,
+    label: `과제 오너 그룹 승인 (SoD 자동 위임 · ${ownerTenant} 오너 미배치)`,
+  };
+}
+
+/** 기안 전에 결재선을 미리 보여 준다 — 등록 폼 사이드바가 쓴다. */
+export function previewDeployApprovers(ownerTenant: Tenant, drafter: string) {
+  return {
+    owner: resolveTaskOwnerApprover(ownerTenant, drafter),
+    platform: avoidDrafter(PLATFORM_APPROVER, drafter),
+  };
+}
+
+export interface AgentDeployDraft {
+  agentId: string;
+  agentName: string;
+  deployStage: '학습계' | '서빙계';
+  useScope: AgentUseScope;
+  ownerTenant: Tenant;
+  draftedBy: string;
+  draftedByRole: string;
+  mainModel: string;
+  builderLabel: string;
+  templateFrom?: { id: string; name: string };
+  linkedKnowledge: AgentDeployKnowledge[];
+  checks: { k: string; v: string; pass: boolean }[];
+}
+
+/*
+ * 발번 대역을 **승격 결재와 분리한다.**
+ *
+ * 처음엔 승격과 같은 `APV-2026-###` 를 101 부터 썼는데, 시드 승격 결재가 이미
+ * `APV-2026-101` 을 쓰고 있어서 기안 한 번에 ID 가 겹쳤다. 결재함에 같은 번호가
+ * 두 줄 뜨고, 상세 화면은 먼저 조회되는 쪽(배포)으로 넘어가 승격 결재가 열리지
+ * 않았다. 종류가 다른 결재는 대역도 달라야 한다.
+ */
+let deploySeq = 1;
+
+/** AI Studio 「기안」 → 실제 결재 건 생성. 결재함과 상세 화면이 이걸 읽는다. */
+export function submitAgentDeploy(draft: AgentDeployDraft): ApprovalItem {
+  const id = `APV-AGT-${String(deploySeq++).padStart(3, '0')}`;
+  const stamp = nowLabel();
+  const owner = resolveTaskOwnerApprover(draft.ownerTenant, draft.draftedBy);
+  const platform = avoidDrafter(PLATFORM_APPROVER, draft.draftedBy);
+
+  const item: ApprovalItem = {
+    id,
+    category: draft.deployStage === '서빙계' ? 'serv' : 'train',
+    title: `${draft.agentName} ${draft.deployStage} 배포`,
+    draftedBy: `${draft.draftedBy} (${draft.draftedByRole})`,
+    draftedAt: stamp,
+    stage: { current: 1, total: 3, label: owner.label },
+    state: 'pending',
+    mine: true,
+  };
+
+  agentDeploys.unshift({
+    ...draft,
+    approvalId: id,
+    draftedAt: stamp,
+    stages: [
+      {
+        seq: 1,
+        kind: 'task-owner',
+        label: owner.label,
+        approverName: owner.name,
+        approverTenant: owner.tenant,
+        state: 'current',
+      },
+      {
+        seq: 2,
+        kind: 'platform-admin',
+        label: '플랫폼 관리 그룹 승인',
+        approverName: platform.name,
+        approverTenant: platform.tenant,
+        state: 'upcoming',
+      },
+    ],
+  });
+  approvals.unshift(item);
+  emit();
+  return item;
+}
+
+/**
+ * 화면에 그릴 결재선 — `promotionLine` 과 같은 규칙으로 `stages` 에서 파생한다.
+ * 표시용 배열을 따로 들면 단계가 넘어갈 때 둘이 어긋난다.
+ */
+export function deployLine(dep: AgentDeployApproval): PromotionStep[] {
+  const head: PromotionStep = {
+    seq: '✓',
+    label: `기안 — ${dep.deployStage} 배포 요청`,
+    sub: `${dep.draftedBy} (${dep.ownerTenant}) · ${dep.draftedAt}`,
+    tone: 'done',
+  };
+  return [
+    head,
+    ...dep.stages.map<PromotionStep>((st) => ({
+      seq: st.state === 'done' ? '✓' : String(st.seq),
+      label: st.label,
+      sub:
+        st.state === 'done'
+          ? [`${st.decidedBy ?? st.approverName}`, st.decidedAt, st.note].filter(Boolean).join(' · ')
+          : `${st.approverName} (${st.approverTenant}) · ${st.state === 'current' ? '결재 대기' : '대기'}`,
+      tone: st.state,
+    })),
+  ];
+}
+
+/** 지금 처리해야 할 단계. 없으면 완결된 건이다. */
+export function currentDeployStage(dep: AgentDeployApproval): PromotionStage | undefined {
+  return dep.stages.find((s) => s.state === 'current');
 }

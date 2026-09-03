@@ -10,7 +10,11 @@ import {
   getApprovalDecision,
   namespaceOf,
   promotionKindLabel,
+  findAgentDeploy,
+  currentDeployStage,
+  deployLine,
   type ScopePromotion,
+  type AgentDeployApproval,
   type ApprovalDecisionKind,
 } from '@/data/mockApprovals';
 import { SCOPE_ORDER, SCOPE_META } from '@/data/mockCatalog';
@@ -76,6 +80,16 @@ export default function ApprovalDetailPage() {
       );
     }
     return <DeployApprovalDetail dep={dep} all={deployApprovals} />;
+  }
+
+  // AI Studio 기안 배포 결재 — 에이전트 구성 중심 전용 상세 (LSM-009 · ONM-003).
+  const agentDep = findAgentDeploy(approvalId);
+  const agentItem = approvals.find((a) => a.id === approvalId);
+  if (agentDep && agentItem) {
+    if (persona && !canViewApproval(persona, agentDep.approvalId)) {
+      return <NoAccess role={persona.role} />;
+    }
+    return <AgentDeployDetail dep={agentDep} item={agentItem} />;
   }
 
   // 공유범위 승격 결재 — 자산·범위 중심 전용 상세 (RFP 1.3.2).
@@ -1325,6 +1339,243 @@ function ScopePromotionDetail({ promo, item }: { promo: ScopePromotion; item: Ap
                 <Button onClick={() => decide('hold')}>보류</Button>
                 <Button variant="primary" onClick={() => decide('approve')}>
                   {isFinalStage ? '✓ 승인 · 그룹 공개' : '✓ 승인 — 다음 단계로'}
+                </Button>
+              </>
+            ) : (
+              <Link to="/approvals" className="text-[12px] font-bold text-info hover:underline">
+                결재함으로 →
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ═══════════════ 에이전트 배포 결재 상세 (AI Studio 기안) ═══════════════ */
+
+/**
+ * RFP: LSM-009(승인 기반 에이전트 배포) · ONM-003(직무 분리 기반 RBAC) ·
+ *      ONM-004(감사 원장) · AGB-001(에이전트 빌더)
+ *
+ * 결재자가 판단할 것은 "이 에이전트를 이 환경에 올려도 되는가" 다. 그래서
+ * 구성 요약·연결 지식·필수 항목 세 가지만 보여 준다. 결재선은 `stages` 에서
+ * 파생하므로 상신 팝업과 항상 같은 말을 한다.
+ */
+function AgentDeployDetail({ dep, item }: { dep: AgentDeployApproval; item: ApprovalItem }) {
+  const navigate = useNavigate();
+  const persona = useCurrentPersona();
+  const [note, setNote] = useState('');
+  const pending = item.state === 'pending';
+  const right = canDecideApproval(persona, item);
+  const stage = currentDeployStage(dep);
+  const isFinalStage = !!stage && !dep.stages.some((st) => st.state === 'upcoming');
+  const decision = getApprovalDecision(item.id);
+
+  const decide = (kind: ApprovalDecisionKind) => {
+    // 다음 단계는 처리 **전에** 읽는다 — 처리 후엔 이미 current 라 검색에 안 걸린다.
+    const next = dep.stages.find((st) => st.state === 'upcoming');
+    decideApproval(item.id, kind, persona?.name ?? '현재 사용자', persona?.role ?? '결재자', note);
+    const who = `${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'})`;
+    const label =
+      kind === 'approve' ? (isFinalStage ? '최종 승인' : '승인') : kind === 'reject' ? '반려' : '보류';
+    toast(
+      `${item.id} · ${dep.deployStage} 배포 ${label}`,
+      kind !== 'approve'
+        ? `처리 ${who} · 통합 감사 원장에 기록되었습니다`
+        : isFinalStage
+        ? `${dep.agentId} ${dep.agentName} 이(가) ${dep.deployStage}에 배포됩니다 · 사용 범위 ${dep.useScope}\n처리 ${who}`
+        : `처리 ${who}\n다음 단계: ${next?.label ?? '-'} · ${next?.approverName ?? '-'} (${next?.approverTenant ?? '-'})`,
+      kind === 'reject' ? 'warn' : 'ok',
+    );
+    setNote('');
+    if (kind !== 'hold') navigate('/approvals');
+  };
+
+  const stateLabel = pending
+    ? '승인 대기'
+    : item.state === 'done'
+    ? `배포 완료 · ${dep.deployStage}`
+    : '반려 · 배포 보류';
+
+  return (
+    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
+      <Crumb
+        items={[
+          { label: '결재함', to: '/approvals' },
+          { label: `${dep.deployStage} 배포 결재` },
+          { label: dep.agentName },
+        ]}
+        trailing={item.id}
+      />
+
+      {/* ── 헤더 ── */}
+      <div className="card px-6 py-5 mb-3.5">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className="pill bg-info-bg text-info border border-info-border">
+            {dep.deployStage} 배포
+          </span>
+          <span className="pill bg-surface-soft text-ink-mid border border-line-soft">
+            사용 범위 {dep.useScope}
+          </span>
+          <span className="pill bg-surface-soft text-ink-mid border border-line-soft">
+            {dep.ownerTenant} · {namespaceOf(dep.ownerTenant)}
+          </span>
+          {dep.templateFrom && (
+            <span className="pill bg-ok-bg text-ok border border-ok-border">
+              {dep.templateFrom.id} 「{dep.templateFrom.name}」에서 복제
+            </span>
+          )}
+        </div>
+        <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">
+          {dep.agentName}
+          <span className="ml-2 text-[12px] font-mono font-bold text-ink-light align-middle">
+            {dep.agentId}
+          </span>
+        </h1>
+        <p className="text-xs text-ink-mid font-semibold mt-1.5">
+          기안 <b className="text-ink-dark">{dep.draftedBy}</b> ({dep.draftedByRole}) ·{' '}
+          <b className="text-ink-dark">{dep.draftedAt}</b> · 결재선{' '}
+          <b className="text-ink-dark">{item.stage.label}</b>
+        </p>
+      </div>
+
+      <div className="grid grid-cols-[1fr_320px] gap-3.5">
+        <main>
+          <FormSection title="배포 구성">
+            <FormRow k="에이전트 ID" v={<code className="text-[11.5px] font-mono font-bold text-ink-dark">{dep.agentId}</code>} />
+            <FormRow k="빌더" v={dep.builderLabel} />
+            <FormRow k="주력 모델" v={<code className="text-[11.5px] font-mono font-bold text-ink-dark">{dep.mainModel}</code>} />
+            <FormRow k="배포 환경" v={dep.deployStage} />
+            <FormRow
+              k="사용 범위"
+              v={
+                <span>
+                  {dep.useScope}
+                  <span className="text-ink-mid font-semibold ml-1.5">
+                    · 계열사·그룹 공개는 별도 승격 결재 대상
+                  </span>
+                </span>
+              }
+            />
+          </FormSection>
+
+          <FormSection title="연결 지식 자산">
+            {dep.linkedKnowledge.length === 0 ? (
+              <div className="text-[11.5px] text-warn font-semibold py-2">
+                연결된 지식 자산이 없습니다 — 근거 없는 응답이 나갈 수 있습니다.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {dep.linkedKnowledge.map((k) => (
+                  <div
+                    key={k.id}
+                    className="flex items-center gap-3 px-3 py-2 rounded border border-line-soft bg-white"
+                  >
+                    <span className="text-[10px] font-mono font-bold text-ink-light flex-shrink-0">
+                      {k.id}
+                    </span>
+                    <span className="text-[12.5px] font-extrabold text-ink truncate">{k.name}</span>
+                    <span className="ml-auto text-[10.5px] text-ink-mid font-semibold whitespace-nowrap">
+                      소유 {k.owner} · 최신 갱신 {k.updatedAt}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection title="필수 항목 확인">
+            <div className="grid grid-cols-2 gap-x-5 gap-y-1">
+              {dep.checks.map((c) => (
+                <div key={c.k} className="flex items-baseline gap-2 text-[11.5px] py-1">
+                  <span className={c.pass ? 'text-ok' : 'text-warn'}>{c.pass ? '✓' : '·'}</span>
+                  <span className="text-ink-mid font-semibold">{c.k}</span>
+                  <span className="ml-auto text-ink-dark font-bold truncate" title={c.v}>
+                    {c.v}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </FormSection>
+        </main>
+
+        {/* ── 우측: 결재선 ── */}
+        <aside className="sticky top-[106px] self-start">
+          <SidebarCard title="결재선 진행" icon="📋">
+            <div className="space-y-1.5">
+              {deployLine(dep).map((st) => (
+                <ApprStep
+                  key={st.seq + st.label}
+                  seq={st.seq}
+                  label={st.label}
+                  sub={st.sub}
+                  tone={
+                    !pending && st.tone === 'current'
+                      ? item.state === 'done'
+                        ? 'done'
+                        : 'rejected'
+                      : st.tone
+                  }
+                />
+              ))}
+            </div>
+            <div className="mt-2 text-[10.5px] text-ink-mid font-semibold leading-relaxed">
+              개발자와 승인권자는 분리된다 — 기안자는 어느 단계에도 배정되지 않는다 · ONM-003
+            </div>
+          </SidebarCard>
+
+          {decision && (
+            <SidebarCard title="결재 결과" icon="🕒">
+              <div className="space-y-1 text-[11.5px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-ink-dark">{decision.reviewer}</span>
+                  <span className="text-ink-mid">({decision.reviewerRole})</span>
+                  <span className="ml-auto text-ink-mid">{decision.decidedAt}</span>
+                </div>
+                <div className="text-ink-dark font-semibold">
+                  {decision.kind === 'approve' ? '승인' : decision.kind === 'reject' ? '반려' : '보류'}
+                  {decision.note && ` · ${decision.note}`}
+                </div>
+              </div>
+            </SidebarCard>
+          )}
+
+          {pending && right.ok && (
+            <SidebarCard title="결재 의견" icon="✎">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="승인·반려 사유 (선택)"
+                className="w-full text-[12px] text-ink-dark leading-[1.6] border border-line rounded p-2 bg-white resize-y focus:outline-none focus:border-brand-dark"
+              />
+            </SidebarCard>
+          )}
+        </aside>
+      </div>
+
+      {/* ── 하단 고정 액션 바 ── */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+        <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
+          <div className="text-[11.5px] text-ink-mid font-semibold">
+            <span className={cn('font-extrabold', pending ? 'text-warn' : 'text-ink-dark')}>
+              {stateLabel}
+            </span>
+            <span className="mx-2 text-line">·</span>
+            {dep.agentId} · {dep.deployStage} 배포 · {item.stage.label}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            {pending && !right.ok ? (
+              <SodNotice hint={right.hint} />
+            ) : pending ? (
+              <>
+                <Button variant="danger" onClick={() => decide('reject')}>반려</Button>
+                <Button onClick={() => decide('hold')}>보류</Button>
+                <Button variant="primary" onClick={() => decide('approve')}>
+                  {isFinalStage ? `✓ 승인 · ${dep.deployStage} 배포` : '✓ 승인 — 다음 단계로'}
                 </Button>
               </>
             ) : (

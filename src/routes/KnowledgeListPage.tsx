@@ -12,8 +12,9 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import StatusPill from '@/components/ui/StatusPill';
 import { useTenant } from '@/lib/tenantStore';
+import { useCurrentPersona } from '@/lib/persona';
 import { TENANT_SHORT, TENANTS } from '@/data/tenants';
-import { STUDIO_TASKS, scopeTasks } from '@/data/studioTasks';
+import { useStudioTasks, scopeTasks } from '@/data/studioTasks';
 
 /** 지식·데이터 메뉴에서 여는 도구들. */
 const TOOLS: { label: string; desc: string; to: string; req: string }[] = [
@@ -55,12 +56,14 @@ export default function KnowledgeListPage() {
   const tenant = useTenant();
   const meta = TENANTS.find((t) => t.name === tenant);
 
+  const allTasks = useStudioTasks();
+  const persona = useCurrentPersona();
   const tasks = useMemo(
     () =>
-      scopeTasks(STUDIO_TASKS, tenant).filter(
+      scopeTasks(allTasks, tenant, persona?.canSwitchTenant ?? false).filter(
         (t) => t.kind === 'knowledge' || t.kind === 'pipeline' || t.kind === 'ontology',
       ),
-    [tenant],
+    [allTasks, tenant, persona],
   );
 
   return (

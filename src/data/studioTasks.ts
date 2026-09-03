@@ -13,7 +13,8 @@
  * 대응 요건: AGB-001(에이전트 빌더) · AGB-002(워크플로우) · AGB-011(버전·배포 이력)
  *            LSM-009(승인 기반 배포) · ONM-008(개발 환경)
  */
-import { MOCK_AGENT_TASKS } from './mockAgentTasks';
+import { useSyncExternalStore } from 'react';
+import { MOCK_AGENT_TASKS, subscribeAgentTasks } from './mockAgentTasks';
 import { MOCK_KNOWLEDGE_TASKS } from './mockKnowledgeTasks';
 import { MOCK_PIPELINE_TASKS } from './mockPipelineTasks';
 import { MOCK_MODEL_TASKS } from './mockModelTasks';
@@ -102,7 +103,15 @@ function tenantOf(id: string): Tenant {
   return TENANT_OF[id] ?? '그룹 공통';
 }
 
-export const STUDIO_TASKS: StudioTask[] = [
+/**
+ * 과제 목록 스냅샷을 만든다.
+ *
+ * 예전에는 이게 모듈 최상단의 `const` 배열이었다. 그래서 **import 시점에 굳어**
+ * 기안으로 새로 생긴 에이전트가 목록에 영영 나타나지 않았다. 지금은 읽을 때마다
+ * 다시 만들고, 원본이 바뀌면 아래 스토어가 스냅샷을 교체한다.
+ */
+function buildStudioTasks(): StudioTask[] {
+  return [
   ...MOCK_AGENT_TASKS.map<StudioTask>((t) => ({
     id: t.id,
     kind: 'agent',
@@ -114,7 +123,7 @@ export const STUDIO_TASKS: StudioTask[] = [
     note: t.changeNote,
     progress: t.progress,
     href: `/projects/${PRIMARY_PROJECT_ID}/tasks/agent/${t.id}`,
-    tenant: tenantOf(t.id),
+    tenant: t.tenant ?? tenantOf(t.id),
   })),
   ...MOCK_KNOWLEDGE_TASKS.map<StudioTask>((t) => ({
     id: t.id,
@@ -190,7 +199,41 @@ export const STUDIO_TASKS: StudioTask[] = [
     href: '/knowledge/ontology',
     tenant: '그룹 공통',
   },
-];
+  ];
+}
+
+/* ═══════════════ 과제 목록 스토어 (메모리 전용) ═══════════════ */
+
+/**
+ * 기안 결과가 목록에 바로 뜨게 하는 구독형 스냅샷.
+ * localStorage 를 쓰지 않는다(CLAUDE.md 절대 규칙). 패턴은 `useTemplates` 와 같다.
+ */
+let snapshot: StudioTask[] = buildStudioTasks();
+const listeners = new Set<() => void>();
+
+function refresh(): void {
+  snapshot = buildStudioTasks();
+  listeners.forEach((l) => l());
+}
+
+// 에이전트 기안 → 목록 갱신. studioTasks 가 구독을 걸어야 순환 참조가 안 생긴다.
+subscribeAgentTasks(refresh);
+
+function subscribe(l: () => void): () => void {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+}
+
+export function getStudioTasks(): StudioTask[] {
+  return snapshot;
+}
+
+/** 과제 목록 구독 — 기안으로 늘어난 과제가 즉시 반영된다. */
+export function useStudioTasks(): StudioTask[] {
+  return useSyncExternalStore(subscribe, getStudioTasks, getStudioTasks);
+}
 
 /**
  * 테넌트 스코프 필터.
@@ -198,7 +241,21 @@ export const STUDIO_TASKS: StudioTask[] = [
  * RFP 2-1 기타: "그룹 공통 AI자산은 재사용하되 계열사별 데이터ᆞ보안ᆞ권한 정책을
  * 독립적으로 적용" — 공통 자산은 계열사에서도 보이고, 남의 계열사 자산은 안 보인다.
  */
-export function scopeTasks(tasks: StudioTask[], tenant: Tenant): StudioTask[] {
-  if (tenant === '그룹 공통') return tasks;
+export function scopeTasks(
+  tasks: StudioTask[],
+  tenant: Tenant,
+  /**
+   * 그룹 공통 Namespace 에서 **계열사 자산까지 조망하는가**.
+   *
+   * 전체 조망은 공동존을 운영·감독하는 역할의 것이다(`canSwitchTenant`).
+   * 지주 개발자처럼 그룹 공통에 소속됐지만 감독 역할이 아닌 계정은 false 로
+   * 넘겨 그룹 공통 자산만 보게 한다 — 아니면 개발자가 남의 계열사 과제를
+   * 들여다보는 화면이 되어 SEC-001 이 무너진다.
+   */
+  wide = true,
+): StudioTask[] {
+  if (tenant === '그룹 공통') {
+    return wide ? tasks : tasks.filter((t) => t.tenant === '그룹 공통');
+  }
   return tasks.filter((t) => t.tenant === tenant || t.tenant === '그룹 공통');
 }

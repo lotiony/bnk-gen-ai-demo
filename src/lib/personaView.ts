@@ -13,6 +13,8 @@ import {
   PROMOTE_CATEGORY,
   currentPromotionStage,
   findPromotion,
+  currentDeployStage,
+  findAgentDeploy,
 } from '@/data/mockApprovals';
 import { getDeployApprovals } from '@/lib/deployApprovalStore';
 import { projectsList } from '@/data/mockProjects';
@@ -81,14 +83,23 @@ export function getVisibleApprovals(persona: PersonaLike): ApprovalItem[] {
   // 이 단계의 당사자면 결재함에 보인다. 보이지 않으면 승격 결재가 2단계에서 멈춘다.
   if (isDrafterOnlyPersona(persona) && persona) {
     const me = persona.name;
-    return list.filter((a) => a.draftedBy.startsWith(me) || isMyPromotionStage(persona, a));
+    return list.filter(
+      (a) =>
+        a.draftedBy.startsWith(me) ||
+        isMyPromotionStage(persona, a) ||
+        // 과제 오너(개발자 그룹)에게 배정된 배포 결재 — 안 보이면 1단계에서 멈춘다.
+        isMyDeployStage(persona, a),
+    );
   }
   const allow = approvalCategoryAllowlist(persona);
   // 관심 카테고리로 좁히되, **본인에게 배정된 승격 단계**는 카테고리와 무관하게 남긴다.
   // 소유자 계정이 없어 정보보호 관리자에게 위임된 동의 단계가 여기서 걸러지면
   // 결재가 조용히 멈춘다 — 배정과 노출이 어긋나면 안 된다.
   if (allow && persona) {
-    list = list.filter((a) => allow.includes(a.category) || isMyPromotionStage(persona, a));
+    list = list.filter(
+      (a) =>
+        allow.includes(a.category) || isMyPromotionStage(persona, a) || isMyDeployStage(persona, a),
+    );
   }
   // 사업·거버넌스 관리자는 완료·반려된 지난 이력은 홈에서 숨기고 진행 중 결재만 노출.
   if (
@@ -364,10 +375,30 @@ export function canDecideApproval(persona: PersonaLike, item: ApprovalItem): Dec
           hint: '그룹 거버넌스 관리자(박거버) 또는 플랫폼 관리자(김플랫) 계정으로 전환해야 합니다',
         };
   }
-  // ③ 그 밖의 결재는 승인권자(관리자 그룹) 몫이다 — 개발자는 기안자다.
+  // ③ 에이전트 배포 결재도 단계마다 승인 주체가 다르다(LSM-009 · ONM-003).
+  const dep = findAgentDeploy(item.id);
+  if (dep) {
+    const stage = currentDeployStage(dep);
+    if (!stage) return { ok: false, hint: '처리할 단계가 남아 있지 않습니다' };
+    return persona.name === stage.approverName
+      ? ALLOW
+      : {
+          ok: false,
+          hint: `${stage.label} 담당 ${stage.approverName} (${stage.approverTenant}) 계정으로 전환해야 합니다`,
+        };
+  }
+  // ④ 그 밖의 결재는 승인권자(관리자 그룹) 몫이다 — 개발자는 기안자다.
   return persona.group === '관리자'
     ? ALLOW
     : { ok: false, hint: '승인권자(관리자 그룹) 계정으로 전환해야 합니다' };
+}
+
+/** 지금 이 페르소나에게 배정된 배포 결재 단계인지. */
+function isMyDeployStage(persona: Persona, a: ApprovalItem): boolean {
+  if (a.state !== 'pending') return false;
+  const dep = findAgentDeploy(a.id);
+  const stage = dep && currentDeployStage(dep);
+  return !!stage && stage.approverName === persona.name;
 }
 
 /** 지금 이 페르소나에게 배정된 승격 단계인지 — 결재함 노출의 근거. */
