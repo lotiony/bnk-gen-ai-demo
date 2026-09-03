@@ -187,7 +187,8 @@ export default function AgentTaskRegisterPage() {
                 {tpl.id} 「{tpl.name}」에서 복제 · 저장 {tpl.savedBy} · {tpl.usedCount}회 사용
               </span>
               <span className="text-[11px] text-ink-mid font-semibold">
-                아래 값은 템플릿에서 채워졌습니다 — 그대로 기안하거나 수정해 쓰십시오
+                검증된 값이 채워졌습니다 · <b className="text-warn">주황 테두리</b> 항목만 확인·조정하면
+                됩니다
               </span>
             </div>
           )}
@@ -203,11 +204,22 @@ export default function AgentTaskRegisterPage() {
           {/* A. 기본 정보 */}
           <SectionCard letter="A" name="에이전트 기본 정보" summary="이름·담당·배포 단계" tag="MVP" defaultOpen>
             <Row>
-              <FormField label="에이전트명" required hint="과제 단위로 식별되는 이름">
+              {/*
+                2A-3 「사용자 조정 필요 항목만 하이라이트」 —
+                템플릿에서 온 값은 그대로 써도 되지만, **이름과 사용 범위는 내 것으로
+                바꿔야 한다.** 그 둘만 테두리로 짚어 준다. 전부 강조하면 아무것도
+                강조하지 않은 것과 같다.
+              */}
+              <FormField
+                label="에이전트명"
+                required
+                hint={pre ? '템플릿 이름 그대로면 내 과제와 구분되지 않는다' : '과제 단위로 식별되는 이름'}
+              >
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="예: 보이스피싱 1차 분류 에이전트"
+                  className={cn(pre && 'border-warn-border bg-warn-bg/40')}
                 />
               </FormField>
               <FormField label="과제 코드" info="기안 시 자동 발번">
@@ -253,7 +265,7 @@ export default function AgentTaskRegisterPage() {
                 </div>
               </FormField>
               <FormField label="사용 범위" required info="누가 이 에이전트를 쓸 수 있는가">
-                <div className="flex gap-3">
+                <div className={cn('flex gap-3 rounded', pre && 'ring-1 ring-warn-border ring-offset-2')}>
                   {AGENT_USE_SCOPES.map((sc) => (
                     <RadioBox
                       key={sc}

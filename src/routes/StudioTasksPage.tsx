@@ -24,7 +24,14 @@ import {
   KIND_TONE,
   type StudioTaskKind,
 } from '@/data/studioTasks';
-import { useTemplates, markTemplateUsed, TEMPLATE_TARGET } from '@/data/mockTemplates';
+import {
+  useTemplates,
+  markTemplateUsed,
+  TEMPLATE_TARGET,
+  type TemplateItem,
+} from '@/data/mockTemplates';
+import { MOCK_KNOWLEDGE_TASKS } from '@/data/mockKnowledgeTasks';
+import Button from '@/components/ui/Button';
 
 const KIND_ORDER: StudioTaskKind[] = [
   'agent',
@@ -78,6 +85,8 @@ export default function StudioTasksPage() {
   const tenant = useTenant();
   const [kind, setKind] = useState<StudioTaskKind | 'all'>('all');
   const [query, setQuery] = useState('');
+  /** 템플릿 상세 모달 — 복제 전에 무엇을 쓰는지 확인시킨다(2A-2). */
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   // 워크플로우 빌더·에이전트 빌더에서 저장한 템플릿이 여기에 그대로 나타난다.
   const templates = useTemplates();
@@ -108,6 +117,19 @@ export default function StudioTasksPage() {
   }, [scoped, kind, query]);
 
   const countOf = (k: StudioTaskKind) => scoped.filter((t) => t.kind === k).length;
+
+  /*
+   * 「내 과제」 — 지금 이 계정이 만들었거나 결재를 올려 둔 것.
+   *
+   * 전체 목록만 있으면 방금 기안한 에이전트가 남의 과제 사이에 묻힌다.
+   * 시연에서 "홈으로 돌아오면 내 것이 결재 진행 중으로 보인다"(2A-8·2B-6)가
+   * 성립하려면 내 것이 따로 묶여야 한다.
+   */
+  const mine = useMemo(
+    () => scoped.filter((t) => t.ownerName === persona?.name),
+    [scoped, persona],
+  );
+  const minePending = mine.filter((t) => t.state.includes('결재 진행 중'));
 
   return (
     <div>
@@ -143,6 +165,51 @@ export default function StudioTasksPage() {
         ))}
       </div>
 
+      {/* ── 내 과제 · 진행 중 (2A-1 · 2A-8 · 2B-6) ── */}
+      {mine.length > 0 && (
+        <div className="card px-4 py-3 mb-3.5">
+          <div className="flex items-baseline gap-2 mb-2">
+            <h2 className="text-[12.5px] font-extrabold text-ink">내 과제</h2>
+            <span className="text-[11px] text-ink-mid font-semibold">
+              <b className="text-ink-dark">{persona?.name}</b> 담당 · {mine.length}건
+              {minePending.length > 0 && (
+                <>
+                  {' '}· 결재 진행 중{' '}
+                  <b className="text-warn">{minePending.length}건</b>
+                </>
+              )}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {mine.slice(0, 6).map((t) => {
+              const pending = t.state.includes('결재 진행 중');
+              return (
+                <Link
+                  key={`${t.kind}-${t.id}`}
+                  to={t.href}
+                  className={cn(
+                    'border rounded px-3 py-2.5 bg-white block hover:border-brand-dark transition-colors',
+                    pending ? 'border-warn-border' : 'border-line-soft',
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={cn('pill border', KIND_TONE[t.kind])}>{KIND_LABEL[t.kind]}</span>
+                    <span className="ml-auto text-[9.5px] font-mono font-bold text-ink-light">{t.id}</span>
+                  </div>
+                  <div className="text-[12px] font-extrabold text-ink leading-tight truncate" title={t.name}>
+                    {t.name}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <StatusPill tone={pending ? 'warn' : stateTone(t.state)}>{t.state}</StatusPill>
+                    <span className="ml-auto text-[10px] text-ink-mid font-semibold">{t.updatedAt}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── 템플릿 (29 템플릿화 및 재사용 자산 관리) ── */}
       <div className="card px-4 py-3 mb-3.5">
         <div className="flex items-baseline gap-2 mb-2">
@@ -163,22 +230,15 @@ export default function StudioTasksPage() {
               <div className="text-[12px] font-extrabold text-ink leading-tight mb-1">{t.name}</div>
               <p className="text-[10.5px] text-ink-mid font-semibold leading-snug mb-1.5">{t.desc}</p>
               <div className="flex items-center gap-1.5">
+                {/*
+                  바로 복제하지 않고 상세를 먼저 연다 — 용도·연결 지식·사용 실적을
+                  보고 고르는 것이 '검증된 자산 재사용' 이다(2-1 템플릿화).
+                */}
                 <button
                   type="button"
-                  onClick={() => {
-                    // 재사용 자산 관리 지표 — 복제하면 사용 횟수가 실제로 올라간다.
-                    markTemplateUsed(t.id);
-                    toast(
-                      `${t.name} 템플릿을 복제했습니다`,
-                      `${t.id} · 저장 ${t.savedBy} — 빌더에 구성이 채워진 상태로 열립니다`,
-                      'ok',
-                    );
-                    // 토스트로 끝내면 '복제' 가 말뿐이다. 해당 빌더를 템플릿 구성이
-                    // 채워진 상태로 연다(`?tpl=` 을 빌더가 해석한다).
-                    navigate(`${TEMPLATE_TARGET[t.kind]}?tpl=${t.id}`);
-                  }}
+                  onClick={() => setDetailId(t.id)}
                   className="text-[10.5px] font-extrabold text-info hover:underline"
-                >이 템플릿 사용하기 →</button>
+                >템플릿 상세 →</button>
                 <span className="ml-auto text-[9.5px] font-mono font-bold text-ink-light">{t.id}</span>
               </div>
             </div>
@@ -211,6 +271,31 @@ export default function StudioTasksPage() {
           />
         </div>
       </div>
+
+      {/* ── 템플릿 상세 모달 (2A-2) ── */}
+      {detailId && (() => {
+        const t = templates.find((x) => x.id === detailId);
+        if (!t) return null;
+        return (
+          <TemplateDetailModal
+            tpl={t}
+            onClose={() => setDetailId(null)}
+            onUse={() => {
+              // 재사용 자산 관리 지표 — 복제하면 사용 횟수가 실제로 올라간다.
+              markTemplateUsed(t.id);
+              setDetailId(null);
+              toast(
+                `${t.name} 템플릿을 복제했습니다`,
+                `${t.id} · 저장 ${t.savedBy} — 빌더에 구성이 채워진 상태로 열립니다`,
+                'ok',
+              );
+              // 토스트로 끝내면 '복제' 가 말뿐이다. 해당 빌더를 템플릿 구성이
+              // 채워진 상태로 연다(`?tpl=` 을 빌더가 해석한다).
+              navigate(`${TEMPLATE_TARGET[t.kind]}?tpl=${t.id}`);
+            }}
+          />
+        );
+      })()}
 
       {/* ── 목록 ── */}
       {visible.length === 0 ? (
@@ -261,6 +346,144 @@ export default function StudioTasksPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════ 템플릿 상세 (2A-2) ═══════════════ */
+
+/**
+ * RFP 2-1 「에이전트/워크플로우/프롬프트의 템플릿화 및 조직 내 재사용 자산 관리」
+ *
+ * 카드에서 바로 빌더로 보내면 개발자가 **무엇을 복제하는지 모르고 고른다.**
+ * 용도·구성·연결 지식·사용 실적을 먼저 보여 주고, 거기서 복제로 넘긴다.
+ */
+function TemplateDetailModal({
+  tpl,
+  onUse,
+  onClose,
+}: {
+  tpl: TemplateItem;
+  onUse: () => void;
+  onClose: () => void;
+}) {
+  const agent = tpl.preset?.kind === '에이전트' ? tpl.preset.agent : null;
+  const wf = tpl.preset?.kind === '워크플로우' ? tpl.preset : null;
+  const linked = agent
+    ? MOCK_KNOWLEDGE_TASKS.filter((k) => agent.linkedKnowledge.includes(k.id))
+    : [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-6">
+      <div className="w-full max-w-[600px] max-h-[86vh] overflow-auto bg-white border border-line rounded-lg shadow-xl">
+        <div className="px-5 py-4 border-b border-line-soft">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="pill bg-surface-soft text-ink-mid border border-line-soft">{tpl.kind}</span>
+            <h2 className="text-[15px] font-extrabold text-ink">{tpl.name}</h2>
+            <span className="ml-auto text-[10.5px] font-mono font-bold text-ink-light">{tpl.id}</span>
+          </div>
+          <p className="text-[11.5px] text-ink-mid font-semibold">{tpl.desc}</p>
+        </div>
+
+        <div className="px-5 py-4 space-y-3.5">
+          <section>
+            <SubTitle>사용 실적</SubTitle>
+            <div className="grid grid-cols-2 gap-2">
+              <MiniStat label="복제 사용" value={`${tpl.usedCount}회`} />
+              <MiniStat label="저장" value={tpl.savedBy} />
+            </div>
+          </section>
+
+          {agent && (
+            <>
+              <section>
+                <SubTitle>복제되는 구성</SubTitle>
+                <dl className="grid grid-cols-[86px_1fr] gap-y-1 text-[11.5px]">
+                  <dt className="text-ink-mid font-semibold">배포 단계</dt>
+                  <dd className="text-ink-dark font-bold">{agent.stage}</dd>
+                  <dt className="text-ink-mid font-semibold">주력 모델</dt>
+                  <dd className="text-ink-dark font-bold font-mono text-[11px]">{agent.mainModel}</dd>
+                  <dt className="text-ink-mid font-semibold">도구</dt>
+                  <dd className="text-ink-dark font-bold">{agent.tools.join(' · ') || '없음'}</dd>
+                  <dt className="text-ink-mid font-semibold">가드레일</dt>
+                  <dd className="text-ink-dark font-bold">
+                    PII 마스킹 {agent.pii ? '활성' : '비활성'} · 레드팀 {agent.redteam ? '필수' : '생략'}
+                  </dd>
+                </dl>
+              </section>
+              <section>
+                <SubTitle>기능 — 시스템 프롬프트가 정의하는 일</SubTitle>
+                <p className="text-[11.5px] text-ink-dark font-semibold leading-relaxed bg-surface-soft border border-line-soft rounded px-3 py-2">
+                  {agent.systemPrompt}
+                </p>
+              </section>
+              <section>
+                <SubTitle>연결 지식</SubTitle>
+                {linked.length === 0 ? (
+                  <div className="text-[11.5px] text-warn font-semibold">연결된 지식이 없습니다</div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {linked.map((k) => (
+                      <div key={k.id} className="flex items-center gap-2.5 px-3 py-2 border border-line-soft rounded">
+                        <span className="text-[10px] font-mono font-bold text-ink-light">{k.id}</span>
+                        <span className="text-[11.5px] font-extrabold text-ink truncate">{k.name}</span>
+                        <span className="ml-auto text-[10.5px] text-ink-mid font-semibold whitespace-nowrap">
+                          소유 {k.ownerName} · 갱신 {k.updatedAt}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+
+          {wf && (
+            <section>
+              <SubTitle>복제되는 구성</SubTitle>
+              <div className="text-[11.5px] text-ink-dark font-semibold">
+                노드 {wf.nodes.length}개 · 연결 {wf.edges.length}개 — 캔버스에 그대로 배치됩니다
+              </div>
+            </section>
+          )}
+
+          {tpl.preset?.kind === '프롬프트' && (
+            <section>
+              <SubTitle>복제되는 구성</SubTitle>
+              <div className="text-[11.5px] text-ink-dark font-semibold">
+                프롬프트 라이브러리의 <b>{tpl.preset.promptId}</b> 템플릿을 엽니다
+              </div>
+            </section>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-line-soft flex items-center gap-2">
+          <span className="text-[11px] text-ink-mid font-semibold">
+            복제하면 빌더가 이 구성으로 채워진 채 열립니다
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" onClick={onClose}>닫기</Button>
+            <Button variant="primary" onClick={onUse}>이 템플릿 사용하기 →</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.3px] mb-1.5">
+      {children}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-line-soft bg-white px-3 py-2">
+      <div className="text-[10px] font-extrabold text-ink-light uppercase tracking-[0.3px]">{label}</div>
+      <div className="text-[13px] font-extrabold text-ink mt-0.5">{value}</div>
     </div>
   );
 }

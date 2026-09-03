@@ -803,32 +803,44 @@ const PLATFORM_APPROVER = { name: '김플랫', tenant: '그룹 공통' as Tenant
 
 /**
  * 배포 결재 1단계(과제 오너 그룹)의 실제 처리자.
- * 기안자 본인이 과제 오너면 소유 계열사 승인권자로, 그것도 겹치면 거버넌스로 넘긴다.
+ *
+ * 피해야 할 사람이 둘이다 — **기안자**(자기결재)와 **2단계 승인자**(같은 사람이
+ * 두 단계를 다 처리하면 단계를 나눈 의미가 없다). 그룹 공통 소속 기안자의 경우
+ * 과제 오너가 없어 플랫폼 관리자로 떨어지는데, 그러면 1·2단계가 같은 사람이
+ * 된다. 그래서 배제 목록을 받아 순서대로 내려간다(ONM-003).
  */
 function resolveTaskOwnerApprover(
   ownerTenant: Tenant,
   drafter: string,
+  taken: string[] = [],
 ): { name: string; tenant: Tenant; label: string } {
+  const blocked = (who?: { name: string }) => !who || who.name === drafter || taken.includes(who.name);
+
   const owner = taskOwnerOf(ownerTenant);
-  if (owner && owner.name !== drafter) {
-    return { name: owner.name, tenant: owner.tenant, label: '과제 오너 그룹 승인' };
+  if (!blocked(owner)) {
+    return { name: owner!.name, tenant: owner!.tenant, label: '과제 오너 그룹 승인' };
   }
   const admin = affiliateApprover(ownerTenant);
-  if (admin && admin.name !== drafter) {
-    return { name: admin.name, tenant: admin.tenant, label: '과제 오너 그룹 승인 (계열사 승인권자 대결)' };
+  if (!blocked(admin)) {
+    return { name: admin!.name, tenant: admin!.tenant, label: '과제 오너 그룹 승인 (계열사 승인권자 대결)' };
   }
+  // 그룹 공통 자산이거나 계열사에 배치된 사람이 없을 때 — 거버넌스가 1단계를 본다.
   const g = GROUP_GOVERNANCE_APPROVER;
-  return {
-    ...g,
-    label: `과제 오너 그룹 승인 (SoD 자동 위임 · ${ownerTenant} 오너 미배치)`,
-  };
+  if (!blocked(g)) {
+    return { ...g, label: `과제 오너 그룹 승인 (SoD 자동 위임 · ${ownerTenant} 오너 미배치)` };
+  }
+  return { ...CONSENT_DELEGATE, label: '과제 오너 그룹 승인 (SoD 자동 위임)' };
 }
 
-/** 기안 전에 결재선을 미리 보여 준다 — 등록 폼 사이드바가 쓴다. */
+/**
+ * 기안 전에 결재선을 미리 보여 준다 — 등록 폼 사이드바가 쓴다.
+ * 2단계를 먼저 정하고 1단계가 그 사람을 피하게 한다.
+ */
 export function previewDeployApprovers(ownerTenant: Tenant, drafter: string) {
+  const platform = avoidDrafter(PLATFORM_APPROVER, drafter);
   return {
-    owner: resolveTaskOwnerApprover(ownerTenant, drafter),
-    platform: avoidDrafter(PLATFORM_APPROVER, drafter),
+    owner: resolveTaskOwnerApprover(ownerTenant, drafter, [platform.name]),
+    platform,
   };
 }
 
@@ -861,8 +873,8 @@ let deploySeq = 1;
 export function submitAgentDeploy(draft: AgentDeployDraft): ApprovalItem {
   const id = `APV-AGT-${String(deploySeq++).padStart(3, '0')}`;
   const stamp = nowLabel();
-  const owner = resolveTaskOwnerApprover(draft.ownerTenant, draft.draftedBy);
   const platform = avoidDrafter(PLATFORM_APPROVER, draft.draftedBy);
+  const owner = resolveTaskOwnerApprover(draft.ownerTenant, draft.draftedBy, [platform.name]);
 
   const item: ApprovalItem = {
     id,
