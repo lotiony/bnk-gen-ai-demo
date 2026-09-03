@@ -26,6 +26,8 @@ import {
   getAgentRows,
 } from '@/data/mockMetering';
 import { useTenant } from '@/lib/tenantStore';
+import { useCurrentPersona } from '@/lib/persona';
+import { isAffiliateConsoleAdmin } from '@/lib/personaView';
 import { toast } from '@/lib/toast';
 import StatusPill from '@/components/ui/StatusPill';
 
@@ -33,8 +35,33 @@ const fmtTok = (n: number) => `${(n / 1_000_000).toFixed(1)}M`;
 const fmtKRW = (n: number) => n.toLocaleString('ko-KR');
 
 export default function MeteringPage() {
-  const rows = useMemo(() => getMeteringRows(), []);
-  const totals = useMemo(() => getMeteringTotals(), []);
+  const persona = useCurrentPersona();
+  /*
+   * 계열사 관리자는 **자기 계열사 행만** 본다. 전사 표를 그대로 주면 남의 계열사
+   * 정산액이 노출된다(SEC-001). 총액 카드도 전사가 아니라 자기 계열사로 바뀌고,
+   * "그룹 내 비중" 은 전사 대비 자기 몫이라 그 숫자만 남긴다.
+   */
+  const affiliate = isAffiliateConsoleAdmin(persona);
+  const myTenant = persona?.tenant ?? '';
+  const allRows = useMemo(() => getMeteringRows(), []);
+  const rows = useMemo(
+    () => (affiliate ? allRows.filter((r) => r.name === myTenant) : allRows),
+    [affiliate, allRows, myTenant],
+  );
+  const groupTotals = useMemo(() => getMeteringTotals(), []);
+  const mine = rows[0];
+  const totals = useMemo(() => {
+    if (!affiliate || !mine) return groupTotals;
+    return {
+      ...groupTotals,
+      input: mine.inputTokens,
+      output: mine.outputTokens,
+      total: mine.totalTokens,
+      cost: mine.monthCost,
+      inputCost: mine.inputCost,
+      outputCost: mine.outputCost,
+    };
+  }, [affiliate, mine, groupTotals]);
   /*
    * 상단 Namespace 스위처를 따라간다 — 계열사를 바꾸면 부서 분해가 그 계열사로
    * 열린다. 그룹 공통을 고르면 사용액 1위 계열사를 기본으로 잡는다.
@@ -57,8 +84,16 @@ export default function MeteringPage() {
     () => (effectiveDept ? getUserRows(picked, effectiveDept) : []),
     [picked, effectiveDept],
   );
-  const maxCost = Math.max(...rows.map((r) => r.monthCost), 1);
-  const agentRows = useMemo(() => getAgentRows(), []);
+  const maxCost = Math.max(...allRows.map((r) => r.monthCost), 1);
+  /*
+   * 에이전트 표 — 계열사 관리자는 **자체 에이전트만**. 그룹 공용 에이전트의 정산액은
+   * 전 계열사 호출을 합친 값이라 여기 두면 남의 사용량이 섞여 보인다(SEC-001).
+   * 그룹 공용의 배분분은 위 계열사 정산액 안에 이미 들어 있다.
+   */
+  const agentRows = useMemo(() => {
+    const all = getAgentRows();
+    return affiliate ? all.filter((a) => a.tenant === myTenant && !a.groupShared) : all;
+  }, [affiliate, myTenant]);
 
   return (
     <div>
@@ -66,11 +101,18 @@ export default function MeteringPage() {
       <div className="flex items-start gap-3 mb-3.5">
         <div className="min-w-0 flex-1">
           <h1 className="text-[19px] font-extrabold text-ink tracking-[-0.4px]">
-            계열사별 미터링 · Chargeback
+            {affiliate ? `${myTenant} 미터링 · Chargeback` : '계열사별 미터링 · Chargeback'}
           </h1>
           <p className="text-[11.5px] text-ink-mid font-semibold mt-1">
-            정산 대상 월 <b className="text-ink-dark">{BILLING_MONTH}</b> · 계열사 {rows.length}개 ·
-            입력/출력 토큰 분리 계측
+            정산 대상 월 <b className="text-ink-dark">{BILLING_MONTH}</b> ·{' '}
+            {affiliate ? (
+              <>
+                <b className="text-ink-dark">{mine?.namespace}</b> Namespace 범위 · 타 계열사 정산은
+                보이지 않는다
+              </>
+            ) : (
+              <>계열사 {rows.length}개 · 입력/출력 토큰 분리 계측</>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 pt-1">
@@ -88,13 +130,13 @@ export default function MeteringPage() {
       {/* ── KPI ── */}
       <div className="grid grid-cols-4 gap-2.5 mb-3.5">
         <KpiCard
-          label="전사 토큰"
+          label={affiliate ? '당사 토큰' : '전사 토큰'}
           value={fmtTok(totals.total)}
           sub={`입력 ${fmtTok(totals.input)} · 출력 ${fmtTok(totals.output)}`}
           tone="ok"
         />
         <KpiCard
-          label="전사 정산액"
+          label={affiliate ? '당사 정산액' : '전사 정산액'}
           value={`₩${fmtKRW(totals.cost)}`}
           sub={`입력분 ₩${fmtKRW(totals.inputCost)} · 출력분 ₩${fmtKRW(totals.outputCost)}`}
           tone="ok"
@@ -110,23 +152,34 @@ export default function MeteringPage() {
           sub={`배분 시 출력 가중치 ${OUTPUT_WEIGHT}배 적용`}
           tone="warn"
         />
-        <KpiCard
-          label="최다 사용 계열사"
-          value={totals.topTenant?.name ?? '-'}
-          sub={`₩${fmtKRW(totals.topTenant?.monthCost ?? 0)} · 비중 ${(totals.topTenant?.pct ?? 0).toFixed(1)}%`}
-          tone="warn"
-        />
+        {affiliate && mine ? (
+          <KpiCard
+            label="그룹 내 비중"
+            value={`${mine.pct.toFixed(1)}%`}
+            sub={`전월비 ${mine.deltaPct > 0 ? '▲' : '▼'} ${Math.abs(mine.deltaPct).toFixed(1)}% · 자체 에이전트 ${mine.agents}종`}
+            tone="warn"
+          />
+        ) : (
+          <KpiCard
+            label="최다 사용 계열사"
+            value={totals.topTenant?.name ?? '-'}
+            sub={`₩${fmtKRW(totals.topTenant?.monthCost ?? 0)} · 비중 ${(totals.topTenant?.pct ?? 0).toFixed(1)}%`}
+            tone="warn"
+          />
+        )}
       </div>
 
       {/* ── 계열사별 정산표 ── */}
       <section className="card px-5 py-4 mb-3.5">
         <div className="flex items-center gap-2 mb-2.5">
-          <h2 className="text-[14px] font-extrabold text-ink">계열사별 월 정산</h2>
+          <h2 className="text-[14px] font-extrabold text-ink">
+            {affiliate ? '월 정산' : '계열사별 월 정산'}
+          </h2>
           <span className="text-[11px] text-ink-mid font-semibold">
             행을 누르면 아래에 <b className="text-ink-dark">부서별 분해</b>가 열린다
           </span>
           <span className="ml-auto text-[11px] text-ink-mid font-bold">
-            {rows.length}개 계열사 · 자체 에이전트 합계{' '}
+            {affiliate ? '' : `${rows.length}개 계열사 · `}자체 에이전트 합계{' '}
             {rows.reduce((a, r) => a + r.agents, 0)}종 + 그룹 공통 {rows[0]?.sharedAgents ?? 0}종 공용
           </span>
         </div>
@@ -209,6 +262,7 @@ export default function MeteringPage() {
                   </tr>
                 );
               })}
+              {!affiliate && (
               <tr className="bg-surface-soft font-extrabold">
                 <td className="px-2.5 py-2 text-[11.5px] text-ink">합계</td>
                 <Num v={fmtTok(totals.input)} bold />
@@ -221,6 +275,7 @@ export default function MeteringPage() {
                 <td />
                 <Num v={String(rows.reduce((a, r) => a + r.agents, 0))} bold />
               </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -231,10 +286,15 @@ export default function MeteringPage() {
         <section className="card px-5 py-4">
           <h2 className="text-[14px] font-extrabold text-ink mb-1">입력 · 출력 구성</h2>
           <p className="text-[11px] text-ink-mid font-semibold mb-3">
-            업무 성격에 따라 출력 비중이 다르다 — 상담 요약은 출력이 길고, 조회·분류는 입력이 길다
+            {affiliate
+              ? '부서별 출력 비중 — 상담 요약은 출력이 길고, 조회·분류는 입력이 길다'
+              : '업무 성격에 따라 출력 비중이 다르다 — 상담 요약은 출력이 길고, 조회·분류는 입력이 길다'}
           </p>
           <div className="space-y-1.5">
-            {rows.map((r) => {
+            {(affiliate
+              ? depts.map((d) => ({ name: d.dept, inputTokens: d.inputTokens, outputTokens: d.outputTokens, totalTokens: d.inputTokens + d.outputTokens }))
+              : rows
+            ).map((r) => {
               const outPct = (r.outputTokens / r.totalTokens) * 100;
               return (
                 <div key={r.name} className="grid grid-cols-[92px_1fr_54px] items-center gap-2">
@@ -362,7 +422,11 @@ export default function MeteringPage() {
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-[14px] font-extrabold text-ink">에이전트별 미터링</h2>
           <span className="text-[11px] text-ink-mid font-bold">
-            호출이 발생한 <b className="text-ink-dark">{agentRows.length}종 전수</b> · 상위 N 절단 없음
+            {affiliate ? (
+              <>당사 자체 에이전트 <b className="text-ink-dark">{agentRows.length}종</b> · 그룹 공용분은 계열사 정산액에 배분 반영</>
+            ) : (
+              <>호출이 발생한 <b className="text-ink-dark">{agentRows.length}종 전수</b> · 상위 N 절단 없음</>
+            )}
           </span>
           <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
             AGB-010
@@ -444,7 +508,7 @@ export default function MeteringPage() {
         </p>
         <div className="grid grid-cols-3 gap-2.5">
           {SETTLEMENT_REPORTS.map((r) => {
-            const cost = r.state === 'scheduled' ? totals.cost : r.totalCost;
+            const cost = affiliate || r.state === 'scheduled' ? totals.cost : r.totalCost;
             return (
               <div key={r.id} className="border border-line-soft rounded px-3 py-2.5 bg-white">
                 <div className="flex items-center gap-2 mb-1">
@@ -457,7 +521,7 @@ export default function MeteringPage() {
                 </div>
                 <div className="text-[11px] text-ink-mid font-semibold">{r.runAt}</div>
                 <div className="text-[11px] text-ink-dark font-semibold mt-1">
-                  계열사 {r.tenants}개 · 합계{' '}
+                  {affiliate ? myTenant : `계열사 ${r.tenants}개`} · 합계{' '}
                   <b className="text-ink tabular-nums">₩{fmtKRW(cost)}</b>
                 </div>
                 <div className="flex items-center gap-1.5 mt-2">

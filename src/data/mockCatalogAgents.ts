@@ -165,7 +165,8 @@ export const MOCK_CATALOG_AGENTS: CatalogAgent[] = [
     mainModel: 'onprem/gpt-oss-120b',
     linkedKnowledgeCount: 2,
     callsWeekly: 7400,
-    p95Ms: 1100,
+    // 서비스·배포 관리(mockServiceRegistry)의 SLA 와 같은 값 — 외부 신용조회 API 지연.
+    p95Ms: 3400,
     customerFacing: false,
     sensitivity: 3,
     ownerName: '서신용',

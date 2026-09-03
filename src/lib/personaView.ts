@@ -20,7 +20,7 @@ import { getDeployApprovals } from '@/lib/deployApprovalStore';
 import { projectsList } from '@/data/mockProjects';
 import { FEATURED_AGENTS, type FeaturedAgent } from '@/data/mockFeaturedAgents';
 import type { ApprovalItem } from '@/types';
-import { AFFILIATE_APPROVER_IDS } from '@/data/mockPersonas';
+import { AFFILIATE_APPROVER_IDS, AFFILIATE_CONSOLE_ADMIN_IDS } from '@/data/mockPersonas';
 import type { Persona, PersonaId } from '@/data/mockPersonas';
 
 /** 현재 페르소나 ID (null이면 로그아웃 상태). */
@@ -51,7 +51,8 @@ function approvalCategoryAllowlist(persona: PersonaLike): string[] | null {
       return ['account'];
     case 'bs_admin':
     case 'kn_admin':
-      // 계열사 승인권자는 그룹 결재함 전체를 보지 않는다(SEC-001 격리).
+    case 'ci_admin':
+      // 계열사 승인권자·계열사 콘솔 관리자는 그룹 결재함 전체를 보지 않는다(SEC-001 격리).
       // 빈 allowlist 로 두고, 아래 union 규칙이 **본인에게 배정된 승격 건**만 더한다.
       return [];
     default:
@@ -222,6 +223,17 @@ export function canAccessAdminConsole(persona: PersonaLike): boolean {
   // GPU 자원·감사 원장)은 열지 않는다. 승인권자이지 공동존 운영자가 아니다(SEC-001).
   if (AFFILIATE_APPROVER_IDS.includes(persona.id)) return false;
   return persona.group === '관리자';
+}
+
+/**
+ * 관리 콘솔이 **자기 계열사 범위로만** 열리는 계정인가.
+ *
+ * 열리는 것과 어디까지 보이는지는 다른 문제다. 계열사 관리자에게 전사 미터링
+ * 표를 그대로 보여 주면 남의 계열사 정산액이 노출된다 — 관리 콘솔의 각 화면은
+ * 이 판정으로 자기 Namespace 만 남긴다(SEC-001).
+ */
+export function isAffiliateConsoleAdmin(persona: PersonaLike): boolean {
+  return !!persona && AFFILIATE_CONSOLE_ADMIN_IDS.includes(persona.id);
 }
 
 /* ═══════════════════════ 메뉴 노출 통제 ═══════════════════════ */

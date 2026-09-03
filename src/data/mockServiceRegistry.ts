@@ -28,6 +28,26 @@ export type OperatingArea = '그룹 공통 운영영역' | '계열사 전용 운
 export type ShareScope = '개인' | '부서' | '본부' | '계열사' | '그룹 전체';
 export type DeployStatus = '테스트 중' | '배포 대기' | '배포 완료' | '롤백됨';
 
+/**
+ * SLA 메트릭 — [45] 배포 현황의 "이상 서비스" 판단 근거.
+ * 관리자 대시보드의 과제 SLO 와 같은 규칙(P95 / 목표)을 쓴다.
+ */
+export interface ServiceSla {
+  p95Ms: number;
+  sloTargetMs: number;
+  /** P95 목표 충족률(%). 99 미만이면 주의. */
+  attainmentPct: number;
+  errorRatePct: number;
+  calls7d: number;
+}
+
+export interface ServiceActivity {
+  at: string;
+  kind: '배포' | '지연' | '오류' | '조치' | '게시';
+  text: string;
+  by: string;
+}
+
 export interface ServiceItem {
   id: string;
   kind: ServiceKind;
@@ -40,6 +60,16 @@ export interface ServiceItem {
   version: string;
   lastActionBy: string;
   lastActionAt: string;
+  /** 운영 중 서비스만 갖는다. 없으면 계측 대상이 아니다(게시 전·중지). */
+  sla?: ServiceSla;
+  /** 최근 활동 — 최신순. 상세 패널에서 원인 파악의 근거가 된다. */
+  activity?: ServiceActivity[];
+}
+
+/** SLA 주의 기준 — P95 목표 충족률 99% 미만. 대시보드 SLO 카드와 같은 문턱이다. */
+export const SLA_WARN_PCT = 99;
+export function isSlaWarn(it: ServiceItem): boolean {
+  return !!it.sla && it.sla.attainmentPct < SLA_WARN_PCT;
 }
 
 export const SERVICE_ITEMS: ServiceItem[] = [
@@ -53,6 +83,30 @@ export const SERVICE_ITEMS: ServiceItem[] = [
   // PRJ-SY-003 개발 생산성 향상 과제의 산출물 — 아직 학습계 테스트 중이라 게시 전이다.
   { id: 'AGT-410', kind: 'Agent', name: '코드 리뷰 · 시큐어코딩 점검', tenant: 'BNK시스템', operatingArea: '계열사 전용 운영영역', publishState: '게시 대기', shareScope: '부서', deployStatus: '테스트 중', version: 'v0.9-rc2', lastActionBy: '한지훈', lastActionAt: '2026-06-02 17:20' },
   { id: 'SVC-EMBED-2', kind: 'AI 서비스', name: '금융 특화 임베딩 서빙', tenant: '그룹 공통', operatingArea: '그룹 공통 운영영역', publishState: '게시 대기', shareScope: '그룹 전체', deployStatus: '배포 대기', version: 'v1.0', lastActionBy: '민모델', lastActionAt: '2026-06-02 09:12' },
+  /*
+   * BNK신용정보 — 시연 3막 파트 B 의 무대. 계열사 관리자(문관제)가 여기서 이상
+   * 서비스를 찾아 원인을 본다. AGT-731 은 카탈로그(mockCatalogAgents)의 실재
+   * 자산이며 P95 3.4s 도 그쪽 값과 같다 — 두 화면이 다른 숫자를 말하면 안 된다.
+   */
+  {
+    id: 'AGT-731', kind: 'Agent', name: '신용평가 조회 에이전트', tenant: 'BNK신용정보', operatingArea: '계열사 전용 운영영역', publishState: '게시 중', shareScope: '계열사', deployStatus: '배포 완료', version: 'v1.2', lastActionBy: '서신용', lastActionAt: '2026-05-30 15:10',
+    sla: { p95Ms: 3400, sloTargetMs: 3000, attainmentPct: 96.7, errorRatePct: 1.8, calls7d: 7400 },
+    activity: [
+      { at: '2026-06-03 08:52', kind: '지연', text: '외부 신용조회 API(NICE 연동 Tool) 응답 P95 2.1s → 지연 구간이 전체 P95 의 62%', by: '자동 계측' },
+      { at: '2026-06-03 08:40', kind: '오류', text: 'Tool 타임아웃 4건 — 재시도 후 3건 복구, 1건 사용자 재질의', by: '자동 계측' },
+      { at: '2026-06-02 17:05', kind: '지연', text: 'P95 목표(3.0s) 초과 시작 — 17:00 이후 외부 API 응답 시간 상승', by: '자동 계측' },
+      { at: '2026-05-30 15:10', kind: '배포', text: 'v1.2 서빙계 배포 — 신용조회 결과 요약 프롬프트 개선', by: '서신용' },
+      { at: '2026-05-30 14:40', kind: '조치', text: 'v1.2 레드팀 재검 통과 (RT-C 보완)', by: '박거버' },
+    ],
+  },
+  {
+    id: 'AGT-745', kind: 'Agent', name: '채권추심 상담 요약', tenant: 'BNK신용정보', operatingArea: '계열사 전용 운영영역', publishState: '게시 중', shareScope: '부서', deployStatus: '배포 완료', version: 'v2.0', lastActionBy: '서신용', lastActionAt: '2026-05-21 10:30',
+    sla: { p95Ms: 1900, sloTargetMs: 3000, attainmentPct: 99.8, errorRatePct: 0.3, calls7d: 4100 },
+    activity: [
+      { at: '2026-06-02 09:15', kind: '게시', text: '채권관리부 → 채권추심부 공개 범위 확장 (부서)', by: '문관제' },
+      { at: '2026-05-21 10:30', kind: '배포', text: 'v2.0 서빙계 배포 — 상담 유형 분류 12종으로 확대', by: '서신용' },
+    ],
+  },
 ];
 
 export const PUBLISH_TONE: Record<PublishState, 'ok' | 'neutral' | 'warn'> = {

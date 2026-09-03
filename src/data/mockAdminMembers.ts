@@ -319,6 +319,48 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     mfaEnabled: false,
   },
 
+  /* ── BNK신용정보 ── */
+  // 문관제는 페르소나(ci_admin), 서신용은 AGT-731 소유자 — 카탈로그와 같은 이름.
+  {
+    id: 'USR-030',
+    empNo: '20160218',
+    name: '문관제',
+    email: 'admin.moon@bnkfg.group.local',
+    tenant: 'BNK신용정보',
+    dept: '디지털전략팀',
+    role: 'reviewer',
+    status: 'active',
+    taskIds: [],
+    lastSeen: '방금',
+    mfaEnabled: true,
+  },
+  {
+    id: 'USR-031',
+    empNo: '20190426',
+    name: '서신용',
+    email: 'credit.seo@bnkfg.group.local',
+    tenant: 'BNK신용정보',
+    dept: '신용조사부',
+    role: 'pm',
+    status: 'active',
+    taskIds: [],
+    lastSeen: '오늘 09:40',
+    mfaEnabled: true,
+  },
+  {
+    id: 'USR-032',
+    empNo: '20210907',
+    name: '강추심',
+    email: 'chusim.kang@bnkfg.group.local',
+    tenant: 'BNK신용정보',
+    dept: '채권추심부',
+    role: 'member',
+    status: 'active',
+    taskIds: [],
+    lastSeen: '어제 18:20',
+    mfaEnabled: false,
+  },
+
   /* ── BNK캐피탈 · 투자증권 · 저축은행 ── */
   {
     id: 'USR-020',

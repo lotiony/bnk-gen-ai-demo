@@ -47,7 +47,9 @@ export type PersonaId =
   | 'kn_data_dev'
   | 'kn_service_user'
   // BNK캐피탈
-  | 'cp_service_user';
+  | 'cp_service_user'
+  // BNK신용정보
+  | 'ci_admin';
 
 /** 화면 노출·권한 판정에 쓰는 큰 분류. */
 export type PersonaGroup = '관리자' | '개발자' | '사용자';
@@ -379,6 +381,35 @@ export const PERSONAS: Persona[] = [
     canSwitchTenant: false,
     hint: '그룹 공통 + 캐피탈 전용 자산 사용',
   },
+
+  /* ─── BNK신용정보 ─── */
+  /**
+   * 계열사 AI 플랫폼 관리자 — **자기 계열사를 운영·관제하는 관리자**.
+   *
+   * 고승인(부산은행)·유승인(경남은행)과 자리가 다르다. 그 둘은 자산 공개 범위를
+   * 승인하는 결재 역할이고, 이 계정은 계열사 Namespace 의 미터링·서비스·멤버를
+   * 직접 다루는 운영 역할이다(RFP 2-1 관리자 포털 37·38·39·45). 시연 3막 파트 B
+   * 「계열사 관리자의 이슈 처리」가 이 계정으로 진행된다.
+   *
+   * 관리 콘솔은 열리되 **자기 계열사 범위로만** 열린다. 그룹 공동존 조망(대시보드·
+   * GPU·감사 원장)은 지주 관리자 몫이다 — 메뉴는 미터링·서비스·멤버 셋만 나오고,
+   * 각 화면은 ns-ci 로 잘린다(SEC-001). `canSwitchTenant` 는 당연히 false 다.
+   *
+   * 소유 자산의 승격 요청은 이 계정이 2단계 승인권자가 된다(`affiliateApprover`).
+   * 시나리오 1 에서 행원이 올린 AGT-731 그룹 공개 요청이 여기로 온다.
+   */
+  {
+    id: 'ci_admin',
+    role: '계열사 AI 플랫폼 관리자',
+    rfpRole: '관리자',
+    name: '문관제',
+    initial: '문',
+    dept: 'BNK신용정보 · 디지털전략팀',
+    group: '관리자',
+    tenant: 'BNK신용정보',
+    canSwitchTenant: false,
+    hint: '신용정보 Namespace 미터링·서비스·멤버 운영 · 자산 공개 승인',
+  },
 ];
 
 export const DEFAULT_PERSONA_ID: PersonaId = 'platform_admin';
@@ -394,6 +425,7 @@ export const PERSONA_TENANT_ORDER: Tenant[] = [
   '부산은행',
   '경남은행',
   'BNK캐피탈',
+  'BNK신용정보',
 ];
 
 export function personasByTenant(t: Tenant): Persona[] {
@@ -405,6 +437,12 @@ export function personasByTenant(t: Tenant): Persona[] {
  * 결재 권한은 갖되 공동존 운영 콘솔·타 계열사 Namespace 는 열지 않는다.
  */
 export const AFFILIATE_APPROVER_IDS: PersonaId[] = ['bs_admin', 'kn_admin'];
+
+/**
+ * 계열사 관리 콘솔 운영자 — 관리 콘솔이 **자기 계열사 범위로** 열리는 계정.
+ * 승인권자(위)와 달리 콘솔은 열리지만, 그룹 공동존 조망 메뉴는 나오지 않는다.
+ */
+export const AFFILIATE_CONSOLE_ADMIN_IDS: PersonaId[] = ['ci_admin'];
 
 /** 해당 계열사의 승인권자(관리자 그룹). 없으면 undefined. */
 export function affiliateApprover(t: Tenant): Persona | undefined {

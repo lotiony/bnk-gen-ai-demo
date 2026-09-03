@@ -1,6 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
+import { isAffiliateConsoleAdmin } from '@/lib/personaView';
+import { TENANTS } from '@/data/tenants';
 import AreaGuard from './AreaGuard';
 
 interface AdminNavItem {
@@ -35,10 +37,30 @@ const NAV: AdminNavItem[] = [
 ];
 
 /**
+ * 계열사 관리자에게 열리는 메뉴.
+ *
+ * 관리 콘솔의 나머지(대시보드·GPU·모델·게이트웨이·감사)는 **그룹 공동존 조망**이라
+ * 계열사 관리자의 것이 아니다. 메뉴를 회색으로 두지 않고 아예 그리지 않는다 —
+ * RFP 2-1 "접근 가능한 워크스페이스·메뉴·기능만 노출". 딥링크로 들어와도
+ * 아래 리다이렉트가 첫 메뉴로 되돌린다.
+ */
+const AFFILIATE_MENU = ['/admin/metering', '/admin/services', '/admin/members'];
+
+/**
  * 관리 콘솔 공통 레이아웃 — 좌측 사이드바 + 본문 Outlet.
  * 모니터링/운영 관리 두 그룹으로 항목을 묶어 추후 운영 항목 확장에 대비.
  */
 export default function AdminLayout() {
+  const persona = useCurrentPersona();
+  const location = useLocation();
+  const affiliate = isAffiliateConsoleAdmin(persona);
+  const nav = affiliate ? NAV.filter((n) => AFFILIATE_MENU.includes(n.to)) : NAV;
+  const ns = TENANTS.find((t) => t.name === persona?.tenant)?.namespace ?? '';
+
+  if (affiliate && !AFFILIATE_MENU.some((m) => location.pathname.startsWith(m))) {
+    return <Navigate to={AFFILIATE_MENU[0]} replace />;
+  }
+
   const groups: AdminNavItem['group'][] = [
     '모니터링',
     '플랫폼 기반',
@@ -46,7 +68,6 @@ export default function AdminLayout() {
     '보안 · 거버넌스',
     '콘텐츠',
   ];
-  const persona = useCurrentPersona();
   const displayName = persona?.name ?? '김플랫';
   const displayRole = persona?.role ?? '관리자';
 
@@ -59,7 +80,7 @@ export default function AdminLayout() {
           <div className="card px-3 py-3">
             <div className="px-2 pb-2 mb-2 border-b border-line-soft">
               <div className="text-[10.5px] text-ink-mid font-bold tracking-[0.3px]">
-                플랫폼 관리
+                {affiliate ? '계열사 관리' : '플랫폼 관리'}
               </div>
               <div className="text-[13.5px] font-extrabold text-ink mt-0.5 flex items-center gap-1.5">
                 관리 콘솔
@@ -67,15 +88,24 @@ export default function AdminLayout() {
                   🔒 MFA
                 </span>
               </div>
+              {affiliate && (
+                // 어디까지 보이는지를 사이드바에 박는다 — 화면마다 따로 설명하지 않아도 되게.
+                <div className="mt-1.5 text-[10px] font-semibold text-ink-mid leading-snug">
+                  <b className="text-ink-dark">{persona?.tenant}</b> 범위
+                  <span className="font-mono text-ink-light"> · {ns}</span>
+                  <br />
+                  그룹 조망 메뉴는 지주 관리자 권한
+                </div>
+              )}
             </div>
 
-            {groups.map((g) => (
+            {groups.filter((g) => nav.some((n) => n.group === g)).map((g) => (
               <div key={g} className="mb-2 last:mb-0">
                 <div className="text-[9.5px] text-ink-light font-extrabold tracking-[0.4px] uppercase px-2 pt-1 pb-1">
                   {g}
                 </div>
                 <ul className="space-y-0.5">
-                  {NAV.filter((n) => n.group === g).map((n) => (
+                  {nav.filter((n) => n.group === g).map((n) => (
                     <li key={n.to}>
                       <NavLink
                         to={n.to}

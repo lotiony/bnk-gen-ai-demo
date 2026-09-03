@@ -3,6 +3,15 @@ import { cn } from '@/lib/utils';
 import StatusPill from '@/components/ui/StatusPill';
 import { APPROVAL_LINES, ACCESS_HISTORY } from '@/data/mockApprovalLines';
 import { SERVICE_CATEGORIES, DEPT_PERMISSIONS, USER_OVERRIDES } from '@/data/mockUsagePermission';
+import { Link } from 'react-router-dom';
+import { useCurrentPersona } from '@/lib/persona';
+import { isAffiliateConsoleAdmin, getVisibleApprovals } from '@/lib/personaView';
+import {
+  useApprovalRevision,
+  findPromotion,
+  currentPromotionStage,
+  getApprovalDecision,
+} from '@/data/mockApprovals';
 import { TENANT_SHORT, TENANTS } from '@/data/tenants';
 import { toast } from '@/lib/toast';
 import {
@@ -45,12 +54,20 @@ const STATUS_TONE: Record<MemberStatus, string> = {
  * 전사 멤버의 플랫폼 역할/상태/MFA를 한 화면에서 검색·필터·변경한다.
  */
 export default function AdminMembersPage() {
+  const persona = useCurrentPersona();
+  /* 계열사 관리자는 자기 계열사 멤버만 다룬다 — 계열사 축이 고정된다(SEC-001). */
+  const affiliate = isAffiliateConsoleAdmin(persona);
+  const myTenant = persona?.tenant ?? '';
   const [q, setQ] = useState('');
   const [role, setRole] = useState<RoleFilter>('all');
   const [status, setStatus] = useState<StatusFilter>('all');
   /* 11개 Namespace 테넌트 격리(SEC-001)를 쓰는 화면이므로 계열사 축이 있어야 한다. */
-  const [tenantFilter, setTenantFilter] = useState<string>('all');
-  const [members, setMembers] = useState<AdminMember[]>(ADMIN_MEMBERS);
+  const [tenantFilter, setTenantFilter] = useState<string>(affiliate ? myTenant : 'all');
+  const [allMembers, setMembers] = useState<AdminMember[]>(ADMIN_MEMBERS);
+  const members = useMemo(
+    () => (affiliate ? allMembers.filter((m) => m.tenant === myTenant) : allMembers),
+    [affiliate, allMembers, myTenant],
+  );
 
   const stats = useMemo(() => {
     const total = members.length;
@@ -111,7 +128,7 @@ export default function AdminMembersPage() {
 
       {tab === 'approval' && <ApprovalLinesTab />}
       {tab === 'history' && <AccessHistoryTab />}
-      {tab === 'permission' && <UsagePermissionTab />}
+      {tab === 'permission' && <UsagePermissionTab tenant={affiliate ? myTenant : null} />}
 
       {tab === 'members' && (
       <>
@@ -163,6 +180,12 @@ export default function AdminMembersPage() {
               </option>
             ))}
           </select>
+          {affiliate ? (
+            // 계열사 축이 고정됐음을 보인다 — 고를 수 없는 select 보다 정직하다.
+            <span className="h-8 px-2.5 inline-flex items-center rounded border border-line-soft bg-surface-soft text-[11.5px] font-extrabold text-ink-dark">
+              🔒 {myTenant}
+            </span>
+          ) : (
           <select
             value={tenantFilter}
             onChange={(e) => setTenantFilter(e.target.value)}
@@ -175,6 +198,7 @@ export default function AdminMembersPage() {
               </option>
             ))}
           </select>
+          )}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
@@ -343,10 +367,27 @@ function AccessHistoryTab() {
   );
 }
 
-function UsagePermissionTab() {
-  /* 원본 관리자 시나리오의 권한 요청 접수·승인 흐름을 위한 세션 목업.
-     실제 IAM/결재 API가 아니라 이 브라우저 세션에서만 상태가 바뀐다. */
-  const [requestState, setRequestState] = useState<'대기' | '승인'>('대기');
+/**
+ * 이용권한 설정 — RFP 2-1 [39] + 권한 요청 처리.
+ *
+ * 권한 요청은 **결재함의 실제 승격 건**이다. 예전에는 이 탭에 REQ-2026-031 이라는
+ * 고정 카드가 있었고 「승인」을 누르면 이 화면 안에서만 상태가 바뀌었다 — 결재함을
+ * 열면 그런 건은 없었다. 시연 1막에서 행원이 올린 요청이 3막에서 계열사 관리자에게
+ * 도착해야 하므로, 같은 결재 데이터를 여기서 읽고 상세는 결재 화면으로 넘긴다.
+ */
+function UsagePermissionTab({ tenant }: { tenant: string | null }) {
+  const persona = useCurrentPersona();
+  useApprovalRevision();
+  /*
+   * 내 계열사 자산에 올라온 공유범위 승격 요청 — 현재 단계가 내 차례인 것.
+   * 계열사 관리자는 자기 자산의 2단계(소유 계열사 관리자 승인)만 여기서 본다.
+   */
+  const requests = getVisibleApprovals(persona)
+    .map((a) => ({ item: a, promo: findPromotion(a.id) }))
+    .filter((x) => !!x.promo && (!tenant || x.promo.ownerTenant === tenant));
+  const deptRows = tenant ? DEPT_PERMISSIONS.filter((d) => d.tenant === tenant) : DEPT_PERMISSIONS;
+  const overrides = tenant ? USER_OVERRIDES.filter((u) => u.tenant === tenant) : USER_OVERRIDES;
+
   return (
     <div className="space-y-3.5">
       <section className="card p-4">
@@ -354,28 +395,69 @@ function UsagePermissionTab() {
           <div>
             <h2 className="text-[13px] font-extrabold text-ink">권한 요청</h2>
             <p className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
-              계열사 밖 자산 접근 요청 · 결재선에 따라 승인 후 권한을 확장한다
+              {tenant
+                ? `${tenant} 소유 자산에 대한 공개 범위 요청 · 소유 계열사 관리자 승인 → 그룹 거버넌스 승인`
+                : '계열사 밖 자산 접근 요청 · 결재선에 따라 승인 후 권한을 확장한다'}
             </p>
           </div>
-          <StatusPill tone={requestState === '승인' ? 'ok' : 'warn'}>{requestState}</StatusPill>
+          <StatusPill tone={requests.some((r) => r.item.state === 'pending') ? 'warn' : 'neutral'}>
+            대기 {requests.filter((r) => r.item.state === 'pending').length}건
+          </StatusPill>
         </div>
-        <div className="flex items-center gap-3 px-3 py-2 border border-line-soft rounded bg-white">
-          <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] font-extrabold text-ink-dark">REQ-2026-031 · 부산은행 행원</div>
-            <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
-              그룹 공통 여신업무 어시스턴트 · 조회 권한 · 결재선: 부서장 → 계열사 관리자 → 그룹 관리자
-            </div>
+        {requests.length === 0 ? (
+          <div className="px-3 py-4 border border-dashed border-line rounded text-center text-[11.5px] text-ink-mid font-semibold">
+            도착한 권한 요청이 없습니다
           </div>
-          {requestState === '대기' ? (
-            <button
-              type="button"
-              onClick={() => { setRequestState('승인'); toast('권한 요청을 승인했습니다 — 감사 원장에 기록됩니다'); }}
-              className="h-7 px-3 bg-brand border border-brand-dark rounded text-[11px] font-extrabold text-white hover:bg-brand-dark"
-            >승인</button>
-          ) : (
-            <span className="text-[11px] font-extrabold text-ok">권한 확장 완료</span>
-          )}
-        </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {requests.map(({ item, promo }) => {
+              const p = promo!;
+              const stage = currentPromotionStage(p);
+              const myTurn = item.state === 'pending' && stage?.approverName === persona?.name;
+              const decision = getApprovalDecision(item.id);
+              return (
+                <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 border border-line-soft rounded bg-white">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11.5px] font-extrabold text-ink-dark">
+                        {item.id} · {p.requestedBy} ({p.requesterTenant})
+                      </span>
+                      <span className="pill bg-surface-soft text-ink-mid border border-line-soft">
+                        {p.fromScope} → {p.toScope}
+                      </span>
+                    </div>
+                    <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5 truncate">
+                      <b className="text-ink-dark">{p.assetId} {p.assetName}</b> · 활용 {p.purpose} ·
+                      결재선: 기안 → 소유 계열사 관리자 → 그룹 거버넌스 ·{' '}
+                      {item.state === 'pending'
+                        ? `현재 ${stage?.label ?? '-'} (${stage?.approverName ?? '-'})`
+                        : item.state === 'done'
+                        ? `승격 완료 · ${decision?.decidedAt ?? ''} · 감사 원장 기록`
+                        : `반려 · ${decision?.decidedAt ?? ''}`}
+                    </div>
+                  </div>
+                  {item.state === 'pending' ? (
+                    <Link
+                      to={`/approvals/${item.id}`}
+                      className={cn(
+                        'h-7 px-3 inline-flex items-center rounded text-[11px] font-extrabold border whitespace-nowrap',
+                        myTurn
+                          ? 'bg-brand border-brand-dark text-white hover:bg-brand-dark'
+                          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
+                      )}
+                    >
+                      {myTurn ? '검토 · 승인 →' : '진행 상태 →'}
+                    </Link>
+                  ) : (
+                    <StatusPill tone={item.state === 'done' ? 'ok' : 'bad'}>
+                      {item.state === 'done' ? '권한 확장 완료' : '반려'}
+                    </StatusPill>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
       <section className="card p-4">
         <h2 className="text-[13px] font-extrabold text-ink mb-2.5">부서별 서비스 카테고리 접근</h2>
@@ -390,7 +472,7 @@ function UsagePermissionTab() {
             </tr>
           </thead>
           <tbody>
-            {DEPT_PERMISSIONS.map((d) => (
+            {deptRows.map((d) => (
               <tr key={d.tenant + d.dept} className="border-b border-line-soft last:border-0">
                 <td className="py-2 pr-3 font-bold text-ink-dark whitespace-nowrap">{TENANT_SHORT[d.tenant]}</td>
                 <td className="py-2 pr-3 font-extrabold text-ink whitespace-nowrap">{d.dept}</td>
@@ -408,7 +490,7 @@ function UsagePermissionTab() {
         <h2 className="text-[13px] font-extrabold text-ink mb-1">사용자별 개별 부여 · 회수</h2>
         <p className="text-[10.5px] text-ink-mid font-semibold mb-2.5">부서 기본값과 다르게 지정된 예외만 표시한다</p>
         <div className="flex flex-col gap-1.5">
-          {USER_OVERRIDES.map((u, i) => (
+          {overrides.map((u, i) => (
             <div key={i} className="grid grid-cols-[100px_1fr_auto] gap-3 items-center px-3 py-2 border border-line-soft rounded bg-white">
               <span className="text-[11.5px] font-extrabold text-ink-dark">{u.name}</span>
               <span className="text-[10.5px] text-ink-dark font-semibold">

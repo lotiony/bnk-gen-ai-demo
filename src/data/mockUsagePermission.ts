@@ -22,6 +22,8 @@ export const DEPT_PERMISSIONS: DeptPermission[] = [
   { tenant: '부산은행', dept: '고객만족부', access: { '여신 업무': false, '외환 업무': false, '고객 상담': true, '규정·컴플라이언스': false, '일반 사무': true } },
   { tenant: '경남은행', dept: '외환사업부', access: { '여신 업무': false, '외환 업무': true, '고객 상담': false, '규정·컴플라이언스': true, '일반 사무': true } },
   { tenant: 'BNK캐피탈', dept: '마케팅부', access: { '여신 업무': false, '외환 업무': false, '고객 상담': true, '규정·컴플라이언스': false, '일반 사무': true } },
+  { tenant: 'BNK신용정보', dept: '신용조사부', access: { '여신 업무': true, '외환 업무': false, '고객 상담': false, '규정·컴플라이언스': true, '일반 사무': true } },
+  { tenant: 'BNK신용정보', dept: '채권추심부', access: { '여신 업무': false, '외환 업무': false, '고객 상담': true, '규정·컴플라이언스': true, '일반 사무': true } },
 ];
 
 export interface UserOverride {
@@ -37,4 +39,5 @@ export interface UserOverride {
 export const USER_OVERRIDES: UserOverride[] = [
   { name: '박서준', tenant: '부산은행', dept: '여신심사부', category: '외환 업무', granted: true, reason: '외환-여신 겸직 업무 수행' },
   { name: '윤지원', tenant: '부산은행', dept: '여신심사부', category: '규정·컴플라이언스', granted: false, reason: '신규 입사자 — 3개월 제한 정책' },
+  { name: '강추심', tenant: 'BNK신용정보', dept: '채권추심부', category: '여신 업무', granted: true, reason: '여신 연체 사후관리 겸직' },
 ];
