@@ -97,7 +97,9 @@ export const PERSONAS: Persona[] = [
     rfpRole: '관리자',
     name: '김지주',
     initial: '김',
-    dept: 'BNK시스템 · AI플랫폼팀',
+    // 소속은 지주다 — 공동존을 운영하되 조직상 BNK시스템 인력이 아니다.
+    // 다른 그룹 공통 페르소나(이사업·박거버·임정보·주개발)와 같은 '지주 · X' 표기.
+    dept: '지주 · AI플랫폼팀',
     group: '관리자',
     tenant: '그룹 공통',
     canSwitchTenant: true,
