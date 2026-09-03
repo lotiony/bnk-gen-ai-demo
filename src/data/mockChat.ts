@@ -122,6 +122,35 @@ export const CHAT_AGENTS: ChatAgentOption[] = [
 - 규정 해석이 갈리는 사안은 소관 부서 문의를 안내합니다.`,
   },
   {
+    /**
+     * AGB-006 ⑤ 고객/민원 분석 및 마케팅 — 시나리오 1 의 상담 에이전트.
+     * 질의응답이 아니라 프로필 → 동의 → 조회 → 분석 → 추천 → 요약을 **카드**로
+     * 이어 간다(mockConsultChat.ts). 문서 RAG 도 온톨로지도 아니라서 ontology:false.
+     */
+    id: 'GRP-005',
+    name: '고객 · 민원 분석 에이전트',
+    desc: '고객 프로필 생성 · 성향 분석 · 맞춤 상품 추천 · 상담 요약',
+    grounding: '고객 DB 가상 뷰(RLS/CLS) + 상품 인덱스 · 동의 권원 확인 후 조회',
+    ontology: false,
+    tenant: '그룹 공통',
+    admins: ['platform_admin', 'business_admin'],
+    systemPrompt: `당신은 고객 · 민원 분석 에이전트입니다.
+
+[역할]
+- 행원의 상담을 돕습니다. 고객 정보는 고객 DB 가상 뷰에서만 조회하고 복제하지 않습니다.
+- 계열사 간 조회는 제3자 정보 활용 동의가 확인된 뒤에만 수행합니다.
+- 상품 추천은 상품 인덱스의 유사 프로필 통계를 근거로 제시하고, 예상 이자는 규칙으로 계산합니다.
+
+[출력 형식]
+1) 단계별 카드 (프로필 · 동의 · 분석 · 추천 · 요약)
+2) 근거 데이터 출처
+
+[금칙]
+- 타 계열사 잔액·거래 내역을 조회하거나 표시하지 않습니다.
+- 투자 권유로 오인될 표현을 쓰지 않습니다 — 상담 초안 작성 보조가 목적입니다.
+- 동의가 확인되지 않은 고객 정보를 활용하지 않습니다.`,
+  },
+  {
     /* 카탈로그의 필수 Use Case ⑧과 Chat 선택지를 같은 자산으로 맞춘다. */
     id: 'GRP-008',
     name: '여신업무 어시스턴트',
@@ -586,4 +615,12 @@ export const RUN_STEP_TONE: Record<string, string> = {
   scan: 'bg-bad-bg text-bad border-bad-border',
   mask: 'bg-warn-bg text-warn border-warn-border',
   parse: 'bg-info-bg text-info border-info-border',
+  /* 고객 상담 턴(mockConsultChat) 전용 단계 */
+  identify: 'bg-brand-tint text-brand border-brand-tint',
+  deposit: 'bg-info-bg text-info border-info-border',
+  loan: 'bg-info-bg text-info border-info-border',
+  tx: 'bg-info-bg text-info border-info-border',
+  index: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
+  fit: 'bg-warn-bg text-warn border-warn-border',
+  summarize: 'bg-ok-bg text-ok border-ok-border',
 };

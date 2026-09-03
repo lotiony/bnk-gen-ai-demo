@@ -5,6 +5,7 @@ import { canViewOntologyReadOnly } from './lib/personaView';
 import LoginPage from './routes/LoginPage';
 import HomePage from './routes/HomePage';
 import ChatPage from './routes/ChatPage';
+import CustomerAssistPage from './routes/CustomerAssistPage';
 import PersonalDocsPage from './routes/PersonalDocsPage';
 import PortalLandingPage from './routes/PortalLandingPage';
 import { useCurrentPersona } from './lib/persona';
@@ -136,6 +137,8 @@ export default function App() {
       >
         <Route path="/" element={<HomePage />} />
         <Route path="/chat" element={<ChatPage />} />
+        {/* AGB-006 ⑤ 고객/민원 분석 — 시나리오 1 고객 상담 워크스페이스 */}
+        <Route path="/assist/customer" element={<CustomerAssistPage />} />
         <Route path="/documents" element={<PersonalDocsPage />} />
         {/*
           공통 포털 랜딩 — 로그인 직후 도착지. 포털 선택과 Namespace 구조를 함께 다룬다.

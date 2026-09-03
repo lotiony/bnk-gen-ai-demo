@@ -55,6 +55,7 @@ export const AGENT_META: Record<string, CatalogMeta> = {
   'AGT-411': { scope: '그룹', rating: 4.4, ratingCount: 52, installs: 27, tags: ['컴플라이언스', '규정', '내부통제'] },
   'AGT-512': { scope: '본부', rating: 4.1, ratingCount: 19, installs: 4, tags: ['여신', '사전심사'] },
   'AGT-602': { scope: '계열사', rating: 4.2, ratingCount: 31, installs: 6, tags: ['카드', '분실신고', '응대'] },
+  'AGT-731': { scope: '계열사', rating: 4.4, ratingCount: 22, installs: 4, tags: ['신용평가', '조회', '상담'] },
   'AGT-708': { scope: '그룹', rating: 4.5, ratingCount: 44, installs: 18, tags: ['보험금', '서류분류', 'OCR'] },
   'AGT-812': { scope: '부서', rating: 3.9, ratingCount: 8, installs: 1, tags: ['리스크', '브리핑'] },
   'AGT-905': { scope: '개인', rating: 0, ratingCount: 0, installs: 0, tags: ['연금', '상담'] },

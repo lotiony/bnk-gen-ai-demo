@@ -59,6 +59,18 @@ import {
   type ChatAgentOption,
   type DocAnswer,
 } from '@/data/mockChat';
+import {
+  CONSULT_AGENT_ID,
+  CONSULT_STEPS_LOOKUP,
+  CONSULT_TEXT,
+  consultSuggestions,
+  matchConsultTurn,
+  stageIndex,
+  type ConsultCardKind,
+  type ConsultStage,
+} from '@/data/mockConsultChat';
+import { AFFILIATE_OPTIONS, CUSTOMER_DEFAULT } from '@/data/mockCustomerConsult';
+import { ConsultTurn, type ConsultState } from '@/components/consult/ConsultCards';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -69,7 +81,19 @@ interface Msg {
   plain?: boolean;
   /** 이 턴에 함께 올린 첨부(2-1 대화중 파일 업로드). */
   att?: AttachFile;
+  /** 고객 상담 카드(GRP-005) — 있으면 답변 블록 대신 카드로 그린다. */
+  card?: ConsultCardKind;
 }
+
+/** 고객 상담 대화의 진행 상태 — 카드 입력값 + 단계. 메모리뿐이라 새로고침하면 처음이다. */
+const INITIAL_CONSULT: ConsultState & { stage: ConsultStage } = {
+  stage: 'idle',
+  name: CUSTOMER_DEFAULT.name,
+  phone: CUSTOMER_DEFAULT.phone,
+  background: CUSTOMER_DEFAULT.background,
+  affiliates: Object.fromEntries(AFFILIATE_OPTIONS.map((o) => [o.tenant, o.defaultOn])),
+  saved: false,
+};
 
 export default function ChatPage() {
   const persona = useCurrentPersona();
@@ -113,6 +137,9 @@ export default function ChatPage() {
     att: AttachFile | null;
     /** 첨부에서 나온 답변 — 있으면 인덱스를 타지 않고 이 문장을 커밋한다. */
     ans: string | null;
+    /** 고객 상담 턴 — 단계 목록과 커밋할 카드를 직접 지정한다. */
+    steps?: typeof RUN_STEPS;
+    card?: ConsultCardKind;
   } | null>(null);
   /*
    * RFP 2-1 — "대화중 파일 업로드 기능(문서/이미지), 업로드 파일 기반 응답·요약·번역".
@@ -120,6 +147,13 @@ export default function ChatPage() {
    */
   const [attached, setAttached] = useState<AttachFile | null>(null);
   const [attachOpen, setAttachOpen] = useState(false);
+
+  /* ── 고객 상담(GRP-005) 상태 — 에이전트를 바꾸면 처음으로 ── */
+  const [consult, setConsult] = useState(INITIAL_CONSULT);
+  useEffect(() => {
+    setConsult(INITIAL_CONSULT);
+  }, [agent.id]);
+  const isConsult = agent.id === CONSULT_AGENT_ID;
   const [stepIdx, setStepIdx] = useState(-1);
   const [activeRef, setActiveRef] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -128,11 +162,9 @@ export default function ChatPage() {
   const blocked = piiHits.length > 0;
 
   /** 근거를 잇지 못하면 앵커링에서 멈춘다 — 단계를 끝까지 돌리지 않는다. */
-  const steps = pending?.att
-    ? ATTACH_STEPS
-    : pending?.sc || pending?.doc
-      ? RUN_STEPS
-      : RUN_STEPS.slice(0, 2);
+  const steps =
+    pending?.steps ??
+    (pending?.att ? ATTACH_STEPS : pending?.sc || pending?.doc ? RUN_STEPS : RUN_STEPS.slice(0, 2));
 
   /* 재생 — 단계 하나씩 진행 후 답변을 커밋한다. */
   useEffect(() => {
@@ -151,6 +183,7 @@ export default function ChatPage() {
           text: ans ?? (sc ? sc.verdict : (doc?.a ?? UNGROUNDED_ANSWER.head)),
           sc: ans ? undefined : (sc ?? undefined),
           plain: !!ans || (!sc && !!doc),
+          card: pending.card,
         },
       ]);
       setActiveRef(null);
@@ -182,6 +215,18 @@ export default function ChatPage() {
     const q = (act?.q ?? raw ?? input).trim();
     if (!q || pending) return;
     if (detectPii(q).length > 0) return; // 차단 상태에서는 전송 자체가 일어나지 않는다
+    // 고객 상담 에이전트 — 현재 단계에서 입력을 해석해 카드 턴으로 간다.
+    if (isConsult) {
+      const turn = matchConsultTurn(consult.stage, q);
+      if (turn) {
+        setMsgs((m) => [...m, { role: 'user', text: q }]);
+        setInput('');
+        setConsult((c) => ({ ...c, stage: turn.next, name: turn.name ?? c.name }));
+        setPending({ q, sc: null, doc: null, att: null, ans: turn.text, steps: turn.steps, card: turn.card });
+        setStepIdx(0);
+        return;
+      }
+    }
     const action = act ?? matchAttachAction(q);
     const att = action ? attached : null;
     setMsgs((m) => [...m, { role: 'user', text: q, att: att ?? undefined }]);
@@ -196,7 +241,30 @@ export default function ChatPage() {
     setStepIdx(0);
   };
 
+  /* 카드 버튼이 일으키는 전이 — 행원의 타이핑 없이 다음 카드로 간다. */
+  const consultHandlers = {
+    onName: (v: string) => setConsult((c) => ({ ...c, name: v })),
+    onBackground: (v: string) => setConsult((c) => ({ ...c, background: v })),
+    onToggle: (t: string) => setConsult((c) => ({ ...c, affiliates: { ...c.affiliates, [t]: !c.affiliates[t] } })),
+    onProfileSubmit: () => {
+      setConsult((c) => ({ ...c, stage: 'consent' }));
+      setMsgs((m) => [...m, { role: 'assistant', text: CONSULT_TEXT.consent, plain: true, card: 'consent' }]);
+    },
+    onConsentConfirm: () => {
+      toast('동의 권원 확인', '사전 동의 이력 확인 · 통합 감사 원장에 기록되었습니다', 'ok');
+      setConsult((c) => ({ ...c, stage: 'analysis' }));
+      setPending({ q: '조회', sc: null, doc: null, att: null, ans: CONSULT_TEXT.analysis, steps: CONSULT_STEPS_LOOKUP, card: 'analysis' });
+      setStepIdx(0);
+    },
+    onSave: () => {
+      setConsult((c) => ({ ...c, saved: true }));
+      toast('고객 상담 자료로 저장', `${consult.name} · 추천 상품 3건 · 내 문서 > 상담 자료에 저장되었습니다`, 'ok');
+    },
+  };
+  const lastCardIdx = msgs.reduce((acc, m, i) => (m.card ? i : acc), -1);
+
   const reset = () => {
+    setConsult(INITIAL_CONSULT);
     setMsgs([]);
     setInput('');
     setPending(null);
@@ -328,11 +396,47 @@ export default function ChatPage() {
 
           {/* 대화 영역 */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 min-h-0">
-            {msgs.length === 0 && !pending && <EmptyState onPick={send} persona={persona?.name} />}
+            {msgs.length === 0 && !pending && (
+              isConsult ? (
+                /* 상담 에이전트의 빈 화면 — 규정 질의 알약이 아니라 상담 시작 안내를 준다. */
+                <div className="og-answer mb-4 border border-line-soft rounded px-5 py-5 bg-white">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="pill bg-brand-tint text-brand border border-brand-tint">고객 상담</span>
+                    <span className="text-[13px] font-extrabold text-ink">상담 대상 고객과 배경을 알려주세요</span>
+                  </div>
+                  <p className="text-[12px] text-ink-dark font-semibold leading-relaxed">
+                    고객 정보는 고객 DB 가상 뷰에서 조회해 채웁니다. 프로필 등록 → 동의 확인 → 데이터 조회 → 분석 → 상품 추천 → 상담 요약 순서로 이어집니다.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {consultSuggestions('idle').map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => send(q)}
+                        className="pill bg-white text-ink-dark border border-line hover:border-brand hover:text-brand"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <EmptyState onPick={send} persona={persona?.name} />
+              )
+            )}
 
             {msgs.map((m, i) =>
               m.role === 'user' ? (
                 <UserBubble key={i} text={m.text} att={m.att} />
+              ) : m.card ? (
+                <ConsultTurn
+                  key={i}
+                  kind={m.card}
+                  text={m.text}
+                  latest={i === lastCardIdx}
+                  done={stageIndex(consult.stage) > stageIndex(m.card)}
+                  state={consult}
+                  handlers={consultHandlers}
+                />
               ) : (
                 <AnswerBlock
                   key={i}
@@ -368,7 +472,7 @@ export default function ChatPage() {
               {/* 에이전트마다 답할 수 있는 질의가 다르다 — 온톨로지 계열은 규정 판정,
                   문서 RAG 계열은 자기 지식 인덱스 범위. 목록을 고정하면 고른 에이전트가
                   답하지 못하는 질의를 추천하게 된다. */}
-              {suggestedQuestions(agent.id).map((q) => (
+              {(isConsult ? consultSuggestions(consult.stage) : suggestedQuestions(agent.id)).map((q) => (
                 <button
                   key={q}
                   onClick={() => send(q)}

@@ -21,7 +21,7 @@
  * ④ **게시판 글쓰기가 실제로 등록된다**(RFP 2-1 [31] 공지·커뮤니티·지식공유).
  */
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useFavorites, toggleFavorite } from '@/lib/personalization';
@@ -78,7 +78,9 @@ export default function CatalogPage() {
   const approvalRev = useApprovalRevision();
   const all = useMemo(() => getCatalogItems(), [approvalRev]);
 
-  const [q, setQ] = useState('');
+  // 고객 상담 워크스페이스의 「후속 조치」가 ?q= 로 검색어를 넘긴다 (시나리오 1-8 → 1-9).
+  const [params] = useSearchParams();
+  const [q, setQ] = useState(params.get('q') ?? '');
   const [kind, setKind] = useState<AssetKind | 'all'>('all');
   const [scope, setScope] = useState<ShareScope | 'all'>('all');
   const [sort, setSort] = useState<SortKey>('usage');

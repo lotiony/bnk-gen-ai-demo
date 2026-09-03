@@ -22,6 +22,17 @@ export interface FeaturedAgent {
 
 export const FEATURED_AGENTS: FeaturedAgent[] = [
   {
+    // 시나리오 1 진입점 — 홈에서 바로 고객 상담 워크스페이스로 간다 (AGB-006 ⑤).
+    id: 'GRP-005',
+    name: '고객 · 민원 분석 에이전트',
+    icon: '🧑‍💼',
+    description:
+      '고객 정보 기반 프로필 생성, 성향 분석과 맞춤 상품 추천, 상담 내용 요약까지 한 흐름으로 지원합니다.',
+    projectName: '그룹 공통 필수 Use Case ⑤',
+    projectHref: '/chat?agent=GRP-005',
+    badge: '그룹 표준',
+  },
+  {
     id: 'AGT-205',
     name: '시황 분석 에이전트',
     icon: '📈',
