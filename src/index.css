@@ -21,9 +21,33 @@
 
 @layer base {
   html,
-  body,
-  #root {
+  body {
     height: 100%;
+  }
+  :root {
+    /*
+     * 푸터 블록의 총 높이(위 여백 64px + 푸터 62px). 로그인 화면처럼 스스로
+     * 뷰포트 높이를 잡는 화면이 이만큼을 빼야 스크롤바가 생기지 않는다.
+     */
+    --demo-footer-block: 126px;
+  }
+  /*
+   * 푸터(components/layout/DemoFooter.tsx)는 고정이 아니라 문서 흐름의 맨 끝에
+   * 있다 — 스크롤을 끝까지 내려야 나온다. 다만 내용이 짧은 화면에서 푸터가
+   * 화면 중간에 떠 버리면 잘린 페이지처럼 보이므로 뷰포트 바닥까지 밀어 둔다.
+   *
+   * 미는 방법으로 flex 는 못 쓴다 — 페이지 컨테이너가 대부분 `mx-auto` 라
+   * flex 자식이 되는 순간 auto 마진이 stretch 를 이겨 폭이 콘텐츠만큼 줄어든다.
+   * 대신 푸터에 `position: sticky; top: 100vh` 를 준다(DemoFooter.tsx):
+   * 문서가 짧으면 #root 바닥(= 뷰포트 바닥)까지 밀리고, 길면 원래 자리인
+   * 문서 끝에 그대로 남는다. 레이아웃은 건드리지 않는다.
+   *
+   * 그래서 #root 는 `height: 100%` 가 아니라 `min-height` 여야 한다 — 고정
+   * 높이면 상자가 뷰포트에 묶여 콘텐츠가 넘치고, sticky 의 컨테이닝 블록도
+   * 뷰포트 한 칸으로 잘려 푸터가 문서 끝에 도달하지 못한다.
+   */
+  #root {
+    min-height: 100%;
   }
   body {
     @apply bg-surface text-ink-dark font-sans text-[13px] leading-[1.5] antialiased;
@@ -98,3 +122,12 @@
    기본 OFF — 시연 화면을 깨끗하게 두고, 요건 질문이 나오면 켠다.
    칩 44곳을 조건부 렌더로 바꾸는 대신 body 클래스 하나로 제어한다. */
 body.rfp-hide .rfp-chip { display: none !important; }
+
+/* ── 하단 고정 액션바가 있는 화면의 푸터 여백 ──
+   기안·결재·파이프라인 등록 등 7개 화면은 `fixed bottom-0` 액션바를 뷰포트
+   바닥에 붙여 둔다. 스크롤을 끝까지 내리면 그 바가 문서 끝의 푸터를 그대로
+   덮는다. 바 높이(약 61px)만큼 푸터 아래에 여백을 둬서 푸터가 바 **위**에
+   서게 한다. 액션바가 없는 화면에는 붙지 않으므로 빈 띠가 생기지 않는다. */
+#root:has(.fixed.bottom-0) > .demo-footer-block {
+  padding-bottom: 64px;
+}

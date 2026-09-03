@@ -39,7 +39,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center px-6 py-10">
+    <div className="min-h-[calc(100vh-var(--demo-footer-block))] bg-surface flex items-center justify-center px-6 py-10">
       <div className="w-full max-w-[520px]">
         {/* Brand */}
         <div className="text-center mb-8">

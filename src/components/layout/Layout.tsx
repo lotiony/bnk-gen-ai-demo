@@ -3,6 +3,7 @@ import Topbar from './Topbar';
 import GNB from './GNB';
 import { Toaster } from '@/lib/toast';
 import PresenterNav from '@/lib/presenter';
+import DemoFooter from './DemoFooter';
 
 /** 관리 콘솔 진입 시 상단바에 노출하는 환경 배지. */
 const ADMIN_ENV_BADGE = 'MFA 인증됨';
@@ -33,6 +34,8 @@ export default function Layout() {
       <Topbar envBadge={envBadgeFor(pathname)} />
       {!isLanding && <GNB />}
       <Outlet />
+      {/* 문서 흐름 맨 끝 — Toaster·PresenterNav 는 fixed 라 흐름 밖이다. */}
+      <DemoFooter />
       <Toaster />
       <PresenterNav />
     </>

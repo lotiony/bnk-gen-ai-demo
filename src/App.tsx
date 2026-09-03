@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import Layout from './components/layout/Layout';
+import DemoFooter from './components/layout/DemoFooter';
 import AreaGuard, { ReadOnlyOntologyPage } from './components/layout/AreaGuard';
 import { canViewOntologyReadOnly } from './lib/personaView';
 import LoginPage from './routes/LoginPage';
@@ -127,7 +128,16 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      {/* 로그인은 `Layout` 밖이라 푸터를 여기서 직접 붙인다(다른 화면은 Layout). */}
+      <Route
+        path="/login"
+        element={
+          <>
+            <LoginPage />
+            <DemoFooter />
+          </>
+        }
+      />
       <Route
         element={
           <PersonaGate>
