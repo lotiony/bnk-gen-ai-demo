@@ -103,7 +103,7 @@ export default function MeteringPage() {
     return affiliate ? all.filter((a) => a.tenant === myTenant) : all;
   }, [affiliate, myTenant]);
   /*
-   * 정렬 축 — 이상 조사 때는 **급증순**으로 봐야 범인이 맨 위로 온다(3A-4).
+   * 정렬 축 — 이상 조사 때는 **급증순**(전일 대비)으로 봐야 범인이 맨 위로 온다(3A-4).
    * 평상시 정산 검토는 비용순이 맞다. 그래서 축을 바꿀 수 있게 둔다.
    */
   const [agentSort, setAgentSort] = useState<'cost' | 'surge'>('cost');
@@ -491,7 +491,8 @@ export default function MeteringPage() {
         <p className="text-[11px] text-ink-mid font-semibold mb-3">
           조직 축(계열사·부서·사용자)과 별개로 <b className="text-ink-dark">무엇이 비용을 쓰는지</b>를
           본다 · 호출 1건당 비용이 높은 에이전트가 최적화 대상이다 · 정산액 합계는 위 계열사 표와
-          같은 총액을 나눈 값이다
+          같은 총액을 나눈 값이다 · 증감률은 <b className="text-ink-dark">전일 대비</b>다 — 급증은
+          하루 만에 일어나므로 월 단위로는 보이지 않는다
         </p>
         <div className="border border-line-soft rounded overflow-hidden">
           <table className="w-full border-collapse">
@@ -500,7 +501,7 @@ export default function MeteringPage() {
                 <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
                   에이전트
                 </th>
-                {['월 호출', '입력', '출력', '정산액', '건당', '전월비', ''].map((h) => (
+                {['월 호출', '입력', '출력', '정산액', '건당', '전일비', ''].map((h) => (
                   <th
                     key={h || 'act'}
                     className="text-right text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft whitespace-nowrap"
