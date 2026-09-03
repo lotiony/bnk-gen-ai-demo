@@ -1780,7 +1780,7 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
               fullKey: `sk-${env === 'train' ? 'train' : 'live'}-${Math.random().toString(36).slice(2, 18)}${Math.random().toString(36).slice(2, 18)}`.slice(0, env === 'train' ? 41 : 40),
               lastFour: Math.random().toString(36).slice(2, 6),
               issuedAt: new Date().toLocaleString('ko-KR', { hour12: false }).replace(/\./g, '-').slice(0, 16),
-              issuedBy: '김플랫',
+              issuedBy: '김지주',
               callCount: 0,
               endpoint: `https://api${env === 'train' ? '-train' : ''}.aip.group.local/agents/${agentId}`,
             };
@@ -1826,7 +1826,7 @@ function ApiKeyPanel({ agentId, env }: { agentId: string; env: ApiKeyEnv }) {
       fullKey: `sk-${env === 'train' ? 'train' : 'live'}-${Math.random().toString(36).slice(2, 18)}${Math.random().toString(36).slice(2, 18)}`.slice(0, env === 'train' ? 41 : 40),
       lastFour: Math.random().toString(36).slice(2, 6),
       issuedAt: new Date().toLocaleString('ko-KR', { hour12: false }).replace(/\./g, '-').slice(0, 16),
-      issuedBy: '김플랫',
+      issuedBy: '김지주',
       callCount: 0,
       lastUsedAt: undefined,
     };

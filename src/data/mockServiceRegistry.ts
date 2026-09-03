@@ -73,7 +73,7 @@ export function isSlaWarn(it: ServiceItem): boolean {
 }
 
 export const SERVICE_ITEMS: ServiceItem[] = [
-  { id: 'GRP-001', kind: 'Agent', name: '규정 · 책무 어시스턴트', tenant: '그룹 공통', operatingArea: '그룹 공통 운영영역', publishState: '게시 중', shareScope: '그룹 전체', deployStatus: '배포 완료', version: 'v3.0', lastActionBy: '김플랫', lastActionAt: '2026-05-17 09:20' },
+  { id: 'GRP-001', kind: 'Agent', name: '규정 · 책무 어시스턴트', tenant: '그룹 공통', operatingArea: '그룹 공통 운영영역', publishState: '게시 중', shareScope: '그룹 전체', deployStatus: '배포 완료', version: 'v3.0', lastActionBy: '김지주', lastActionAt: '2026-05-17 09:20' },
   { id: 'GRP-006', kind: 'Agent', name: '광고심의 지원 에이전트', tenant: 'BNK캐피탈', operatingArea: '계열사 전용 운영영역', publishState: '게시 중', shareScope: '계열사', deployStatus: '배포 완료', version: 'v1.4', lastActionBy: '이정우', lastActionAt: '2026-05-18 11:02' },
   { id: 'GRP-007', kind: 'Agent', name: '지식 · 상품 어시스턴트', tenant: '경남은행', operatingArea: '그룹 공통 운영영역', publishState: '게시 대기', shareScope: '부서', deployStatus: '테스트 중', version: 'v0.9-rc1', lastActionBy: '남데이터', lastActionAt: '2026-06-01 14:40' },
   { id: 'MCP-011', kind: 'MCP', name: 'authority.lookup', tenant: '그룹 공통', operatingArea: '그룹 공통 운영영역', publishState: '게시 중', shareScope: '그룹 전체', deployStatus: '배포 완료', version: 'v2.0', lastActionBy: '박거버', lastActionAt: '2026-05-20 08:10' },

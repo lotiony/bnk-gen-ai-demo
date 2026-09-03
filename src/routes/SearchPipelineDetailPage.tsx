@@ -731,7 +731,7 @@ function ApiKeyPanel({ initial, endpoint }: { initial?: PipelineApiKey; endpoint
         .toLocaleString('ko-KR', { hour12: false })
         .replace(/\./g, '-')
         .slice(0, 16),
-      issuedBy: '김플랫',
+      issuedBy: '김지주',
       callCount: 0,
     };
   };

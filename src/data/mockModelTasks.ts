@@ -139,7 +139,7 @@ export const MOCK_MODEL_TASKS: ModelTask[] = [
       {
         stage: '최종 승인',
         state: '승인',
-        by: 'AI플랫폼팀 · 김플랫',
+        by: 'AI플랫폼팀 · 김지주',
         at: '2025-11-04 16:22',
       },
     ],
@@ -196,7 +196,7 @@ export const MOCK_MODEL_TASKS: ModelTask[] = [
       {
         stage: '최종 승인',
         state: '승인',
-        by: 'AI플랫폼팀 · 김플랫',
+        by: 'AI플랫폼팀 · 김지주',
         at: '2026-03-08 17:54',
       },
     ],

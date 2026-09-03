@@ -334,7 +334,7 @@ export default function ApprovalDetailPage() {
             <KvGrid>
               <KvRow
                 k="사전 협의 담당자"
-                v={<ChipReadonly primary>김플랫</ChipReadonly>}
+                v={<ChipReadonly primary>김지주</ChipReadonly>}
               />
               <KvRow
                 k="예산 할당"

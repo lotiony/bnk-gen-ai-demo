@@ -146,7 +146,7 @@ export const approvals: ApprovalItem[] = [
     category: 'serv',
     title: '에이전트 v1.7 → 운영계 프로모션 (풀 번들)',
     projectName: 'PB 에이전트 프로젝트',
-    draftedBy: '김플랫',
+    draftedBy: '김지주',
     draftedAt: '2026-05-13 16:08',
     stage: { current: 5, total: 5, label: '부서장 결재' },
     state: 'done',
@@ -159,7 +159,7 @@ export const approvals: ApprovalItem[] = [
     projectName: 'PB 에이전트 프로젝트',
     draftedBy: '박서연 (SoD 자동 위임)',
     draftedAt: '2026-05-10 11:24',
-    stage: { current: 1, total: 1, label: '김플랫 결재' },
+    stage: { current: 1, total: 1, label: '김지주 결재' },
     state: 'done',
   },
   {
@@ -167,7 +167,7 @@ export const approvals: ApprovalItem[] = [
     category: 'policy',
     title: 'EX-2026-014 야간 fallback 모델 예외 신청',
     projectName: 'PB 에이전트 프로젝트',
-    draftedBy: '김플랫',
+    draftedBy: '김지주',
     draftedAt: '2026-04-28 14:14',
     stage: { current: 2, total: 2, label: '거버넌스 강민호' },
     state: 'done',
@@ -186,7 +186,7 @@ export const approvals: ApprovalItem[] = [
     id: 'APV-2026-062',
     category: 'register',
     title: '프로젝트 예산 변경 (Q3 +₩0.3M)',
-    draftedBy: '김플랫',
+    draftedBy: '김지주',
     draftedAt: '2026-04-08 13:30',
     stage: { current: 3, total: 3, label: '플랫폼 부서장' },
     state: 'done',
@@ -316,16 +316,23 @@ const CONSENT_DELEGATE = {
  * 지정을 두는 이유와 같다 — 배정 시점에 기안자를 피해서 정한다.
  */
 const BACKUP_APPROVER = {
-  name: '김플랫',
+  name: '김지주',
   tenant: '그룹 공통' as Tenant,
 };
 
-/** 기안자와 겹치면 예비 결재자로 넘긴다. */
+/**
+ * 기안자와 겹치면 예비 결재자로 넘긴다.
+ *
+ * ⚠️ **예비를 지정할 수 있어야 한다.** 기본 예비는 플랫폼 관리자인데, 배정하려는
+ * 사람이 바로 그 플랫폼 관리자면 자기 자신으로 되돌아온다 — 자기결재가 그대로
+ * 통과한다. 그 자리에는 다른 사람을 넘겨야 한다(ONM-003).
+ */
 function avoidDrafter(
   who: { name: string; tenant: Tenant },
   drafter: string,
+  backup: { name: string; tenant: Tenant } = BACKUP_APPROVER,
 ): { name: string; tenant: Tenant } {
-  return who.name === drafter ? BACKUP_APPROVER : who;
+  return who.name === drafter ? backup : who;
 }
 
 /**
@@ -799,7 +806,7 @@ export function findAgentDeploy(approvalId: string | undefined): AgentDeployAppr
 }
 
 /** 플랫폼 관리 그룹 승인 단계의 담당자 — mockPersonas 의 `platform_admin`. */
-const PLATFORM_APPROVER = { name: '김플랫', tenant: '그룹 공통' as Tenant };
+const PLATFORM_APPROVER = { name: '김지주', tenant: '그룹 공통' as Tenant };
 
 /**
  * 배포 결재 1단계(과제 오너 그룹)의 실제 처리자.
@@ -837,7 +844,8 @@ function resolveTaskOwnerApprover(
  * 2단계를 먼저 정하고 1단계가 그 사람을 피하게 한다.
  */
 export function previewDeployApprovers(ownerTenant: Tenant, drafter: string) {
-  const platform = avoidDrafter(PLATFORM_APPROVER, drafter);
+  // 예비는 거버넌스다 — 기본 예비(플랫폼 관리자)는 여기서 배정 대상 본인이다.
+  const platform = avoidDrafter(PLATFORM_APPROVER, drafter, GROUP_GOVERNANCE_APPROVER);
   return {
     owner: resolveTaskOwnerApprover(ownerTenant, drafter, [platform.name]),
     platform,
@@ -873,7 +881,7 @@ let deploySeq = 1;
 export function submitAgentDeploy(draft: AgentDeployDraft): ApprovalItem {
   const id = `APV-AGT-${String(deploySeq++).padStart(3, '0')}`;
   const stamp = nowLabel();
-  const platform = avoidDrafter(PLATFORM_APPROVER, draft.draftedBy);
+  const platform = avoidDrafter(PLATFORM_APPROVER, draft.draftedBy, GROUP_GOVERNANCE_APPROVER);
   const owner = resolveTaskOwnerApprover(draft.ownerTenant, draft.draftedBy, [platform.name]);
 
   const item: ApprovalItem = {

@@ -82,7 +82,7 @@ export default function AdminLayout() {
     '보안 · 거버넌스',
     '콘텐츠',
   ];
-  const displayName = persona?.name ?? '김플랫';
+  const displayName = persona?.name ?? '김지주';
   const displayRole = persona?.role ?? '관리자';
 
   return (

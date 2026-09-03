@@ -70,7 +70,7 @@ export interface AccessHistoryEntry {
 }
 
 export const ACCESS_HISTORY: AccessHistoryEntry[] = [
-  { at: '2026-06-03 09:02:14', actor: '김플랫', action: 'SSO 로그인', ip: '10.20.1.14', result: '성공' },
+  { at: '2026-06-03 09:02:14', actor: '김지주', action: 'SSO 로그인', ip: '10.20.1.14', result: '성공' },
   { at: '2026-06-03 08:58:02', actor: '박서연', action: '운영계 배포 승인', ip: '10.20.4.31', result: '성공' },
   { at: '2026-06-02 22:14:02', actor: 'unknown', action: 'SSO 로그인 실패 5회', ip: '203.0.113.9', result: '실패' },
   { at: '2026-06-02 17:20:41', actor: '이정우', action: '가드레일 예외 신청', ip: '10.20.7.2', result: '성공' },

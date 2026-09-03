@@ -384,7 +384,7 @@ export function canDecideApproval(persona: PersonaLike, item: ApprovalItem): Dec
       ? ALLOW
       : {
           ok: false,
-          hint: '그룹 거버넌스 관리자(박거버) 또는 플랫폼 관리자(김플랫) 계정으로 전환해야 합니다',
+          hint: '그룹 거버넌스 관리자(박거버) 또는 플랫폼 관리자(김지주) 계정으로 전환해야 합니다',
         };
   }
   // ③ 에이전트 배포 결재도 단계마다 승인 주체가 다르다(LSM-009 · ONM-003).

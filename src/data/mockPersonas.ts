@@ -95,7 +95,7 @@ export const PERSONAS: Persona[] = [
     id: 'platform_admin',
     role: '플랫폼 관리자',
     rfpRole: '관리자',
-    name: '김플랫',
+    name: '김지주',
     initial: '김',
     dept: 'BNK시스템 · AI플랫폼팀',
     group: '관리자',
@@ -157,7 +157,7 @@ export const PERSONAS: Persona[] = [
    * 지주 개발자 — **그룹 공동 배포용 자산을 만드는 개발자**.
    *
    * 그룹 공통에 소속된 유일한 비관리자다. 여기가 필요한 이유는 ONM-003 이다 —
-   * 그룹 공동 자산의 배포를 지주 관리자(김플랫·박거버)가 승인하는데, 그 자산을
+   * 그룹 공동 자산의 배포를 지주 관리자(김지주·박거버)가 승인하는데, 그 자산을
    * 만드는 사람까지 관리자면 기안자와 승인권자가 같아진다.
    *
    * `canSwitchTenant` 는 **false** 다. 테넌트를 넘나드는 권한은 공동존을

@@ -188,12 +188,12 @@ const UNIFIED_AUDIT_RAW: UnifiedAuditRow[] = [
   },
   // ── 자원변경 ──
   {
-    at: '2026-06-01 11:08:19', actor: '김플랫', tenant: 'BNK시스템',
+    at: '2026-06-01 11:08:19', actor: '김지주', tenant: 'BNK시스템',
     category: '자원변경', action: '반입 승인', target: 'IN-2036 상품 매뉴얼',
     verdict: '허용',
   },
   {
-    at: '2026-05-31 09:15:40', actor: '김플랫', tenant: 'BNK시스템',
+    at: '2026-05-31 09:15:40', actor: '김지주', tenant: 'BNK시스템',
     category: '자원변경', action: 'GPU 상한 정책 변경', target: '과제 GPU 상한 4장 → 6장',
     verdict: '허용', note: '다음 배정부터 적용',
   },

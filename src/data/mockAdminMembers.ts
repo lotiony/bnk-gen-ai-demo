@@ -66,7 +66,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
   {
     id: 'USR-001',
     empNo: '20180312',
-    name: '김플랫',
+    name: '김지주',
     email: 'platform.kim@bnkfg.group.local',
     tenant: '그룹 공통',
     dept: 'AI플랫폼팀',

@@ -215,7 +215,7 @@ const HISTORY: DeployRecord[] = [
     deployedAt: '2026-05-29 17:08',
     deployedBy: '박서연',
     status: 'active',
-    approvedBy: '김플랫 (프로젝트 오너 그룹)',
+    approvedBy: '김지주 (프로젝트 오너 그룹)',
   },
   {
     id: 'deploy-204-11',
@@ -223,7 +223,7 @@ const HISTORY: DeployRecord[] = [
     deployedAt: '2026-05-22 16:30',
     deployedBy: '박서연',
     status: 'replaced',
-    approvedBy: '김플랫 (프로젝트 오너 그룹)',
+    approvedBy: '김지주 (프로젝트 오너 그룹)',
   },
   {
     id: 'deploy-204-10',
@@ -231,7 +231,7 @@ const HISTORY: DeployRecord[] = [
     deployedAt: '2026-05-08 12:08',
     deployedBy: '박서연',
     status: 'replaced',
-    approvedBy: '김플랫 (프로젝트 오너 그룹)',
+    approvedBy: '김지주 (프로젝트 오너 그룹)',
   },
   {
     id: 'deploy-204-09',

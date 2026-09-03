@@ -140,7 +140,7 @@ export default function AdminAssetSpreadPage() {
       {reviewing && (
         <PromotionReviewModal
           row={reviewing}
-          drafter={persona?.name ?? '김플랫'}
+          drafter={persona?.name ?? '김지주'}
           drafterRole={persona?.role ?? '플랫폼 관리자'}
           drafterTenant={persona?.tenant ?? '그룹 공통'}
           onClose={() => setReviewing(null)}

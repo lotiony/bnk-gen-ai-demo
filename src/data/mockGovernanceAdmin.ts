@@ -43,7 +43,7 @@ export const STAGE_OWNERS: Record<string, StageOwner[]> = {
     { stage: 'plan', dept: 'AI거버넌스 사무국', owner: '박거버', backup: '한정책', assignedAt: '2026-03-30' },
     { stage: 'build', dept: '정보보호부', owner: '임정보', backup: '노보안', assignedAt: '2026-03-30' },
     { stage: 'assess', dept: '리스크관리부', owner: '서리스크', backup: '민평가', assignedAt: '2026-04-06' },
-    { stage: 'operate', dept: 'AI디지털전략부', owner: '김플랫', backup: '정오너', assignedAt: '2026-04-06' },
+    { stage: 'operate', dept: 'AI디지털전략부', owner: '김지주', backup: '정오너', assignedAt: '2026-04-06' },
     { stage: 'retire', dept: 'AI거버넌스 사무국', owner: '박거버', backup: '한정책', assignedAt: '2026-03-30' },
   ],
   부산은행: [

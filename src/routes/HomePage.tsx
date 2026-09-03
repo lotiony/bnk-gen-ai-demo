@@ -22,7 +22,7 @@ import {
 /** 홈 대시보드 — 개인 워크스페이스. KPI / 결재 / AI Studio · 거버넌스 포탈 진입 */
 export default function HomePage() {
   const persona = useCurrentPersona();
-  const displayName = persona?.name ?? '김플랫';
+  const displayName = persona?.name ?? '김지주';
   const kpis = getHomeKpis(persona);
   const featuredAgents = getHomeFeaturedAgents(persona);
   const homeApprovals = getHomeApprovals(persona);

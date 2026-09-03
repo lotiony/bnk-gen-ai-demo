@@ -802,7 +802,7 @@ export const ACTIVITY_FEED: ActivityItem[] = [
     id: 'ACT-1030',
     kind: 'gpu_change',
     title: 'onprem/gpt-oss-120b 서빙 GPU 30장 → 33장 증설',
-    who: '김플랫 · 결재 ▶ 2단계 완료',
+    who: '김지주 · 결재 ▶ 2단계 완료',
     at: '2026-06-03 11:42',
   },
   {
@@ -865,7 +865,7 @@ export const GPU_CHANGE_EVENTS: GpuChangeEvent[] = [
     from: 30,
     to: 33,
     reason: '피크 점유율 94% 도달 — 사용 현황 탭 알람 기반 증설',
-    approver: '김플랫',
+    approver: '김지주',
     costDeltaKrw: gpuDelta('onprem/gpt-oss-120b', 30, 33),
   },
   {
@@ -875,7 +875,7 @@ export const GPU_CHANGE_EVENTS: GpuChangeEvent[] = [
     from: 3,
     to: 4,
     reason: '리스크 데일리 자동화 과제(PRJ-SC-014) 배정',
-    approver: '김플랫',
+    approver: '김지주',
     costDeltaKrw: gpuDelta('onprem/qwen3-32b', 3, 4),
   },
   {
@@ -895,7 +895,7 @@ export const GPU_CHANGE_EVENTS: GpuChangeEvent[] = [
     from: 4,
     to: 3,
     reason: 'PB 자산관리 과제 호출 안정화 — 평균 점유 38% → 1장 회수',
-    approver: '김플랫',
+    approver: '김지주',
     costDeltaKrw: gpuDelta('onprem/qwen3-32b', 4, 3),
   },
 ];
@@ -1004,14 +1004,14 @@ export const AUDIT_LOG: AuditLogItem[] = [
   {
     id: 'AUD-2026-06-03-0042',
     at: '2026-06-03 14:08',
-    actor: '김플랫',
+    actor: '김지주',
     action: '관리 대시보드 진입 (MFA 인증)',
     target: '/admin',
   },
   {
     id: 'AUD-2026-06-03-0041',
     at: '2026-06-03 11:42',
-    actor: '김플랫',
+    actor: '김지주',
     action: 'GPU 할당 증설 결재 승인',
     target: 'onprem/gpt-oss-120b 30장 → 33장',
   },
