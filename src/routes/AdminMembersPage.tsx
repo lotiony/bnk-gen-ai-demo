@@ -3,15 +3,8 @@ import { cn } from '@/lib/utils';
 import StatusPill from '@/components/ui/StatusPill';
 import { APPROVAL_LINES, ACCESS_HISTORY } from '@/data/mockApprovalLines';
 import { SERVICE_CATEGORIES, DEPT_PERMISSIONS, USER_OVERRIDES } from '@/data/mockUsagePermission';
-import { Link } from 'react-router-dom';
 import { useCurrentPersona } from '@/lib/persona';
-import { isAffiliateConsoleAdmin, getVisibleApprovals } from '@/lib/personaView';
-import {
-  useApprovalRevision,
-  findPromotion,
-  currentPromotionStage,
-  getApprovalDecision,
-} from '@/data/mockApprovals';
+import { isAffiliateConsoleAdmin } from '@/lib/personaView';
 import { TENANT_SHORT, TENANTS } from '@/data/tenants';
 import { toast } from '@/lib/toast';
 import {
@@ -375,92 +368,29 @@ function AccessHistoryTab() {
  * 열면 그런 건은 없었다. 시연 1막에서 행원이 올린 요청이 3막에서 계열사 관리자에게
  * 도착해야 하므로, 같은 결재 데이터를 여기서 읽고 상세는 결재 화면으로 넘긴다.
  */
+/**
+ * 이용권한 설정 — RFP 2-1 관리자 포털 [39]
+ *   "계열사·부서·사용자별 AI서비스 및 Agent 접근 및 이용권한 설정 기능 제공"
+ *
+ * 계열사 관리자에게는 자기 계열사 행만 남긴다(SEC-001).
+ *
+ * ⚠️ 자산 공개 범위 요청은 여기 두지 않는다. 그건 결재이고 결재함에서 처리한다 —
+ *    화면 안에서만 상태가 바뀌는 가짜 승인 버튼을 두면 결재함과 말이 갈린다.
+ *    계열사를 가로지르는 재사용 현황은 지주 관리자의 「자산 활용 현황」에 있다.
+ */
 function UsagePermissionTab({ tenant }: { tenant: string | null }) {
-  const persona = useCurrentPersona();
-  useApprovalRevision();
-  /*
-   * 내 계열사 자산에 올라온 공유범위 승격 요청 — 현재 단계가 내 차례인 것.
-   * 계열사 관리자는 자기 자산의 2단계(소유 계열사 관리자 승인)만 여기서 본다.
-   */
-  const requests = getVisibleApprovals(persona)
-    .map((a) => ({ item: a, promo: findPromotion(a.id) }))
-    .filter((x) => !!x.promo && (!tenant || x.promo.ownerTenant === tenant));
   const deptRows = tenant ? DEPT_PERMISSIONS.filter((d) => d.tenant === tenant) : DEPT_PERMISSIONS;
   const overrides = tenant ? USER_OVERRIDES.filter((u) => u.tenant === tenant) : USER_OVERRIDES;
 
   return (
     <div className="space-y-3.5">
       <section className="card p-4">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <div>
-            <h2 className="text-[13px] font-extrabold text-ink">권한 요청</h2>
-            <p className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
-              {tenant
-                ? `${tenant} 소유 자산에 대한 공개 범위 요청 · 소유 계열사 관리자 승인 → 그룹 거버넌스 승인`
-                : '계열사 밖 자산 접근 요청 · 결재선에 따라 승인 후 권한을 확장한다'}
-            </p>
-          </div>
-          <StatusPill tone={requests.some((r) => r.item.state === 'pending') ? 'warn' : 'neutral'}>
-            대기 {requests.filter((r) => r.item.state === 'pending').length}건
-          </StatusPill>
+        <div className="flex items-baseline gap-2 mb-2.5">
+          <h2 className="text-[13px] font-extrabold text-ink">부서별 서비스 카테고리 접근</h2>
+          <span className="text-[10.5px] text-ink-mid font-semibold">
+            {tenant ? `${tenant} 부서 기준` : '계열사·부서 기준'} · 변경은 감사 원장에 기록된다
+          </span>
         </div>
-        {requests.length === 0 ? (
-          <div className="px-3 py-4 border border-dashed border-line rounded text-center text-[11.5px] text-ink-mid font-semibold">
-            도착한 권한 요청이 없습니다
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            {requests.map(({ item, promo }) => {
-              const p = promo!;
-              const stage = currentPromotionStage(p);
-              const myTurn = item.state === 'pending' && stage?.approverName === persona?.name;
-              const decision = getApprovalDecision(item.id);
-              return (
-                <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 border border-line-soft rounded bg-white">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11.5px] font-extrabold text-ink-dark">
-                        {item.id} · {p.requestedBy} ({p.requesterTenant})
-                      </span>
-                      <span className="pill bg-surface-soft text-ink-mid border border-line-soft">
-                        {p.fromScope} → {p.toScope}
-                      </span>
-                    </div>
-                    <div className="text-[10.5px] text-ink-mid font-semibold mt-0.5 truncate">
-                      <b className="text-ink-dark">{p.assetId} {p.assetName}</b> · 활용 {p.purpose} ·
-                      결재선: 기안 → 소유 계열사 관리자 → 그룹 거버넌스 ·{' '}
-                      {item.state === 'pending'
-                        ? `현재 ${stage?.label ?? '-'} (${stage?.approverName ?? '-'})`
-                        : item.state === 'done'
-                        ? `승격 완료 · ${decision?.decidedAt ?? ''} · 감사 원장 기록`
-                        : `반려 · ${decision?.decidedAt ?? ''}`}
-                    </div>
-                  </div>
-                  {item.state === 'pending' ? (
-                    <Link
-                      to={`/approvals/${item.id}`}
-                      className={cn(
-                        'h-7 px-3 inline-flex items-center rounded text-[11px] font-extrabold border whitespace-nowrap',
-                        myTurn
-                          ? 'bg-brand border-brand-dark text-white hover:bg-brand-dark'
-                          : 'bg-white border-line text-ink-dark hover:border-brand-dark',
-                      )}
-                    >
-                      {myTurn ? '검토 · 승인 →' : '진행 상태 →'}
-                    </Link>
-                  ) : (
-                    <StatusPill tone={item.state === 'done' ? 'ok' : 'bad'}>
-                      {item.state === 'done' ? '권한 확장 완료' : '반려'}
-                    </StatusPill>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-      <section className="card p-4">
-        <h2 className="text-[13px] font-extrabold text-ink mb-2.5">부서별 서비스 카테고리 접근</h2>
         <table className="w-full text-[11.5px]">
           <thead>
             <tr className="text-left text-[9.5px] text-ink-light font-extrabold uppercase tracking-[0.3px] border-b border-line-soft">

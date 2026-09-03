@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useCurrentPersona } from '@/lib/persona';
 import { isAffiliateConsoleAdmin } from '@/lib/personaView';
 import { TENANTS } from '@/data/tenants';
+import { ANOMALY_ALERTS } from '@/data/mockAffiliateOps';
 import AreaGuard from './AreaGuard';
 
 interface AdminNavItem {
@@ -15,7 +16,9 @@ interface AdminNavItem {
 
 const NAV: AdminNavItem[] = [
   { label: '대시보드', to: '/admin/dashboard', group: '모니터링', hint: '사용·자원·안전 현황' },
+  { label: '이상 탐지', to: '/admin/anomaly', group: '모니터링', hint: '급증·지연 감지 · 실행 로그' },
   { label: '미터링·정산', to: '/admin/metering', group: '모니터링', hint: '계열사·부서 Chargeback' },
+  { label: '자산 활용 현황', to: '/admin/asset-spread', group: '운영 관리', hint: '계열사간 재사용 · 그룹 승격' },
   { label: '모델 관리', to: '/admin/models', group: '플랫폼 기반', hint: '등록·버전·외부 서빙 API' },
   { label: 'LLM Gateway', to: '/admin/gateway', group: '플랫폼 기반', hint: '단일 통로·라우팅·쿼터' },
   { label: 'Vector 저장소', to: '/admin/vector-store', group: '플랫폼 기반', hint: '제품 연동·계열사 격리' },
@@ -44,7 +47,12 @@ const NAV: AdminNavItem[] = [
  * RFP 2-1 "접근 가능한 워크스페이스·메뉴·기능만 노출". 딥링크로 들어와도
  * 아래 리다이렉트가 첫 메뉴로 되돌린다.
  */
-const AFFILIATE_MENU = ['/admin/metering', '/admin/services', '/admin/members'];
+const AFFILIATE_MENU = ['/admin/anomaly', '/admin/metering', '/admin/services', '/admin/members'];
+
+/**
+ * 지주 관리자 전용 메뉴 — 계열사를 가로지르는 조망이라 계열사 관리자에겐 안 나온다.
+ * 「자산 활용 현황」이 여기 있는 이유가 3막 파트 B 의 전제다.
+ */
 
 /**
  * 관리 콘솔 공통 레이아웃 — 좌측 사이드바 + 본문 Outlet.
@@ -56,8 +64,14 @@ export default function AdminLayout() {
   const affiliate = isAffiliateConsoleAdmin(persona);
   const nav = affiliate ? NAV.filter((n) => AFFILIATE_MENU.includes(n.to)) : NAV;
   const ns = TENANTS.find((t) => t.name === persona?.tenant)?.namespace ?? '';
+  /*
+   * 이상 알림 배지 — 접속 즉시 보여야 관제다. 자기 계열사 건만 센다.
+   * 지주 관리자는 전 계열사 건을 본다.
+   */
+  const myAlerts = ANOMALY_ALERTS.filter((a) => !affiliate || a.tenant === persona?.tenant);
 
   if (affiliate && !AFFILIATE_MENU.some((m) => location.pathname.startsWith(m))) {
+    // 관제의 시작은 이상 알림이다 — 첫 메뉴가 곧 아침에 여는 화면이다.
     return <Navigate to={AFFILIATE_MENU[0]} replace />;
   }
 
@@ -88,6 +102,17 @@ export default function AdminLayout() {
                   🔒 MFA
                 </span>
               </div>
+              {myAlerts.length > 0 && (
+                <NavLink
+                  to="/admin/anomaly"
+                  className="mt-2 flex items-center gap-1.5 rounded border border-bad-border bg-bad-bg px-2 py-1.5 hover:border-bad"
+                >
+                  <span className="text-[11px]">⚠</span>
+                  <span className="text-[10.5px] font-extrabold text-bad leading-tight">
+                    {affiliate ? '우리 계열사' : '그룹'} 이상 감지 {myAlerts.length}건
+                  </span>
+                </NavLink>
+              )}
               {affiliate && (
                 // 어디까지 보이는지를 사이드바에 박는다 — 화면마다 따로 설명하지 않아도 되게.
                 <div className="mt-1.5 text-[10px] font-semibold text-ink-mid leading-snug">

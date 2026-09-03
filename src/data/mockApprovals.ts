@@ -400,88 +400,23 @@ export function promotionKindLabel(kind: AssetKind): string {
 }
 
 /**
- * 시드 1건 — **AGT-204 PB 자산진단 어시스턴트** 를 계열사 → 그룹으로 승격.
+ * 승격 결재 시드는 **두지 않는다.**
  *
- * 자산·소유자·계열사·지표는 전부 mockCatalogAgents.ts / mockCatalog.ts 의
- * 실재 값이다(AGT-204 · 부산은행 · 박서연 · 계열사 범위 · ★4.6(38) · 12곳 도입 ·
- * 주간 12,480 호출 · 시스템 프롬프트 v4.2). 카탈로그에서 이 카드를 열어 두고
- * 결재 화면으로 넘어가면 같은 숫자가 이어진다.
+ * 예전에는 AGT-204(PB 자산진단)에 「설개발 상신 · 고승인 승인 완료 · 박거버 대기」
+ * 건을 심어 뒀다. 그런데 시연 3막 파트 B 는 **지주 관리자가 그 자산의 승격을
+ * 발의하는** 이야기다 — 이미 올라간 결재가 있으면 중복 상신으로 막혀 그 장면이
+ * 성립하지 않는다.
+ *
+ * 대신 그 서사를 `mockAssetSpread.ACCESS_REQUESTS` 가 맡는다. 여러 계열사가
+ * **개별 권한 요청만 반복**했고 아직 아무도 승격을 올리지 않은 상태 — 그래서
+ * 지주 관리자가 "절차를 반복시키느니 범위를 넓히자" 고 판단하는 흐름이 된다.
+ *
+ * 진행 중인 승격 결재는 시연 중에 실제로 상신되어 생긴다(1막 AGT-731 · 3막 AGT-204).
  */
-const SEED_PROMOTIONS: ScopePromotion[] = [
-  {
-    approvalId: 'APV-2026-101',
-    assetKind: 'agent',
-    assetId: 'AGT-204',
-    assetName: 'PB 자산진단 어시스턴트',
-    ownerTenant: '부산은행',
-    ownerName: '박서연',
-    version: 'v4.2',
-    updatedAt: '2026-05-19 16:08',
-    fromScope: '계열사',
-    toScope: '그룹',
-    requestedBy: '설개발',
-    requesterTenant: '경남은행',
-    purpose: 'PB 고객 보유자산 진단 상담 초안 작성',
-    deployUnit: '본부',
-    reason:
-      '경남은행 PB 채널에서 동일 업무를 별도로 만들 계획이었으나, 부산은행 자산이 이미 검증을 마쳐 중복 구축이 불필요합니다. 그룹 범위로 열어 주시면 경남은행·투자증권·자산운용이 각 Namespace 에서 그대로 호출하겠습니다.',
-    evidence: [
-      { k: '사용량', v: '주간 12,480 호출 · 최근 8주 연속 증가', pass: true },
-      { k: '이용자 평가', v: '★ 4.6 / 5.0 · 38명 평가', pass: true },
-      { k: '도입 부서', v: '12개 부서 (소유 계열사 내)', pass: true },
-      { k: '운영 기간', v: '서빙계 운영 6개월 · 중단 이력 없음', pass: true },
-      { k: '대고객 노출', v: '대직원 전용 — 대고객 채널 미노출', pass: true },
-    ],
-    artifacts: [
-      { name: '레드팀 검증 결과서', ref: 'RT-2026-0412', result: '치명 0 · 중 2 (조치 완료)', ok: true },
-      { name: '가드레일 정책 적용 확인', ref: 'GRD-PB-04', result: '입력·출력 필터 적용', ok: true },
-      { name: 'PII 마스킹 점검', ref: 'PII-AGT-204', result: '기본 항목 6종 전량 활성', ok: true },
-      { name: 'SLO 리포트 (30일)', ref: 'SLO-2026-05', result: 'P95 2.1초 · 가용률 99.7%', ok: true },
-      { name: '타 계열사 적용 영향도 검토', ref: 'IMP-KN-011', result: '경남은행 상품코드 매핑 1건 보완 필요', ok: false },
-    ],
-    draftedAt: '2026-05-15 10:20',
-    stages: [
-      {
-        seq: 2,
-        kind: 'affiliate-admin',
-        label: '소유 계열사 관리자 승인',
-        approverName: '고승인',
-        approverTenant: '부산은행',
-        state: 'done',
-        decidedBy: '고승인 (계열사 AI서비스 관리자)',
-        decidedAt: '2026-05-15 15:41',
-        note: '경남은행 상품코드 매핑 보완을 전제로 승인합니다.',
-      },
-      {
-        seq: 3,
-        kind: 'group-governance',
-        label: '그룹 거버넌스 승인',
-        approverName: GROUP_GOVERNANCE_APPROVER.name,
-        approverTenant: GROUP_GOVERNANCE_APPROVER.tenant,
-        state: 'current',
-      },
-    ],
-  },
-];
+const SEED_PROMOTIONS: ScopePromotion[] = [];
 
-const SEED_PROMOTION_APPROVALS: ApprovalItem[] = [
-  {
-    id: 'APV-2026-101',
-    category: PROMOTE_CATEGORY,
-    title: '[공유범위 승격] PB 자산진단 어시스턴트 · 계열사 → 그룹',
-    draftedBy: '설개발',
-    draftedAt: '2026-05-15 10:20',
-    stage: { current: 3, total: 3, label: '그룹 거버넌스 승인' },
-    state: 'pending',
-    mine: true,
-  },
-];
-
-/** 승격 결재 상세 — approvalId 로 조회한다. */
-const promotions: ScopePromotion[] = [...SEED_PROMOTIONS];
-
-// 시드 승격 결재를 결재함 목록 맨 앞에 얹는다(진행 중 건이라 위에 보여야 한다).
-approvals.unshift(...SEED_PROMOTION_APPROVALS);
+/** 진행 중인 승격 결재 상세. 시연 중 상신으로 채워진다. */
+let promotions: ScopePromotion[] = [...SEED_PROMOTIONS];
 
 /* ═══════════════════════ 결재 스토어 (메모리 전용) ═══════════════════════ */
 

@@ -1639,11 +1639,21 @@ export function getMeteringAgentBase() {
         calls: a.monthCalls,
         inputTokens: a.monthTokenInput,
         outputTokens: a.monthTokenOutput,
-        deltaPct: +(((seed % 51) - 16) * 0.85).toFixed(1),
+        // 이상 알림이 걸린 자산은 알림과 **같은 배수**를 쓴다. 관제 화면과 미터링이
+        // 다른 증감률을 말하면 관리자가 두 번 확인해야 한다.
+        deltaPct: AGENT_DELTA_OVERRIDE[a.id] ?? +(((seed % 51) - 16) * 0.85).toFixed(1),
       };
     })
     .sort((a, b) => b.calls - a.calls);
 }
+
+/**
+ * 전월비 고정값 — 시연 3막 파트 A 의 이상 알림(GRP-005 ×3.0)과 맞춘다.
+ * `mockAffiliateOps.ANOMALY_ALERTS` 의 multiple 을 퍼센트로 옮긴 값이다.
+ */
+const AGENT_DELTA_OVERRIDE: Record<string, number> = {
+  'GRP-005': 200.0,
+};
 
 /* ═══════════════════════════════════════════════════════════════
  * 10) 대시보드 Export — RFP 2-1 [34] "(Export 기능 포함)"

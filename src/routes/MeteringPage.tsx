@@ -26,7 +26,13 @@ import {
   getAgentRows,
 } from '@/data/mockMetering';
 import { useTenant } from '@/lib/tenantStore';
+import { Link } from 'react-router-dom';
 import { useCurrentPersona } from '@/lib/persona';
+import {
+  TENANT_CALL_TREND,
+  SURGE_INDEX,
+  ANOMALY_ALERTS,
+} from '@/data/mockAffiliateOps';
 import { isAffiliateConsoleAdmin } from '@/lib/personaView';
 import { toast } from '@/lib/toast';
 import StatusPill from '@/components/ui/StatusPill';
@@ -86,14 +92,32 @@ export default function MeteringPage() {
   );
   const maxCost = Math.max(...allRows.map((r) => r.monthCost), 1);
   /*
-   * 에이전트 표 — 계열사 관리자는 **자체 에이전트만**. 그룹 공용 에이전트의 정산액은
-   * 전 계열사 호출을 합친 값이라 여기 두면 남의 사용량이 섞여 보인다(SEC-001).
-   * 그룹 공용의 배분분은 위 계열사 정산액 안에 이미 들어 있다.
+   * 에이전트 표 — 계열사 관리자는 **자기 계열사가 만든 자산**을 본다.
+   *
+   * 그룹 공통 운영영역에 배포된 자산(GRP-*)도 제작 주관이 우리면 포함한다.
+   * 만든 쪽이 운영 책임을 지므로 관제 대상이다 — 시연 3막의 GRP-005 가 그 경우다.
+   * 남의 계열사가 만든 자산은 여기 나오지 않는다(SEC-001).
    */
-  const agentRows = useMemo(() => {
+  const baseAgentRows = useMemo(() => {
     const all = getAgentRows();
-    return affiliate ? all.filter((a) => a.tenant === myTenant && !a.groupShared) : all;
+    return affiliate ? all.filter((a) => a.tenant === myTenant) : all;
   }, [affiliate, myTenant]);
+  /*
+   * 정렬 축 — 이상 조사 때는 **급증순**으로 봐야 범인이 맨 위로 온다(3A-4).
+   * 평상시 정산 검토는 비용순이 맞다. 그래서 축을 바꿀 수 있게 둔다.
+   */
+  const [agentSort, setAgentSort] = useState<'cost' | 'surge'>('cost');
+  const agentRows = useMemo(() => {
+    const arr = [...baseAgentRows];
+    return agentSort === 'surge' ? arr.sort((a, b) => b.deltaPct - a.deltaPct) : arr;
+  }, [baseAgentRows, agentSort]);
+  // 급증순으로 보라고 화면이 먼저 권한다 — 조사 동선을 끊지 않기 위해서다.
+  /** 이 계열사에 이상 알림이 걸린 자산 — 표에서 강조하고 실행 로그로 잇는다. */
+  const alertedIds = useMemo(
+    () => new Set(ANOMALY_ALERTS.filter((a) => !affiliate || a.tenant === myTenant).map((a) => a.agentId)),
+    [affiliate, myTenant],
+  );
+  const trend = TENANT_CALL_TREND[myTenant];
 
   return (
     <div>
@@ -168,6 +192,23 @@ export default function MeteringPage() {
           />
         )}
       </div>
+
+      {/* ── 30일 호출 추이 (3A-3 급증 시점 확인) ── */}
+      {affiliate && trend && (
+        <section className="card px-5 py-4 mb-3.5">
+          <div className="flex items-baseline gap-2 mb-1">
+            <h2 className="text-[14px] font-extrabold text-ink">30일 호출 추이</h2>
+            <span className="text-[11px] text-ink-mid font-semibold">
+              {myTenant} 일별 호출 수 · 급증 구간은 붉게 표시된다
+            </span>
+            <span className="ml-auto text-[11px] font-bold text-ink-mid tabular-nums">
+              최근 {trend[trend.length - 1].toLocaleString('ko-KR')}회 · 30일 평균{' '}
+              {Math.round(trend.reduce((a, b) => a + b, 0) / trend.length).toLocaleString('ko-KR')}회
+            </span>
+          </div>
+          <CallTrend series={trend} surgeFrom={SURGE_INDEX} />
+        </section>
+      )}
 
       {/* ── 계열사별 정산표 ── */}
       <section className="card px-5 py-4 mb-3.5">
@@ -423,14 +464,29 @@ export default function MeteringPage() {
           <h2 className="text-[14px] font-extrabold text-ink">에이전트별 미터링</h2>
           <span className="text-[11px] text-ink-mid font-bold">
             {affiliate ? (
-              <>당사 자체 에이전트 <b className="text-ink-dark">{agentRows.length}종</b> · 그룹 공용분은 계열사 정산액에 배분 반영</>
+              <>당사 제작 <b className="text-ink-dark">{agentRows.length}종</b> · 그룹 공용 자산은 전 계열사 호출 합산 기준</>
             ) : (
               <>호출이 발생한 <b className="text-ink-dark">{agentRows.length}종 전수</b> · 상위 N 절단 없음</>
             )}
           </span>
-          <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
-            AGB-010
-          </span>
+          <div className="ml-auto flex items-center gap-1.5">
+            {([['cost', '비용순'], ['surge', '급증순']] as const).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setAgentSort(k)}
+                className={cn(
+                  'px-2.5 py-1 rounded-full border text-[11px] font-extrabold',
+                  agentSort === k ? 'bg-brand-dark border-brand-dark text-white' : 'bg-white border-line text-ink-dark hover:border-brand-dark',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+            <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
+              AGB-010
+            </span>
+          </div>
         </div>
         <p className="text-[11px] text-ink-mid font-semibold mb-3">
           조직 축(계열사·부서·사용자)과 별개로 <b className="text-ink-dark">무엇이 비용을 쓰는지</b>를
@@ -444,9 +500,9 @@ export default function MeteringPage() {
                 <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
                   에이전트
                 </th>
-                {['월 호출', '입력', '출력', '정산액', '건당', '전월비'].map((h) => (
+                {['월 호출', '입력', '출력', '정산액', '건당', '전월비', ''].map((h) => (
                   <th
-                    key={h}
+                    key={h || 'act'}
                     className="text-right text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft whitespace-nowrap"
                   >
                     {h}
@@ -458,6 +514,9 @@ export default function MeteringPage() {
               {agentRows.map((a) => (
                 <tr key={a.agentId} className="border-b border-line-soft last:border-b-0">
                   <td className="px-2.5 py-[7px] whitespace-nowrap">
+                    {alertedIds.has(a.agentId) && (
+                      <span className="pill bg-bad-bg text-bad border border-bad-border mr-1.5">⚠ 이상</span>
+                    )}
                     <span className="text-[10px] font-mono font-bold text-ink-mid">
                       {a.agentId}
                     </span>
@@ -486,6 +545,16 @@ export default function MeteringPage() {
                     )}
                   >
                     {a.deltaPct > 0 ? '▲' : '▼'} {Math.abs(a.deltaPct).toFixed(1)}%
+                  </td>
+                  <td className="px-2.5 py-[7px] text-right whitespace-nowrap">
+                    {alertedIds.has(a.agentId) && (
+                      <Link
+                        to="/admin/anomaly"
+                        className="text-[10.5px] font-extrabold text-info hover:underline"
+                      >
+                        실행 로그 조회 →
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -578,5 +647,52 @@ function Legend({ cls, label }: { cls: string; label: string }) {
       <span className={cn('w-2.5 h-2.5 rounded-sm', cls)} />
       <span className="text-[10.5px] text-ink-mid font-semibold">{label}</span>
     </span>
+  );
+}
+
+
+/* ═══════════════ 30일 호출 추이 (3A-3) ═══════════════ */
+
+/**
+ * 급증 시점을 눈으로 짚을 수 있어야 한다 — 알림이 말한 시각과 그래프의 튀는
+ * 지점이 같아야 두 화면이 같은 사건을 말한다. 외부 차트 라이브러리를 쓰지 않고
+ * SVG 로 그린다(오프라인 자립).
+ */
+function CallTrend({ series, surgeFrom }: { series: number[]; surgeFrom: number }) {
+  const W = 900;
+  const H = 132;
+  const PAD = 6;
+  const max = Math.max(...series) * 1.08;
+  const step = (W - PAD * 2) / (series.length - 1);
+  const x = (i: number) => PAD + i * step;
+  const y = (v: number) => H - PAD - (v / max) * (H - PAD * 2);
+  const line = series.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+  const area = `${line} L ${x(series.length - 1).toFixed(1)} ${H - PAD} L ${x(0).toFixed(1)} ${H - PAD} Z`;
+
+  return (
+    <div className="border border-line-soft rounded bg-white px-3 py-2.5">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[132px]" preserveAspectRatio="none">
+        {/* 급증 구간 배경 */}
+        <rect
+          x={x(surgeFrom)}
+          y={PAD}
+          width={W - PAD - x(surgeFrom)}
+          height={H - PAD * 2}
+          className="fill-bad/10"
+        />
+        <path d={area} className="fill-brand/10" />
+        <path d={line} className="stroke-brand fill-none" strokeWidth={2} />
+        {/* 급증 시작 표식 */}
+        <line x1={x(surgeFrom)} y1={PAD} x2={x(surgeFrom)} y2={H - PAD} className="stroke-bad" strokeWidth={1.5} strokeDasharray="4 3" />
+        {series.slice(surgeFrom).map((v, i) => (
+          <circle key={i} cx={x(surgeFrom + i)} cy={y(v)} r={3.5} className="fill-bad" />
+        ))}
+      </svg>
+      <div className="flex items-center justify-between text-[10px] font-semibold text-ink-mid mt-1">
+        <span>30일 전</span>
+        <span className="text-bad font-extrabold">↑ 06-02 14:20 급증 시작</span>
+        <span>오늘</span>
+      </div>
+    </div>
   );
 }

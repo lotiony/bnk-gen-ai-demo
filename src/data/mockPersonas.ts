@@ -33,6 +33,7 @@ export type PersonaId =
   | 'group_dev'
   // 부산은행
   | 'bs_admin'
+  | 'bs_ops_admin'
   | 'bs_loan_dev'
   | 'project_owner'
   | 'agent_lead'
@@ -200,6 +201,31 @@ export const PERSONAS: Persona[] = [
     tenant: '부산은행',
     canSwitchTenant: false,
     hint: '부산은행 AI자산의 공개·공유 범위 승인',
+  },
+  /**
+   * 계열사 AI 플랫폼 관리자 — **자기 계열사를 관제하는 운영 관리자**.
+   *
+   * 고승인(승인권자)과 자리가 다르다. 그쪽은 자산 공개 범위를 결재하는
+   * 역할이고, 이 계정은 계열사 Namespace 의 사용량·이상·서비스·멤버를 직접
+   * 보는 관제 역할이다. 시연 3막 파트 A 「이상 탐지 → 원인 판단 → 개선 요청」이
+   * 이 계정으로 진행된다.
+   *
+   * 관리 콘솔은 열리되 **자기 계열사 범위로만** 열린다(SEC-001).
+   * 그룹 전체 조망(전사 대시보드·GPU·감사 원장)은 지주 관리자 몫이다.
+   *
+   * ⚠️ 관리자는 에이전트를 쓰지 않는다. 데이터를 보고 사람이 판단한다.
+   */
+  {
+    id: 'bs_ops_admin',
+    role: '계열사 AI 플랫폼 관리자',
+    rfpRole: '관리자',
+    name: '최관제',
+    initial: '최',
+    dept: '부산은행 · AI플랫폼운영팀',
+    group: '관리자',
+    tenant: '부산은행',
+    canSwitchTenant: false,
+    hint: '부산은행 Namespace 사용량·이상 탐지·서비스 운영',
   },
   {
     id: 'project_owner',
@@ -442,7 +468,7 @@ export const AFFILIATE_APPROVER_IDS: PersonaId[] = ['bs_admin', 'kn_admin'];
  * 계열사 관리 콘솔 운영자 — 관리 콘솔이 **자기 계열사 범위로** 열리는 계정.
  * 승인권자(위)와 달리 콘솔은 열리지만, 그룹 공동존 조망 메뉴는 나오지 않는다.
  */
-export const AFFILIATE_CONSOLE_ADMIN_IDS: PersonaId[] = ['ci_admin'];
+export const AFFILIATE_CONSOLE_ADMIN_IDS: PersonaId[] = ['bs_ops_admin', 'ci_admin'];
 
 /** 해당 계열사의 승인권자(관리자 그룹). 없으면 undefined. */
 export function affiliateApprover(t: Tenant): Persona | undefined {

@@ -32,6 +32,8 @@ import WorkflowBuilderPage from './routes/WorkflowBuilderPage';
 import McpRegisterPage from './routes/McpRegisterPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './routes/AdminDashboardPage';
+import AdminAnomalyPage from './routes/AdminAnomalyPage';
+import AdminAssetSpreadPage from './routes/AdminAssetSpreadPage';
 import StudioLayout from './components/layout/StudioLayout';
 import KnowledgeLayout from './components/layout/KnowledgeLayout';
 import StudioTasksPage from './routes/StudioTasksPage';
@@ -262,6 +264,8 @@ export default function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="anomaly" element={<AdminAnomalyPage />} />
+          <Route path="asset-spread" element={<AdminAssetSpreadPage />} />
           {/* 거버넌스는 최상위 /governance 로 분리됐다 — 기존 링크 보존용 리다이렉트 */}
           <Route path="governance" element={<Navigate to="/governance" replace />} />
           <Route path="metering" element={<MeteringPage />} />
