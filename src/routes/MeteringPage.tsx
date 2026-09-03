@@ -501,7 +501,7 @@ export default function MeteringPage() {
                 <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
                   에이전트
                 </th>
-                {['월 호출', '입력', '출력', '정산액', '건당', '전일비', ''].map((h) => (
+                {['월 호출', '입력', '출력', '정산액', '건당', '전일 대비', ''].map((h) => (
                   <th
                     key={h || 'act'}
                     className="text-right text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft whitespace-nowrap"

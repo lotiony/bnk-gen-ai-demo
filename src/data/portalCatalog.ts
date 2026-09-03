@@ -38,7 +38,7 @@ export const PORTALS: PortalDefinition[] = [
     id: 'studio',
     eyebrow: 'BUILD & DATA',
     title: 'AI Studio · 지식/데이터',
-    description: 'Agent·Workflow·MCP를 설계하고 지식 파이프라인과 Ontology를 관리합니다.',
+    description: 'Agent·Workflow·MCP를 설계하고 검색 파이프라인과 Ontology를 관리합니다.',
     entry: '/studio',
     secondary: [
       { label: 'Workflow Builder', to: '/studio/workflow' },

@@ -11,7 +11,7 @@ import FormField, { Input, Select, Row } from '@/components/projectForm/FormFiel
 import { cn } from '@/lib/utils';
 
 /**
- * 지식 파이프라인 과제 등록 — 지식데이터 과제에서 만든 인덱스를 골라
+ * 검색 파이프라인 과제 등록 — 지식데이터 과제에서 만든 인덱스를 골라
  * 검색엔진(retriever) 서비스로 가공·평가·운영계 프로모션 까지 처리.
  * 에이전트/지식데이터 과제와 동일한 디자인 토큰·레이아웃 사용.
  */
@@ -144,7 +144,7 @@ export default function SearchPipelineTaskPage() {
       <div className="card px-6 py-5 mb-3.5 flex justify-between items-end">
         <div>
           <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px]">
-            지식 파이프라인 과제 등록
+            검색 파이프라인 과제 등록
           </h1>
           <p className="text-xs text-ink-mid font-semibold mt-1">
             지식데이터 과제의 인덱스를 골라 <b className="text-ink-dark">검색엔진(retriever)</b>을 개발계 배포 →

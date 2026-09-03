@@ -37,7 +37,7 @@ const SENS_TONE: Record<number, string> = {
 };
 
 /**
- * 지식 파이프라인 과제 상세 — 헤더 + 4단계 stepper + 5개 탭(개요·인덱스·개발계·평가·운영계).
+ * 검색 파이프라인 과제 상세 — 헤더 + 4단계 stepper + 5개 탭(개요·인덱스·개발계·평가·운영계).
  * 에이전트 과제 상세와 동일한 max-w/padding/Header card/TabBtn 패턴.
  */
 /** 셸 밖(프로젝트 경로)에서 단독으로 열릴 때의 컨테이너. */

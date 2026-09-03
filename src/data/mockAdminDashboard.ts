@@ -1648,7 +1648,7 @@ export function getMeteringAgentBase() {
 }
 
 /**
- * 전일비 고정값 — 시연 3막 파트 A 의 이상 알림(GRP-005 ×3.0)과 맞춘다.
+ * 전일 대비 고정값 — 시연 3막 파트 A 의 이상 알림(GRP-005 ×3.0)과 맞춘다.
  * `mockAffiliateOps.ANOMALY_ALERTS` 의 multiple(어제 대비 3배)을 퍼센트로 옮긴 값이다.
  */
 const AGENT_DELTA_OVERRIDE: Record<string, number> = {
