@@ -10,6 +10,10 @@
  * ⚠️ 조치 버튼을 두지 않는다. 관리자는 원인을 **판단**해 개발팀에 넘기고,
  *    실제 수정은 워크플로우 배포 결재를 타야 한다. 여기서 눌러 고치는 그림을
  *    그리면 그게 그대로 계약 확약이 된다(RFP Ⅳ.4.1).
+ *
+ * 화면 아래쪽의 「운영 대응 이력」은 **이미 끝난** 건이다(외환 시나리오 화면 13).
+ * 지금 조사할 건과 섞지 않으려고 축을 나눴다. 운영의 가치는 무장애가 아니라
+ * 되짚을 수 있음이라서, 처리 완료 기록도 화면에 남긴다(SEC-009).
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -21,11 +25,21 @@ import {
   SURGE_CALL_LOG,
   REPEAT_CALLERS,
   LOOP_DIAGNOSIS,
+  resolvedIncidentsFor,
+  type ResolvedIncident,
 } from '@/data/mockAffiliateOps';
 
 export default function AdminAnomalyPage() {
   const persona = useCurrentPersona();
-  const alerts = ANOMALY_ALERTS.filter((a) => !persona?.tenant || a.tenant === persona.tenant);
+  /*
+   * 그룹 조망 권한인가 — 공동존을 운영·감독하는 역할만 계열사를 가로질러 본다
+   * (SEC-001). 계열사 관리자는 자기 Namespace 만 본다.
+   */
+  const wide = !!persona?.canSwitchTenant;
+  const alerts = ANOMALY_ALERTS.filter(
+    (a) => wide || !persona?.tenant || a.tenant === persona.tenant,
+  );
+  const incidents = resolvedIncidentsFor(persona?.tenant, wide);
   const [openId, setOpenId] = useState<string | null>(alerts[0]?.id ?? null);
   /** 3A-5·3A-6 은 「상세 조사」를 눌러야 열린다 — 탐지와 조사를 시연에서 나눈다. */
   const [investigating, setInvestigating] = useState(false);
@@ -37,12 +51,13 @@ export default function AdminAnomalyPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-[19px] font-extrabold text-ink tracking-[-0.4px]">이상 탐지</h1>
           <p className="text-[11.5px] text-ink-mid font-semibold mt-1">
-            <b className="text-ink-dark">{persona?.tenant}</b> Namespace 의 사용량·응답 이상을
-            규칙으로 감지한다 · 판단과 조치는 관리자 몫이다
+            <b className="text-ink-dark">{wide ? '그룹 전체' : persona?.tenant}</b>
+            {wide ? ' 11개 Namespace 의' : ' Namespace 의'} 사용량·응답 이상을 규칙으로 감지한다 ·
+            판단과 조치는 관리자 몫이다
           </p>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 pt-1">
-          {['AGB-009', 'ONM-002'].map((r) => (
+          {['AGB-009', 'ONM-002', 'SEC-009'].map((r) => (
             <span key={r} className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
               {r}
             </span>
@@ -272,7 +287,104 @@ export default function AdminAnomalyPage() {
           </section>
         </>
       )}
+
+      {/* ── 운영 대응 이력 (외환 시나리오 화면 13) ── */}
+      {incidents.length > 0 && (
+        <section className="card px-5 py-4">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-[14px] font-extrabold text-ink">운영 대응 이력</h2>
+            <span className="text-[11px] text-ink-mid font-semibold">
+              처리 완료된 건 · 무엇이 문제였고 어떻게 해결했는지가 남는다
+            </span>
+            <span className="ml-auto pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
+              SEC-009
+            </span>
+          </div>
+          <p className="text-[11px] text-ink-mid font-semibold mb-3">
+            문제 확인 → 담당자 조치 → 복구 확인까지 한 건으로 묶어 기록한다 · 조치 주체는 항상
+            사람이다
+          </p>
+          <div className="flex flex-col gap-2.5">
+            {incidents.map((inc) => (
+              <IncidentCard key={inc.id} inc={inc} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+/**
+ * 처리 완료된 운영 이슈 한 건.
+ *
+ * 신고자의 말을 그대로 인용하는 것이 이 카드의 출발점이다 — 운영 기록이
+ * 시스템 용어로만 남으면 "무엇이 문제였는지" 가 사용자 관점에서 사라진다.
+ */
+function IncidentCard({ inc }: { inc: ResolvedIncident }) {
+  return (
+    <article className="border border-line rounded px-4 py-3.5 bg-white">
+      <div className="flex items-baseline gap-2 flex-wrap mb-2">
+        <span className="text-[13px] font-extrabold text-ink">{inc.scope}</span>
+        <span className="text-[10px] font-mono font-bold text-ink-light">
+          {inc.agentId} · {inc.id}
+        </span>
+        <StatusPill tone="ok" className="ml-auto">
+          ✓ {inc.state}
+        </StatusPill>
+      </div>
+
+      {/* 신고자의 말 그대로 */}
+      <blockquote className="border-l-[3px] border-bad-border pl-3 py-0.5 mb-3">
+        <p className="text-[14px] font-extrabold text-ink leading-snug">“{inc.report}”</p>
+        <p className="text-[10.5px] text-ink-mid font-semibold mt-0.5">
+          {inc.reportedBy} · 신고 {inc.reportedAt} · 영향 사용자 {inc.affectedUsers}명 · 복구까지{' '}
+          {inc.duration}
+        </p>
+      </blockquote>
+
+      {/* 문제 확인 → 담당자 조치 → 복구 확인 */}
+      <div className="grid grid-cols-3 gap-2.5">
+        {inc.steps.map((st, i) => (
+          <section
+            key={st.k}
+            className={cn(
+              'rounded border px-3.5 py-3',
+              i === inc.steps.length - 1 ? 'border-ok-border bg-ok-bg' : 'border-line-soft bg-surface-soft',
+            )}
+          >
+            <div className="flex items-baseline gap-1.5 mb-1">
+              <span className="text-[10px] font-mono font-extrabold text-ink-light">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span
+                className={cn(
+                  'text-[12.5px] font-extrabold',
+                  i === inc.steps.length - 1 ? 'text-ok' : 'text-ink',
+                )}
+              >
+                {st.k}
+              </span>
+            </div>
+            <p className="text-[11px] text-ink-dark font-semibold leading-snug">{st.v}</p>
+            <div className="mt-1.5 pt-1.5 border-t border-line-soft text-[10px] text-ink-mid font-semibold leading-snug">
+              {st.at}
+              {st.by && (
+                <>
+                  <br />
+                  {st.by}
+                </>
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <p className="mt-2.5 text-[10.5px] text-ink-mid font-semibold">
+        감사 원장 참조 <b className="text-ink-dark font-mono">{inc.auditRef}</b> · 처리 완료된 가상
+        운영 이력입니다
+      </p>
+    </article>
   );
 }
 

@@ -172,3 +172,99 @@ export const TREND_DAYS = 30;
 
 /** 급증 시작 표식 — 뒤에서 두 번째 점. */
 export const SURGE_INDEX = 28;
+
+/* ═══════════════════ 운영 대응 이력 (외환 시나리오 화면 13) ═══════════════════ */
+
+/**
+ * 처리 완료된 운영 이슈 — **문제 확인 → 담당자 조치 → 복구 확인**의 완결 기록.
+ *
+ * RFP: SEC-009(관리자 및 사용자 감사 추적 로그) · ONM-002(모니터링) ·
+ *      AGB-009(에이전트 실행 로그·추적)
+ *
+ * 위쪽의 `ANOMALY_ALERTS` 와 성격이 다르다. 그쪽은 **지금 조사해야 할** 건이고,
+ * 이쪽은 **이미 끝난** 건이다. 둘을 한 목록에 섞으면 "지금 무엇을 봐야 하는가" 가
+ * 흐려진다. 그래서 별도 축으로 둔다.
+ *
+ * 왜 완결 기록을 굳이 화면에 두는가 — 운영의 가치는 무장애가 아니라 **되짚을 수
+ * 있음**이다. 무엇이 문제였고 누가 어떻게 조치했는지가 남아야 그룹 공동 플랫폼의
+ * 운영 책임 소재가 성립한다. 장애가 한 건도 없는 화면이 오히려 신뢰를 잃는다.
+ *
+ * ⚠️ 조치 주체는 항상 **사람**이다. "AI 가 스스로 복구했다" 로 읽히면 그게 그대로
+ *    계약 확약이 된다(RFP Ⅳ.4.1).
+ *
+ * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
+ */
+export interface IncidentStep {
+  /** 단계 라벨 — 문제 확인 · 담당자 조치 · 복구 확인 세 단계로 고정한다. */
+  k: string;
+  /** 무슨 일이 있었는가. */
+  v: string;
+  at: string;
+  /** 처리한 사람. 시스템이 한 일이면 비운다. */
+  by?: string;
+}
+
+export interface ResolvedIncident {
+  id: string;
+  tenant: Tenant;
+  agentId: string;
+  agentName: string;
+  /** 화면 제목에 쓰는 업무 이름. */
+  scope: string;
+  /** 사용자가 처음 신고한 말 그대로. */
+  report: string;
+  reportedAt: string;
+  reportedBy: string;
+  /** 영향 받은 사용자 수. */
+  affectedUsers: number;
+  /** 신고부터 복구 확인까지 걸린 시간. */
+  duration: string;
+  steps: IncidentStep[];
+  /** 현재 상태 — 처리 완료 건이므로 항상 정상이다. */
+  state: '현재 정상';
+  /** 감사 원장 참조 — 되짚을 수 있다는 것을 ID 로 보인다(SEC-009). */
+  auditRef: string;
+}
+
+export const RESOLVED_INCIDENTS: ResolvedIncident[] = [
+  {
+    id: 'INC-2026-0603-01',
+    tenant: '경남은행',
+    agentId: 'GRP-009',
+    agentName: '외환업무 어시스턴트',
+    scope: '경남은행 외환업무 / 처리 이력',
+    report: '첨부한 서류가 열리지 않습니다.',
+    reportedAt: '2026-06-03 09:12',
+    reportedBy: '경남은행 · 외환사업부',
+    affectedUsers: 4,
+    duration: '38분',
+    steps: [
+      {
+        k: '문제 확인',
+        v: '당행 적용 시 연결한 문서 파서 설정이 잘못돼 첨부 서류 파싱이 실패했습니다. 서류를 읽지 못해 검토가 진행되지 않았습니다.',
+        at: '2026-06-03 09:20',
+        by: '배관제 (경남은행 AI플랫폼운영팀)',
+      },
+      {
+        k: '담당자 조치',
+        v: '직전 정상 버전의 자료 연결 설정으로 복구했습니다. 응답 형식(개선 버전)은 그대로 유지했습니다.',
+        at: '2026-06-03 09:41',
+        by: '배관제 (경남은행 AI플랫폼운영팀)',
+      },
+      {
+        k: '복구 확인',
+        v: '신고 건과 같은 서류 4건을 다시 올려 파싱·검토가 정상 완료되는 것을 확인했습니다. 신고자에게 회신했습니다.',
+        at: '2026-06-03 09:50',
+        by: '배관제 (경남은행 AI플랫폼운영팀)',
+      },
+    ],
+    state: '현재 정상',
+    auditRef: 'AUD-2026-0603-118',
+  },
+];
+
+/** 계열사 범위로 자른 운영 이력 — 그룹 조망 권한이면 전부 본다(SEC-001). */
+export function resolvedIncidentsFor(tenant: string | undefined, wide: boolean): ResolvedIncident[] {
+  if (wide) return RESOLVED_INCIDENTS;
+  return RESOLVED_INCIDENTS.filter((i) => i.tenant === tenant);
+}
