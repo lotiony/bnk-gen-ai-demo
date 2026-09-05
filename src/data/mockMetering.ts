@@ -21,8 +21,10 @@ import {
   getCostByConglomerate,
   getMeteringAgentBase,
   AFFILIATE_HEADCOUNT,
+  PLATFORM_AGENTS,
 } from '@/data/mockAdminDashboard';
 import { AFFILIATES } from '@/data/tenants';
+import { SERVICE_CATEGORIES } from '@/data/mockUsagePermission';
 
 /** 정산 대상 월 — 데모는 한 달만 다룬다. 대시보드 기준일(2026-06-03)의 직전 마감월. */
 export const BILLING_MONTH = '2026-05';
@@ -42,6 +44,14 @@ export interface MeteringRow {
   agents: number;
   /** 그룹 공통 운영영역에서 함께 쓰는 에이전트 수(전 계열사 공용). */
   sharedAgents: number;
+  /**
+   * 이번 달 이용 횟수(호출 수).
+   *
+   * 토큰과 **같은 배분 규칙**으로 낸다 — 자체 에이전트는 전량, 그룹 공통 자산은
+   * 임직원 수 비중만큼. 다른 규칙을 쓰면 "호출은 많은데 토큰은 적다" 같은
+   * 설명할 수 없는 조합이 표 안에서 생긴다.
+   */
+  calls: number;
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
@@ -74,9 +84,21 @@ const DELTA: Record<string, number> = {
  */
 const USERS: Record<string, number> = AFFILIATE_HEADCOUNT;
 
+/** 그룹 전체 임직원 수 — 그룹 공통 자산 사용량을 계열사에 나누는 분모. */
+const HEADCOUNT_ALL = AFFILIATES.reduce((a, t) => a + (AFFILIATE_HEADCOUNT[t.name] ?? 0), 0);
+
+/** 계열사가 그룹 공통 자산에서 가져가는 몫 — 토큰 배분과 같은 가중치다. */
+function sharedShare(tenantName: string): number {
+  return (AFFILIATE_HEADCOUNT[tenantName] ?? 0) / (HEADCOUNT_ALL || 1);
+}
+
 export function getMeteringRows(): MeteringRow[] {
   const series = getConglomerateTokenSeries();
   const cost = getCostByConglomerate();
+  const sharedCalls = PLATFORM_AGENTS.filter((a) => a.groupShared).reduce(
+    (a, x) => a + x.monthCalls,
+    0,
+  );
 
   return series.map((s) => {
     const c = cost.find((x) => x.name === s.name);
@@ -94,6 +116,13 @@ export function getMeteringRows(): MeteringRow[] {
       users: USERS[s.name] ?? 0,
       agents: c?.agentCount ?? 0,
       sharedAgents: c?.sharedAgentCount ?? 0,
+      calls: Math.round(
+        PLATFORM_AGENTS.filter((a) => !a.groupShared && a.tenant === s.name).reduce(
+          (a, x) => a + x.monthCalls,
+          0,
+        ) +
+          sharedCalls * sharedShare(s.name),
+      ),
       inputTokens: s.inputTotal,
       outputTokens: s.outputTotal,
       totalTokens: s.total,
@@ -391,4 +420,166 @@ export function getAgentRows(): AgentMeteringRow[] {
       };
     })
     .sort((x, y) => y.cost - x.cost);
+}
+
+/* ═══════════════════ 이번 달 활용 현황 (업무 축) ═══════════════════ */
+
+/**
+ * 「이용 직원 · 이용 횟수 · 배분 비용」 세 숫자와 **업무별 분해**.
+ *
+ * RFP: ONM-005(월별 사내 과금·비용 정산) · AGB-010(호출 빈도 미터링)
+ *
+ * 왜 토큰 표와 별도로 두는가 —
+ *   토큰 표는 **정산 근거**다. 입력/출력을 나누고 가중치로 배분하는 규칙이
+ *   화면에 있어야 "이 금액이 왜 우리 것이냐" 에 답할 수 있다. 그런데 그 표만
+ *   놓으면 "우리 계열사가 이걸 얼마나 쓰고 있나" 라는 **관리자의 첫 질문**에
+ *   2초 안에 답하지 못한다. 그래서 읽는 층을 하나 얹는다 — 세 숫자가 먼저 오고,
+ *   근거는 아래 표에 그대로 남는다.
+ *
+ * 조직 축(계열사·부서·사용자)과 자산 축(에이전트)에 이어 **업무 축**을 더한다.
+ * 어휘는 새로 만들지 않고 `mockUsagePermission.SERVICE_CATEGORIES` 를 그대로
+ * 쓴다 — 부서별 이용 권한 화면이 이미 이 다섯 가지로 권한을 나누고 있어서,
+ * 여기서 다른 분류를 쓰면 "권한은 A 축, 비용은 B 축" 이 되어 대조가 불가능해진다.
+ *
+ * ⚠️ 전부 가상 수치다.
+ */
+
+/** 업무 축 라벨. */
+export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
+
+/**
+ * 에이전트 → 업무 매핑.
+ *
+ * 카탈로그의 `domain`(PB자산·CX·컴플라이언스…)은 **제작 관점의 분류**라
+ * 현업이 쓰는 업무명과 다르다. 관리자가 보는 것은 "어느 업무에 비용이 드나"
+ * 이므로 업무 어휘로 다시 묶는다. 매핑에 없는 자산은 「일반 사무」로 떨어진다.
+ */
+const AGENT_TASK: Record<string, ServiceCategory> = {
+  /* 계열사 자산 */
+  'AGT-204': '고객 상담',
+  'AGT-301': '고객 상담',
+  'AGT-411': '규정·컴플라이언스',
+  'AGT-512': '여신 업무',
+  'AGT-602': '고객 상담',
+  'AGT-731': '여신 업무',
+  'AGT-708': '일반 사무',
+  'AGT-812': '일반 사무',
+  'AGT-905': '고객 상담',
+  'AGT-205': '일반 사무',
+  'AGT-318': '고객 상담',
+  'AGT-072': '외환 업무',
+  'AGT-621': '고객 상담',
+  'AGT-701': '규정·컴플라이언스',
+  /* 그룹 공통 필수 Use Case 10종 */
+  'GRP-001': '규정·컴플라이언스',
+  'GRP-002': '일반 사무',
+  'GRP-003': '일반 사무',
+  'GRP-004': '일반 사무',
+  'GRP-005': '고객 상담',
+  'GRP-006': '규정·컴플라이언스',
+  'GRP-007': '고객 상담',
+  'GRP-008': '여신 업무',
+  'GRP-009': '외환 업무',
+  'GRP-010': '일반 사무',
+};
+
+export function taskOfAgent(agentId: string): ServiceCategory {
+  return AGENT_TASK[agentId] ?? '일반 사무';
+}
+
+/**
+ * 이번 달 플랫폼을 **한 번이라도 쓴** 임직원 비율.
+ *
+ * 임직원 수(`AFFILIATE_HEADCOUNT`)와 이용 직원은 다른 값이다. 총원을 그대로
+ * 「이용 직원」이라고 쓰면 전 임직원이 매달 쓴다는 뜻이 되어 과장이다. 그래서
+ * 총원에 이 비율을 곱해 내고, 화면에는 분모(임직원 수)를 함께 적는다.
+ *
+ * 계열사별로 다르게 두지 않는다 — 근거 없이 계열사마다 다른 채택률을 주면
+ * 그 차이를 설명해야 하는데 설명할 것이 없다.
+ */
+export const ADOPTION_RATE = 0.62;
+
+export interface UsageTaskRow {
+  task: ServiceCategory;
+  calls: number;
+  cost: number;
+  /** 비용 기준 비중(%). */
+  pct: number;
+}
+
+export interface UsageSummary {
+  /** 이번 달 이용 직원. */
+  users: number;
+  /** 분모 — 임직원 수. */
+  headcount: number;
+  /** 이번 달 이용 횟수(호출). */
+  calls: number;
+  /** 배분 비용. 아래 정산표의 정산액과 같은 값이다. */
+  cost: number;
+  /** 업무별 분해 — 비용 내림차순. */
+  tasks: UsageTaskRow[];
+}
+
+/**
+ * 활용 현황 요약.
+ *
+ * `tenantName` 을 주면 그 계열사, 없으면 그룹 전체다.
+ * 계열사 몫은 토큰·정산액과 **같은 배분 규칙**을 탄다 — 자체 자산은 전량,
+ * 그룹 공통 자산은 임직원 수 비중만큼. 규칙이 갈리면 이 밴드의 합계가 바로
+ * 아래 정산표와 어긋난다.
+ */
+export function getUsageSummary(tenantName?: string): UsageSummary {
+  const rows = getMeteringRows();
+  const scoped = tenantName ? rows.filter((r) => r.name === tenantName) : rows;
+
+  const headcount = scoped.reduce((a, r) => a + r.users, 0);
+  const calls = scoped.reduce((a, r) => a + r.calls, 0);
+  const cost = scoped.reduce((a, r) => a + r.monthCost, 0);
+
+  // 업무별 — 자산 축을 업무로 접는다. 배분 규칙은 위와 같다.
+  const share = tenantName ? sharedShare(tenantName) : 1;
+  const bucket = new Map<ServiceCategory, { calls: number; weighted: number }>();
+  for (const a of PLATFORM_AGENTS) {
+    if (a.monthCalls <= 0) continue;
+    if (tenantName && !a.groupShared && a.tenant !== tenantName) continue;
+    const k = tenantName && a.groupShared ? share : 1;
+    const task = taskOfAgent(a.id);
+    const cur = bucket.get(task) ?? { calls: 0, weighted: 0 };
+    cur.calls += a.monthCalls * k;
+    cur.weighted += (a.monthTokenInput + a.monthTokenOutput * OUTPUT_WEIGHT) * k;
+    bucket.set(task, cur);
+  }
+
+  const weightedSum = [...bucket.values()].reduce((a, b) => a + b.weighted, 0) || 1;
+  const tasks: UsageTaskRow[] = [...bucket.entries()]
+    .map(([task, v]) => ({
+      task,
+      calls: Math.round(v.calls),
+      cost: Math.round((cost * v.weighted) / weightedSum),
+      pct: (v.weighted / weightedSum) * 100,
+    }))
+    .sort((a, b) => b.cost - a.cost);
+
+  /*
+   * 반올림 잔액을 1위 행에 몰아 준다 — 업무별 합계가 위의 세 숫자와 1원·1회라도
+   * 다르면 "합이 안 맞는 표" 가 화면에 남는다.
+   *
+   * 비용과 호출을 **둘 다** 보정해야 한다. 처음엔 비용만 맞추고 호출을 빠뜨려서
+   * 그룹 화면의 업무별 호출 합이 이용 횟수보다 2회 많았다. 계열사별 호출과
+   * 업무별 호출이 각각 따로 반올림되기 때문에 생기는 차이다.
+   */
+  if (tasks.length) {
+    const costDrift = cost - tasks.reduce((a, t) => a + t.cost, 0);
+    if (costDrift !== 0) tasks[0].cost += costDrift;
+    const callDrift = calls - tasks.reduce((a, t) => a + t.calls, 0);
+    if (callDrift !== 0) tasks[0].calls += callDrift;
+  }
+
+  return {
+    users: Math.round(headcount * ADOPTION_RATE),
+    headcount,
+    calls,
+    cost,
+    tasks,
+  };
 }
