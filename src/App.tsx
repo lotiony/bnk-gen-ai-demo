@@ -22,6 +22,7 @@ import KnowledgeTaskRegisterPage from './routes/KnowledgeTaskRegisterPage';
 import SearchPipelineTaskPage from './routes/SearchPipelineTaskPage';
 import SearchPipelineDetailPage from './routes/SearchPipelineDetailPage';
 import CatalogPage from './routes/CatalogPage';
+import AffiliateAdoptPage from './routes/AffiliateAdoptPage';
 import AgentTaskRegisterPage from './routes/AgentTaskRegisterPage';
 import AgentTaskDetailPage from './routes/AgentTaskDetailPage';
 import DevenvTaskDetailPage from './routes/DevenvTaskDetailPage';
@@ -261,6 +262,12 @@ export default function App() {
         </Route>
 
         <Route path="/catalog" element={<CatalogPage />} />
+        {/*
+          계열사 적용 확인 — 마켓플레이스의 「당행 적용 준비」 도착지.
+          권한 판정은 화면 자체가 마켓플레이스 버튼과 같은 규칙으로 한다
+          (딥링크로 들어와도 같은 판정이 걸려야 한다).
+        */}
+        <Route path="/adopt/:agentId" element={<AffiliateAdoptPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboardPage />} />

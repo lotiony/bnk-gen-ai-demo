@@ -44,6 +44,7 @@ export type PersonaId =
   | 'service_user'
   // 경남은행
   | 'kn_admin'
+  | 'kn_ops_admin'
   | 'kn_agent_dev'
   | 'kn_data_dev'
   | 'kn_service_user'
@@ -359,6 +360,33 @@ export const PERSONAS: Persona[] = [
     canSwitchTenant: false,
     hint: '경남은행 AI자산의 공개·공유 범위 승인',
   },
+  /**
+   * 계열사 AI 플랫폼 관리자(경남은행) — **자기 계열사를 관제하는 운영 관리자**.
+   *
+   * 유승인(승인권자)과 자리가 다르다. 그쪽은 자산 공개 범위를 결재하는 역할이고,
+   * 이 계정은 경남은행 Namespace 의 미터링·서비스·멤버를 직접 보는 관제 역할이다
+   * (부산은행의 최관제, 신용정보의 문관제와 같은 자리).
+   *
+   * 외환 시나리오 화면 11 「사용량과 비용」이 이 계정으로 진행된다 — 계열사가
+   * 자기 활용 현황과 배분 비용을 직접 확인하는 장면이다. 이 계정이 없으면 그
+   * 화면을 지주 관리자로 열게 되는데, 그러면 "계열사 관점" 이라는 요점이 사라진다.
+   *
+   * ⚠️ 반드시 `kn_admin` **뒤에** 둔다. `affiliateApprover()` 가 계열사의 첫
+   *    관리자를 승인권자로 집으므로, 앞에 두면 승격·개선안 결재선이 이 계정으로
+   *    바뀐다.
+   */
+  {
+    id: 'kn_ops_admin',
+    role: '계열사 AI 플랫폼 관리자',
+    rfpRole: '관리자',
+    name: '배관제',
+    initial: '배',
+    dept: '경남은행 · AI플랫폼운영팀',
+    group: '관리자',
+    tenant: '경남은행',
+    canSwitchTenant: false,
+    hint: '경남은행 Namespace 사용량·비용·서비스 운영',
+  },
   {
     id: 'kn_agent_dev',
     role: '에이전트 개발자',
@@ -470,7 +498,7 @@ export const AFFILIATE_APPROVER_IDS: PersonaId[] = ['bs_admin', 'kn_admin'];
  * 계열사 관리 콘솔 운영자 — 관리 콘솔이 **자기 계열사 범위로** 열리는 계정.
  * 승인권자(위)와 달리 콘솔은 열리지만, 그룹 공동존 조망 메뉴는 나오지 않는다.
  */
-export const AFFILIATE_CONSOLE_ADMIN_IDS: PersonaId[] = ['bs_ops_admin', 'ci_admin'];
+export const AFFILIATE_CONSOLE_ADMIN_IDS: PersonaId[] = ['bs_ops_admin', 'kn_ops_admin', 'ci_admin'];
 
 /** 해당 계열사의 승인권자(관리자 그룹). 없으면 undefined. */
 export function affiliateApprover(t: Tenant): Persona | undefined {

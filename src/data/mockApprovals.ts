@@ -56,6 +56,8 @@ export const APPROVAL_CHIP: Record<string, { cls: string; label: string }> = {
   redteam: { cls: 'bg-warn-bg text-bad border-bad-border', label: '레드팀 신청' },
   // RFP 1.3.2 "관리자 승인 절차 기반 배포·공유 범위 통제" — 마켓플레이스에서 올라온 승격 결재.
   promote: { cls: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border', label: '공유범위 승격' },
+  // LSM-012 "LLM 응답에 대한 사용자 피드백 수집" — 대화 화면에서 올라온 응답 개선안.
+  improve: { cls: 'bg-brand-tint text-brand border-brand-tint', label: '응답 개선안' },
 };
 
 /** 매핑에 없는 종류가 와도 화면이 죽지 않도록 항상 이 함수로 조회한다. */
@@ -565,9 +567,11 @@ export function decideApproval(
   if (!target) return;
   const trimmed = note?.trim() || undefined;
   const promo = promotions.find((p) => p.approvalId === id);
-  // 승격이든 배포든 단계 진행 규칙은 하나다 — `stages` 를 가진 쪽을 집는다.
+  // 승격이든 배포든 개선안이든 단계 진행 규칙은 하나다 — `stages` 를 가진 쪽을 집는다.
   const staged: { stages: PromotionStage[] } | undefined =
-    promo ?? agentDeploys.find((d) => d.approvalId === id);
+    promo ??
+    agentDeploys.find((d) => d.approvalId === id) ??
+    improvements.find((d) => d.approvalId === id);
   const stamp = decisionLabel();
 
   if (kind === 'hold') {
@@ -951,4 +955,180 @@ export function deployLine(dep: AgentDeployApproval): PromotionStep[] {
 /** 지금 처리해야 할 단계. 없으면 완결된 건이다. */
 export function currentDeployStage(dep: AgentDeployApproval): PromotionStage | undefined {
   return dep.stages.find((s) => s.state === 'current');
+}
+
+
+/* ═══════════════ 응답 개선안 결재 (외환 시나리오 화면 07) ═══════════════ */
+
+/**
+ * 현장 직원이 남긴 개선 의견 → **관리자 승인** → 다음 업무에 반영.
+ *
+ * RFP 근거
+ *  · LSM-012 「LLM 응답에 대한 사용자 피드백 수집」 — 수집만으로는 절반이다.
+ *    수집한 의견이 검토·승인을 거쳐 반영되는 경로가 화면에 있어야 한다.
+ *  · ONM-003 「직무 분리(SoD) 기반 RBAC」 — 개선을 만든 사람과 승인하는 사람은
+ *    반드시 다르다. 기안자는 현업 직원, 승인은 계열사 AI서비스 관리자다.
+ *  · 1.3.2 「관리자 승인 절차 기반 배포·공유 범위 통제」 — 승인 후 그룹 공유
+ *    등록까지가 한 흐름이다.
+ *
+ * 승격·배포 결재와 **같은 `stages` 기계**를 쓴다. 단계 진행과 승인 자격 판정이
+ * 한 곳에서만 돌아가야 세 결재가 서로 다른 말을 하지 않는다.
+ */
+export const IMPROVE_CATEGORY = 'improve' as unknown as ApprovalItem['category'];
+
+/** 개선안이 바꾸는 응답 구성 요소 — 결재자가 "무엇이 달라지는가" 를 읽는 단위. */
+export interface ImprovementElement {
+  /** 요소명 — 직원이 말한 세 단어와 같다(결론 · 필요 서류 · 고객 안내). */
+  k: string;
+  /** 이 요소가 답하는 질문. */
+  q: string;
+  /** 개선 후 이 자리에 무엇이 오는가. */
+  v: string;
+}
+
+export interface AgentImprovement {
+  approvalId: string;
+  agentId: string;
+  agentName: string;
+  /** 승인되면 붙는 버전 라벨. */
+  version: string;
+  ownerTenant: Tenant;
+  /** 개선 의견을 낸 사람 — 기안자다. */
+  requestedBy: string;
+  requesterRole: string;
+  requesterDept: string;
+  /** 직원이 직접 쓴 개선 의견 원문. 자동 생성 문장으로 바꾸지 않는다. */
+  feedback: string;
+  elements: ImprovementElement[];
+  /** 결재자가 판단 근거로 보는 확인 항목. */
+  checks: { k: string; v: string; pass: boolean }[];
+  draftedAt: string;
+  stages: PromotionStage[];
+  /** 승인 후 그룹 마켓플레이스에 공유 등록까지 마쳤는가. */
+  shared: boolean;
+}
+
+const improvements: AgentImprovement[] = [];
+
+export function getImprovements(): AgentImprovement[] {
+  return improvements;
+}
+
+export function findImprovement(approvalId: string | undefined): AgentImprovement | undefined {
+  if (!approvalId) return undefined;
+  return improvements.find((d) => d.approvalId === approvalId);
+}
+
+export function currentImprovementStage(imp: AgentImprovement): PromotionStage | undefined {
+  return imp.stages.find((s) => s.state === 'current');
+}
+
+/** 승인이 끝났는가 — 마켓플레이스 「개선 버전」 노출 조건. */
+export function isImprovementApproved(imp: AgentImprovement): boolean {
+  const item = approvals.find((a) => a.id === imp.approvalId);
+  return item?.state === 'done';
+}
+
+/**
+ * 해당 자산의 승인된 개선안. 마켓플레이스·계열사 적용 화면이 이걸 읽는다.
+ * 없으면 아직 개선 전이라는 뜻이고, 그때는 「개선 버전」 카드가 뜨지 않는다.
+ */
+export function approvedImprovementOf(agentId: string): AgentImprovement | undefined {
+  return improvements.find((d) => d.agentId === agentId && isImprovementApproved(d));
+}
+
+/** 승인 후 공유 등록 — 그룹 마켓플레이스 노출을 켠다. */
+export function markImprovementShared(approvalId: string): void {
+  const imp = findImprovement(approvalId);
+  if (!imp || imp.shared) return;
+  imp.shared = true;
+  emit();
+}
+
+export interface ImprovementDraft {
+  agentId: string;
+  agentName: string;
+  version: string;
+  ownerTenant: Tenant;
+  requestedBy: string;
+  requesterRole: string;
+  requesterDept: string;
+  feedback: string;
+  elements: ImprovementElement[];
+  checks: { k: string; v: string; pass: boolean }[];
+}
+
+/*
+ * 발번 대역은 승격(`APV-2026-###`)·배포(`APV-AGT-###`)와 또 다르다.
+ * 같은 대역을 쓰면 결재함에 같은 번호가 두 줄 뜨고 상세가 먼저 조회되는 쪽으로
+ * 넘어간다 — 배포 결재에서 실제로 났던 사고라 처음부터 갈라 둔다.
+ */
+let improveSeq = 1;
+
+/**
+ * 대화 화면의 「개선 의견 남기기」 → 실제 결재 건 생성.
+ *
+ * 토스트만 띄우면 LSM-012 의 "수집" 만 증명되고 반영 경로가 비어 보인다.
+ * 여기서 만든 건은 결재함에서 조회되고 결재 상세에서 승인·반려된다.
+ *
+ * 승인 주체는 **소유 계열사의 AI서비스 관리자**다(개발자가 아니다 — ONM-003).
+ * 기안자가 곧 승인자가 되는 경우를 피하기 위해 `avoidDrafter` 규칙을 그대로 탄다.
+ */
+export function submitImprovement(draft: ImprovementDraft): ApprovalItem {
+  const id = `APV-IMP-${String(improveSeq++).padStart(3, '0')}`;
+  const stamp = nowLabel();
+  const approver = resolveAffiliateApprover(draft.ownerTenant, draft.requestedBy);
+
+  const item: ApprovalItem = {
+    id,
+    category: IMPROVE_CATEGORY,
+    title: `[응답 개선안] ${draft.agentName} · ${draft.version}`,
+    draftedBy: draft.requestedBy,
+    draftedAt: stamp,
+    stage: { current: 1, total: 2, label: approver.label },
+    state: 'pending',
+    mine: true,
+  };
+
+  improvements.unshift({
+    ...draft,
+    approvalId: id,
+    draftedAt: stamp,
+    shared: false,
+    stages: [
+      {
+        seq: 1,
+        kind: 'affiliate-admin',
+        label: approver.label,
+        approverName: approver.name,
+        approverTenant: approver.tenant,
+        state: 'current',
+      },
+    ],
+  });
+  approvals.unshift(item);
+  emit();
+  return item;
+}
+
+/** 화면에 그릴 결재선 — `deployLine` 과 같은 규칙으로 `stages` 에서 파생한다. */
+export function improvementLine(imp: AgentImprovement): PromotionStep[] {
+  const head: PromotionStep = {
+    seq: '✓',
+    label: '기안 — 현장 개선 의견 등록',
+    sub: `${imp.requestedBy} (${imp.requesterDept}) · ${imp.draftedAt}`,
+    tone: 'done',
+  };
+  return [
+    head,
+    ...imp.stages.map<PromotionStep>((st) => ({
+      seq: st.state === 'done' ? '✓' : String(st.seq + 1),
+      label: st.label,
+      sub:
+        st.state === 'done'
+          ? [`${st.decidedBy ?? st.approverName}`, st.decidedAt, st.note].filter(Boolean).join(' · ')
+          : `${st.approverName} (${st.approverTenant}) · ${st.state === 'current' ? '결재 대기' : '대기'}`,
+      tone: st.state,
+    })),
+  ];
 }

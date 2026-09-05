@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/Button';
 import { toast } from '@/lib/toast';
 import { useCurrentPersona } from '@/lib/persona';
 import { useTenant } from '@/lib/tenantStore';
@@ -71,6 +72,29 @@ import {
 } from '@/data/mockConsultChat';
 import { AFFILIATE_OPTIONS, CUSTOMER_DEFAULT } from '@/data/mockCustomerConsult';
 import { ConsultTurn, type ConsultState } from '@/components/consult/ConsultCards';
+import {
+  FX_AGENT_ID,
+  FX_STEPS_EVIDENCE,
+  FX_STEPS_REVIEW,
+  FX_STEPS_WRAPUP,
+  FX_TEXT,
+  fxStageIndex,
+  fxSuggestions,
+  matchFxTurn,
+  type FxCardKind,
+  type FxStage,
+} from '@/data/mockFxChat';
+import {
+  FX_CUSTOMER_QUESTION,
+  FX_FEEDBACK,
+  FX_IMPROVEMENT_CHECKS,
+  FX_IMPROVEMENT_ELEMENTS,
+  FX_IMPROVED_VERSION,
+  FX_INSTRUCTION,
+  FX_TASK_CARDS,
+} from '@/data/mockFxAssist';
+import { FxTurn, type FxState } from '@/components/fx/FxCards';
+import { submitImprovement } from '@/data/mockApprovals';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -83,6 +107,12 @@ interface Msg {
   att?: AttachFile;
   /** 고객 상담 카드(GRP-005) — 있으면 답변 블록 대신 카드로 그린다. */
   card?: ConsultCardKind;
+  /**
+   * 외환업무 카드(GRP-009). 상담 카드와 **필드를 나눠 둔다** — 에이전트를 바꿔도
+   * 이전 대화는 지워지지 않으므로, 한 필드에 두 종류를 담으면 직전 시나리오의
+   * 카드가 다른 컴포넌트로 그려진다.
+   */
+  fx?: FxCardKind;
 }
 
 /** 고객 상담 대화의 진행 상태 — 카드 입력값 + 단계. 메모리뿐이라 새로고침하면 처음이다. */
@@ -93,6 +123,14 @@ const INITIAL_CONSULT: ConsultState & { stage: ConsultStage } = {
   background: CUSTOMER_DEFAULT.background,
   affiliates: Object.fromEntries(AFFILIATE_OPTIONS.map((o) => [o.tenant, o.defaultOn])),
   saved: false,
+};
+
+/** 외환업무 대화의 진행 상태 — 카드 입력값 + 단계. 상담과 같은 규약이다. */
+const INITIAL_FX: FxState & { stage: FxStage } = {
+  stage: 'idle',
+  instruction: FX_INSTRUCTION,
+  feedback: FX_FEEDBACK.quote,
+  submitted: false,
 };
 
 export default function ChatPage() {
@@ -140,6 +178,7 @@ export default function ChatPage() {
     /** 고객 상담 턴 — 단계 목록과 커밋할 카드를 직접 지정한다. */
     steps?: typeof RUN_STEPS;
     card?: ConsultCardKind;
+    fxCard?: FxCardKind;
   } | null>(null);
   /*
    * RFP 2-1 — "대화중 파일 업로드 기능(문서/이미지), 업로드 파일 기반 응답·요약·번역".
@@ -154,6 +193,22 @@ export default function ChatPage() {
     setConsult(INITIAL_CONSULT);
   }, [agent.id]);
   const isConsult = agent.id === CONSULT_AGENT_ID;
+
+  /* ── 외환업무(GRP-009) 상태 — 에이전트를 바꾸면 처음으로 ── */
+  const [fx, setFx] = useState(INITIAL_FX);
+  useEffect(() => {
+    setFx(INITIAL_FX);
+  }, [agent.id]);
+  const isFx = agent.id === FX_AGENT_ID;
+  /*
+   * 개선판을 쓰는 계열사인가.
+   *
+   * 부산은행이 개선하고 관리자가 승인한 응답 형식을 경남은행이 그대로 받는다
+   * (외환 시나리오 08·09). 그래서 경남은행 직원은 6단계를 밟지 않고 결론·필요
+   * 서류·고객 안내를 한 장으로 받는다 — 개선이 무엇을 바꿨는지가 이 차이로 드러난다.
+   */
+  const fxImproved = isFx && tenant === '경남은행';
+
   const [stepIdx, setStepIdx] = useState(-1);
   const [activeRef, setActiveRef] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -184,6 +239,7 @@ export default function ChatPage() {
           sc: ans ? undefined : (sc ?? undefined),
           plain: !!ans || (!sc && !!doc),
           card: pending.card,
+          fx: pending.fxCard,
         },
       ]);
       setActiveRef(null);
@@ -227,6 +283,18 @@ export default function ChatPage() {
         return;
       }
     }
+    // 외환업무 에이전트 — 첫 입력을 문의 접수(또는 개선판 한 장)로 받는다.
+    if (isFx) {
+      const turn = matchFxTurn(fx.stage, q, fxImproved);
+      if (turn) {
+        setMsgs((m) => [...m, { role: 'user', text: q }]);
+        setInput('');
+        setFx((c) => ({ ...c, stage: turn.next }));
+        setPending({ q, sc: null, doc: null, att: null, ans: turn.text, steps: turn.steps, fxCard: turn.card });
+        setStepIdx(0);
+        return;
+      }
+    }
     const action = act ?? matchAttachAction(q);
     const att = action ? attached : null;
     setMsgs((m) => [...m, { role: 'user', text: q, att: att ?? undefined }]);
@@ -263,8 +331,53 @@ export default function ChatPage() {
   };
   const lastCardIdx = msgs.reduce((acc, m, i) => (m.card ? i : acc), -1);
 
+  /* 외환 카드 버튼이 일으키는 전이 — 직원의 타이핑 없이 다음 카드로 간다. */
+  const fxStep = (card: FxCardKind, steps: typeof RUN_STEPS) => {
+    setFx((c) => ({ ...c, stage: card }));
+    setPending({ q: card, sc: null, doc: null, att: null, ans: FX_TEXT[card], steps, fxCard: card });
+    setStepIdx(0);
+  };
+  const fxHandlers = {
+    onInstruction: (v: string) => setFx((c) => ({ ...c, instruction: v })),
+    onFeedbackText: (v: string) => setFx((c) => ({ ...c, feedback: v })),
+    // 서류를 올리는 화면은 실행 단계가 없다 — 아직 아무것도 읽지 않았다.
+    onIntakeNext: () => {
+      setFx((c) => ({ ...c, stage: 'upload' }));
+      setMsgs((m) => [...m, { role: 'assistant', text: FX_TEXT.upload, plain: true, fx: 'upload' }]);
+    },
+    onReviewRequest: () => fxStep('result', FX_STEPS_REVIEW),
+    onShowEvidence: () => fxStep('evidence', FX_STEPS_EVIDENCE),
+    onWrapup: () => fxStep('wrapup', FX_STEPS_WRAPUP),
+    /*
+     * LSM-012 — 수집으로 끝내지 않는다. 현장 의견이 **결재 건**이 되어
+     * 계열사 관리자에게 넘어간다(외환 시나리오 06 → 07 전환점).
+     */
+    onSubmitFeedback: () => {
+      const item = submitImprovement({
+        agentId: agent.id,
+        agentName: agent.name,
+        version: FX_IMPROVED_VERSION,
+        ownerTenant: '부산은행',
+        requestedBy: persona?.name ?? '서사용',
+        requesterRole: persona?.role ?? '일반 사용자',
+        requesterDept: persona?.dept ?? FX_FEEDBACK.by,
+        feedback: fx.feedback.trim(),
+        elements: FX_IMPROVEMENT_ELEMENTS,
+        checks: FX_IMPROVEMENT_CHECKS,
+      });
+      setFx((c) => ({ ...c, submitted: true, approvalId: item.id }));
+      toast(
+        '개선 의견을 등록했습니다',
+        `${item.id} · ${item.stage.label} — 개발자와 다른 승인자가 검토합니다`,
+        'ok',
+      );
+    },
+  };
+  const lastFxIdx = msgs.reduce((acc, m, i) => (m.fx ? i : acc), -1);
+
   const reset = () => {
     setConsult(INITIAL_CONSULT);
+    setFx(INITIAL_FX);
     setMsgs([]);
     setInput('');
     setPending(null);
@@ -277,6 +390,29 @@ export default function ChatPage() {
 
   /** 이어하기(2-1) — 이력 항목을 클릭하면 그 대화를 복원하고 이어서 질문할 수 있다. */
   const [activeHistory, setActiveHistory] = useState<string | null>(null);
+
+  /*
+   * 계열사가 바뀌면 대화를 비운다.
+   *
+   * 좌측 사이드바가 "대화는 계열사 Namespace 안에서만 보관됩니다" 라고 적어 두고
+   * 실제로는 부산은행 대화가 경남은행 화면에 그대로 남아 있으면, 그 화면이
+   * SEC-001 격리 서사를 스스로 반증한다. 시연에서 페르소나를 바꾸는 순간
+   * (프리젠터 이동 포함) 바로 드러나는 종류라 여기서 끊는다.
+   *
+   * 첫 렌더에도 한 번 돌지만 그때는 이미 비어 있어 아무 일도 하지 않는다.
+   */
+  useEffect(() => {
+    setMsgs([]);
+    setInput('');
+    setPending(null);
+    setStepIdx(-1);
+    setActiveRef(null);
+    setActiveHistory(null);
+    setAttached(null);
+    setAttachOpen(false);
+    setConsult(INITIAL_CONSULT);
+    setFx(INITIAL_FX);
+  }, [tenant]);
   const openHistory = (id: string) => {
     const seed = seedHistory(id);
     if (!seed || pending) return;
@@ -419,6 +555,19 @@ export default function ChatPage() {
                     ))}
                   </div>
                 </div>
+              ) : isFx ? (
+                <FxStart
+                  persona={persona?.name}
+                  tenant={tenant}
+                  improved={fxImproved}
+                  onPickTask={(id) => {
+                    const a = agentOptions.find((x) => x.id === id);
+                    if (a) setAgent(a);
+                  }}
+                  onStart={() =>
+                    send(fxImproved ? fxSuggestions('idle', true)[0] : FX_CUSTOMER_QUESTION)
+                  }
+                />
               ) : (
                 <EmptyState onPick={send} persona={persona?.name} />
               )
@@ -427,6 +576,16 @@ export default function ChatPage() {
             {msgs.map((m, i) =>
               m.role === 'user' ? (
                 <UserBubble key={i} text={m.text} att={m.att} />
+              ) : m.fx ? (
+                <FxTurn
+                  key={i}
+                  kind={m.fx}
+                  text={m.text}
+                  latest={i === lastFxIdx}
+                  done={fxStageIndex(fx.stage) > fxStageIndex(m.fx)}
+                  state={fx}
+                  handlers={fxHandlers}
+                />
               ) : m.card ? (
                 <ConsultTurn
                   key={i}
@@ -472,7 +631,12 @@ export default function ChatPage() {
               {/* 에이전트마다 답할 수 있는 질의가 다르다 — 온톨로지 계열은 규정 판정,
                   문서 RAG 계열은 자기 지식 인덱스 범위. 목록을 고정하면 고른 에이전트가
                   답하지 못하는 질의를 추천하게 된다. */}
-              {(isConsult ? consultSuggestions(consult.stage) : suggestedQuestions(agent.id)).map((q) => (
+              {(isConsult
+                ? consultSuggestions(consult.stage)
+                : isFx
+                ? fxSuggestions(fx.stage, fxImproved)
+                : suggestedQuestions(agent.id)
+              ).map((q) => (
                 <button
                   key={q}
                   onClick={() => send(q)}
@@ -657,6 +821,88 @@ function EmptyState({ onPick, persona }: { onPick: (q: string) => void; persona?
             <span className="text-[12px] font-semibold text-ink-mid">{q}</span>
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 외환업무 에이전트의 빈 화면 — 외환 시나리오 화면 01 「업무 시작」.
+ *
+ * 원안은 포털에 별도의 업무 선택 화면을 두지만, 이 데모에는 이미 마켓플레이스와
+ * 홈이 진입 경로를 맡고 있다. 같은 일을 하는 화면을 하나 더 만들면 IA 가 갈라지므로
+ * **에이전트를 고른 직후의 빈 대화 화면**이 그 역할을 한다.
+ *
+ * 세 카드는 장식이 아니라 **실제 에이전트로 전환**한다. 누를 수는 있는데 아무
+ * 일도 일어나지 않는 카드를 시연 화면에 두지 않는다.
+ */
+function FxStart({
+  persona,
+  tenant,
+  improved,
+  onPickTask,
+  onStart,
+}: {
+  persona?: string;
+  tenant: string;
+  improved: boolean;
+  onPickTask: (agentId: string) => void;
+  onStart: () => void;
+}) {
+  return (
+    <div className="og-answer mb-4 border border-line-soft rounded px-5 py-5 bg-white">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="pill bg-brand-tint text-brand border border-brand-tint">외환업무</span>
+        <span className="text-[11px] text-ink-mid font-semibold">
+          BNK AI 포털 · {tenant} / {persona ?? '직원'}
+        </span>
+        {improved && (
+          <span className="pill bg-ok-bg text-ok border border-ok-border">개선 버전 적용됨</span>
+        )}
+      </div>
+      <h2 className="text-[17px] font-extrabold text-ink tracking-[-0.3px]">
+        오늘 어떤 업무를 도와드릴까요?
+      </h2>
+      <p className="text-[11.5px] text-ink-mid font-semibold mt-1">
+        필요한 업무를 고르고, 평소 쓰는 말로 질문하십시오.
+      </p>
+
+      <div className="grid grid-cols-3 gap-2.5 mt-4">
+        {FX_TASK_CARDS.map((c) => {
+          const active = c.agentId === FX_AGENT_ID;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => !active && onPickTask(c.agentId)}
+              className={cn(
+                'text-left rounded border-2 px-3.5 py-3 transition-colors',
+                active
+                  ? 'border-brand bg-brand-bg cursor-default'
+                  : 'border-line-soft bg-white hover:border-line-warm',
+              )}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className={cn('text-[13px] font-extrabold', active ? 'text-brand' : 'text-ink')}>
+                  {c.label}
+                </span>
+                {active && <span className="text-[11px] text-brand font-extrabold">✓</span>}
+              </div>
+              <div className="text-[10.5px] text-ink-mid font-semibold mt-1 leading-snug">{c.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
+        <span className="text-[10.5px] text-ink-light font-semibold flex-1 leading-snug">
+          {improved
+            ? '부산은행에서 개선하고 검증한 응답 형식이 적용되어 있습니다.'
+            : '고객 문의를 그대로 옮겨 적어도 됩니다 — 확인 포인트로 정리해 드립니다.'}
+        </span>
+        <Button variant="primary" onClick={onStart}>
+          외환업무 시작 →
+        </Button>
       </div>
     </div>
   );
