@@ -13,8 +13,15 @@
  * 판단의 근거는 **개별 요청 이력**이다. 여러 계열사가 같은 자산을 각자
  * 요청해 왔다면, 그 절차를 반복시키는 것보다 범위를 넓히는 게 맞다.
  *
- * ⚠️ 자산 ID·소유자·호출량은 카탈로그(mockCatalogAgents)와 같은 값이다.
- *    화면끼리 다른 숫자를 말하면 그 자체가 리스크다.
+ * ⚠️ 자산 ID·이름·소유자·계열사·호출량·평가는 카탈로그(mockCatalogAgents ·
+ *    mockCatalog)와 **같은 값이어야 한다.** 화면끼리 다른 말을 하면 그 자체가
+ *    리스크다.
+ *
+ *    실제로 AGT-602 는 여기서 「외환 규정 질의 어시스턴트 · 남데이터」였는데
+ *    카탈로그에서는 「카드 분실신고 응대 봇 · 한지민」이었고, AGT-812 도 이름·
+ *    소유 계열사·호출량이 전부 달랐다. 같은 ID 가 화면마다 다른 자산으로
+ *    보이던 상태라 정본에 맞춰 정정했다. 행을 추가할 때는 반드시 카탈로그에서
+ *    값을 옮겨 올 것.
  *
  * 전부 가상 창작물이다(CLAUDE.md 절대 규칙).
  */
@@ -54,9 +61,9 @@ export interface SpreadRow {
 const SEED_SPREAD_ROWS: SpreadRow[] = [
   { assetId: 'AGT-204', assetName: 'PB 자산진단 어시스턴트', ownerTenant: '부산은행', ownerName: '박서연', scope: '계열사', callsWeekly: 12480, requestingTenants: 6, grantedTenants: 4, rating: 4.6, ratingCount: 38 },
   { assetId: 'AGT-731', assetName: '신용평가 조회 에이전트', ownerTenant: 'BNK신용정보', ownerName: '서신용', scope: '계열사', callsWeekly: 7400, requestingTenants: 3, grantedTenants: 2, rating: 4.4, ratingCount: 22 },
-  { assetId: 'AGT-602', assetName: '외환 규정 질의 어시스턴트', ownerTenant: '경남은행', ownerName: '남데이터', scope: '계열사', callsWeekly: 5120, requestingTenants: 2, grantedTenants: 1, rating: 4.2, ratingCount: 17 },
+  { assetId: 'AGT-602', assetName: '카드 분실신고 응대 봇', ownerTenant: '경남은행', ownerName: '한지민', scope: '계열사', callsWeekly: 32000, requestingTenants: 2, grantedTenants: 1, rating: 4.2, ratingCount: 31 },
   { assetId: 'MCP-034', assetName: 'crm.customer_profile', ownerTenant: '부산은행', ownerName: '조디비', scope: '부서', callsWeekly: 3960, requestingTenants: 2, grantedTenants: 0, rating: 4.1, ratingCount: 9 },
-  { assetId: 'AGT-812', assetName: '광고심의 지원 에이전트', ownerTenant: 'BNK캐피탈', ownerName: '이정우', scope: '계열사', callsWeekly: 2840, requestingTenants: 1, grantedTenants: 1, rating: 4.0, ratingCount: 11 },
+  { assetId: 'AGT-812', assetName: '리스크 일일 브리프 봇', ownerTenant: 'BNK투자증권', ownerName: '이서연', scope: '부서', callsWeekly: 280, requestingTenants: 1, grantedTenants: 1, rating: 3.9, ratingCount: 8 },
 ];
 
 /**
