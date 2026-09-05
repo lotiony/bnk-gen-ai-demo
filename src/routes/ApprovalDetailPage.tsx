@@ -13,6 +13,11 @@ import {
   findAgentDeploy,
   currentDeployStage,
   deployLine,
+  findImprovement,
+  currentImprovementStage,
+  improvementLine,
+  markImprovementShared,
+  type AgentImprovement,
   type ScopePromotion,
   type AgentDeployApproval,
   type ApprovalDecisionKind,
@@ -47,7 +52,8 @@ import { canDecideApproval, canViewApproval, canViewPtuPool } from '@/lib/person
  * 세 가지 상세를 한 라우트에서 분기한다.
  *   ① 운영계·개발계 **배포** 결재  → DeployApprovalDetail
  *   ② 공유범위 **승격** 결재       → ScopePromotionDetail (RFP 1.3.2)
- *   ③ 그 외 프로젝트 결재          → 아래 기본 아코디언 (PRJ-101_approval.html 포팅)
+ *   ③ 응답 **개선안** 결재         → ImprovementDetail (LSM-012 · ONM-003)
+ *   ④ 그 외 프로젝트 결재          → 아래 기본 아코디언 (PRJ-101_approval.html 포팅)
  *
  * ② 를 ③ 의 레이아웃(프로젝트 기본 정보·비즈니스 케이스·데이터 자산)에 태우면
  * 결재자가 판단할 것("이 자산을 11개 Namespace 에 열어도 되는가")이 화면에
@@ -100,6 +106,16 @@ export default function ApprovalDetailPage() {
       return <NoAccess role={persona.role} />;
     }
     return <ScopePromotionDetail promo={promo} item={promoItem} />;
+  }
+
+  // 응답 개선안 결재 — 현장 의견이 무엇을 바꾸는지가 중심인 전용 상세 (LSM-012).
+  const imp = findImprovement(approvalId);
+  const impItem = approvals.find((a) => a.id === approvalId);
+  if (imp && impItem) {
+    if (persona && !canViewApproval(persona, imp.approvalId)) {
+      return <NoAccess role={persona.role} />;
+    }
+    return <ImprovementDetail imp={imp} item={impItem} />;
   }
 
   const approval = approvals.find((a) => a.id === approvalId) ?? approvals[0];
@@ -1578,6 +1594,296 @@ function AgentDeployDetail({ dep, item }: { dep: AgentDeployApproval; item: Appr
                   {isFinalStage ? `✓ 승인 · ${dep.deployStage} 배포` : '✓ 승인 — 다음 단계로'}
                 </Button>
               </>
+            ) : (
+              <Link to="/approvals" className="text-[12px] font-bold text-info hover:underline">
+                결재함으로 →
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ═══════════════ 응답 개선안 결재 상세 (외환 시나리오 화면 07) ═══════════════ */
+
+/**
+ * RFP: LSM-012(LLM 응답 사용자 피드백) · ONM-003(직무 분리 기반 RBAC) ·
+ *      ONM-004(감사 원장) · 1.3.2(승인 후 공유 등록)
+ *
+ * 결재자가 판단할 것은 "현장의 이 의견을 다음 업무에 반영해도 되는가" 다.
+ * 그래서 세 가지만 보여 준다 — **직원이 남긴 말 그대로**, 그 말이 바꾸는
+ * 응답 구성, 그리고 바꾸지 않는 것(판정 로직·담당자 확인 표시).
+ *
+ * 마지막이 중요하다. 현장 의견 한 줄로 심사 기준이 움직이면 통제가 없는 것이다.
+ * 이 결재가 다루는 범위는 **응답 형식**뿐이라는 사실이 화면에 있어야 한다.
+ */
+function ImprovementDetail({ imp, item }: { imp: AgentImprovement; item: ApprovalItem }) {
+  const navigate = useNavigate();
+  const persona = useCurrentPersona();
+  const [note, setNote] = useState('');
+  const pending = item.state === 'pending';
+  const right = canDecideApproval(persona, item);
+  const decision = getApprovalDecision(item.id);
+  const approved = item.state === 'done';
+
+  const decide = (kind: ApprovalDecisionKind) => {
+    decideApproval(item.id, kind, persona?.name ?? '현재 사용자', persona?.role ?? '결재자', note);
+    const who = `${persona?.name ?? '현재 사용자'} (${persona?.role ?? '결재자'})`;
+    toast(
+      `${item.id} · 응답 개선안 ${kind === 'approve' ? '승인' : kind === 'reject' ? '반려' : '보류'}`,
+      kind === 'approve'
+        ? `${imp.agentName} ${imp.version} 이(가) 다음 업무부터 적용됩니다\n처리 ${who} · 통합 감사 원장에 기록되었습니다`
+        : `처리 ${who} · 통합 감사 원장에 기록되었습니다`,
+      kind === 'reject' ? 'warn' : 'ok',
+    );
+    setNote('');
+    /*
+     * 승인하면 **이 화면에 머문다.**
+     *
+     * 다른 결재는 처리하고 결재함으로 돌아가면 끝이지만, 개선안은 승인 직후
+     * 「승인 후 공유 등록」이 남는다(1.3.2). 여기서 목록으로 튕기면 발표자가
+     * 같은 건을 다시 찾아 들어와야 하고, 승인과 공유가 한 흐름이라는 것도
+     * 화면에서 끊긴다. 반려는 후속 조치가 없으므로 그대로 목록으로 돌아간다.
+     */
+    if (kind === 'reject') navigate('/approvals');
+  };
+
+  /** 승인 후 공유 등록 — 그룹 마켓플레이스에 개선 버전을 노출한다(1.3.2). */
+  const share = () => {
+    markImprovementShared(item.id);
+    toast(
+      '그룹 공유 등록 완료',
+      `${imp.agentName} ${imp.version} 이(가) 마켓플레이스에 노출됩니다 — 업무 흐름과 결과 형식만 공유되고 고객 자료는 계열사에 남습니다`,
+      'ok',
+    );
+  };
+
+  const statePill = pending
+    ? { cls: 'bg-warn-bg text-warn border-warn-border', label: '승인 대기' }
+    : approved
+    ? { cls: 'bg-ok-bg text-ok border-ok-border', label: '승인 완료 · 운영 반영' }
+    : { cls: 'bg-bad-bg text-bad border-bad-border', label: '반려 · 기존 형식 유지' };
+
+  return (
+    <div className="max-w-[1360px] mx-auto px-6 py-6 pb-[120px]">
+      <Crumb
+        items={[
+          { label: '결재함', to: '/approvals' },
+          { label: '응답 개선안 결재' },
+          { label: imp.agentName },
+        ]}
+        trailing={item.id}
+      />
+
+      {/* ── 헤더 ── */}
+      <div className="card px-6 py-5 mb-3.5">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className="pill bg-brand-tint text-brand border border-brand-tint">응답 개선안</span>
+          <span className={cn('pill border', statePill.cls)}>{statePill.label}</span>
+          <span className="pill bg-white text-ink-mid border border-line font-mono tracking-normal rfp-chip">
+            LSM-012 사용자 피드백 · ONM-003 직무 분리
+          </span>
+        </div>
+        <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.3px] mb-1.5">
+          {imp.agentName}
+          <span className="ml-2 text-[13px] font-mono font-bold text-ink-light align-middle">
+            {imp.agentId} · {imp.version}
+          </span>
+        </h1>
+        <p className="text-xs text-ink-mid font-semibold">
+          기안 <b className="text-ink-dark">{imp.requestedBy}</b> ({imp.requesterRole} ·{' '}
+          {imp.requesterDept}) · 등록 <b className="text-ink-dark">{imp.draftedAt}</b> · 결재선{' '}
+          <b className="text-ink-dark">{item.stage.label}</b>
+        </p>
+      </div>
+
+      <div className="grid grid-cols-[1fr_340px] gap-3.5">
+        <div>
+          {/* ── ① 현장에서 올라온 말 그대로 ── */}
+          <section className="card px-5 py-4 mb-3.5">
+            <div className="flex items-baseline gap-2 mb-2.5">
+              <h2 className="text-[15px] font-extrabold text-ink">현장 개선 의견</h2>
+              <span className="text-[11.5px] text-ink-mid font-semibold">
+                직원이 대화 화면에서 직접 남긴 문장입니다 — 요약하거나 다시 쓰지 않았습니다
+              </span>
+            </div>
+            <blockquote className="border-l-[3px] border-brand pl-4 py-1">
+              <p className="text-[16px] font-extrabold text-ink leading-snug tracking-[-0.2px]">
+                “{imp.feedback}”
+              </p>
+              <p className="text-[11px] text-ink-mid font-semibold mt-1.5">
+                {imp.requestedBy} · {imp.requesterDept} · {imp.draftedAt}
+              </p>
+            </blockquote>
+          </section>
+
+          {/* ── ② 이 의견이 바꾸는 것 ── */}
+          <section className="card px-5 py-4 mb-3.5">
+            <div className="flex items-baseline gap-2 mb-2.5 flex-wrap">
+              <h2 className="text-[15px] font-extrabold text-ink">개선 후 응답 구성</h2>
+              <span className="text-[11.5px] text-ink-mid font-semibold">
+                세 항목을 <b className="text-ink-dark">한 화면에</b> 함께 제시합니다
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {imp.elements.map((e) => (
+                <section key={e.k} className="rounded border border-line-soft px-3.5 py-3">
+                  <div className="text-[13px] font-extrabold text-ink">{e.k}</div>
+                  <div className="text-[11px] text-brand font-bold mt-0.5 leading-snug">{e.q}</div>
+                  <p className="text-[11px] text-ink-dark font-semibold mt-1.5 leading-snug">{e.v}</p>
+                </section>
+              ))}
+            </div>
+          </section>
+
+          {/* ── ③ 확인 항목 — 무엇이 바뀌지 않는지가 핵심이다 ── */}
+          <section className="card px-5 py-4 mb-3.5">
+            <h2 className="text-[13px] font-extrabold text-ink mb-2.5">검토 확인 항목</h2>
+            <div className="border border-line-soft rounded overflow-hidden">
+              {imp.checks.map((c, i) => (
+                <div
+                  key={c.k}
+                  className={cn(
+                    'grid grid-cols-[168px_1fr_auto] gap-3 items-center px-3.5 py-2.5',
+                    i > 0 && 'border-t border-line-soft',
+                  )}
+                >
+                  <span className="text-[11.5px] font-extrabold text-ink">{c.k}</span>
+                  <span className="text-[11.5px] text-ink-dark font-semibold leading-snug">{c.v}</span>
+                  <span
+                    className={cn(
+                      'pill border',
+                      c.pass
+                        ? 'bg-ok-bg text-ok border-ok-border'
+                        : 'bg-warn-bg text-warn border-warn-border',
+                    )}
+                  >
+                    {c.pass ? '확인' : '확인 필요'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ── ④ 승인하면 적용되는 것 ── */}
+          <section className="card px-5 py-4">
+            <h2 className="text-[13px] font-extrabold text-ink mb-2">승인하면 적용되는 것</h2>
+            <ul className="space-y-1">
+              {[
+                `${imp.agentName}(${imp.agentId})의 응답이 ${imp.version} 형식으로 바뀐다 — 결론·필요 서류·고객 안내를 한 화면에 함께 제시한다.`,
+                `판정 로직은 바뀌지 않는다. 「담당자 확인 필요」 표시도 그대로 유지된다.`,
+                `개선 이력이 통합 감사 원장에 기록된다 — 누가 제안하고 누가 승인했는지(ONM-004).`,
+                `「승인 후 공유 등록」을 함께 누르면 그룹 마켓플레이스에 개선 버전으로 노출되고, 다른 계열사가 자기 자료·사용자로 다시 설정해 적용할 수 있다(1.3.2).`,
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-1.5">
+                  <span className="text-brand text-[11px] leading-[1.6] font-extrabold">·</span>
+                  <span className="text-[11.5px] text-ink-dark font-semibold leading-snug">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+
+        {/* ── 우측: 결재선 ── */}
+        <aside className="sticky top-[106px] self-start">
+          <SidebarCard title="결재선 진행" icon="📋">
+            <div className="space-y-1.5">
+              {improvementLine(imp).map((st) => (
+                <ApprStep
+                  key={st.seq + st.label}
+                  seq={st.seq}
+                  label={st.label}
+                  sub={st.sub}
+                  tone={
+                    !pending && st.tone === 'current' ? (approved ? 'done' : 'rejected') : st.tone
+                  }
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-[10.5px] text-ink-mid font-semibold leading-snug">
+              기안자는 현업 직원, 승인자는 계열사 AI서비스 관리자입니다 — 개발자가 승인 행위를
+              하지 않습니다 (ONM-003).
+            </p>
+          </SidebarCard>
+
+          {decision && (
+            <SidebarCard title="결재 결과" icon="🕒">
+              <div className="space-y-1 text-[11.5px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-ink-dark">{decision.reviewer}</span>
+                  <span className="text-ink-mid">({decision.reviewerRole})</span>
+                  <span className="ml-auto text-ink-mid">{decision.decidedAt}</span>
+                </div>
+                <div className="text-ink-dark font-semibold">
+                  {decision.kind === 'approve' ? '승인' : decision.kind === 'reject' ? '반려' : '보류'}
+                  {decision.note && ` · ${decision.note}`}
+                </div>
+              </div>
+            </SidebarCard>
+          )}
+
+          {/* 승인 뒤에만 열리는 후속 조치 — 승인 전에 공유부터 되면 순서가 뒤집힌다 */}
+          {approved && (
+            <SidebarCard title="승인 후 조치" icon="🌐">
+              {imp.shared ? (
+                <div className="text-[11.5px] text-ok font-extrabold">
+                  ✓ 그룹 공유 등록 완료 — 마켓플레이스 노출 중
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] text-ink-mid font-semibold leading-snug mb-2">
+                    업무 흐름과 결과 형식만 공유됩니다. 고객 자료는 각 계열사 Namespace 에 남습니다.
+                  </p>
+                  <Button variant="primary" onClick={share} className="w-full">
+                    승인 후 공유 등록
+                  </Button>
+                </>
+              )}
+            </SidebarCard>
+          )}
+
+          {pending && right.ok && (
+            <SidebarCard title="결재 의견" icon="✎">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="승인·반려 사유 (선택)"
+                className="w-full text-[12px] text-ink-dark leading-[1.6] border border-line rounded p-2 bg-white resize-y focus:outline-none focus:border-brand-dark"
+              />
+            </SidebarCard>
+          )}
+        </aside>
+      </div>
+
+      {/* ── 하단 고정 액션 바 ── */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+        <div className="max-w-[1360px] mx-auto px-6 py-3 flex items-center gap-3">
+          <div className="text-[11.5px] text-ink-mid font-semibold">
+            <span className={cn('font-extrabold', pending ? 'text-warn' : 'text-ink-dark')}>
+              {statePill.label}
+            </span>
+            <span className="mx-2 text-line">·</span>
+            응답 개선안 · {imp.agentName} {imp.version} · {item.stage.label}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            {pending && !right.ok ? (
+              <SodNotice hint={right.hint} />
+            ) : pending ? (
+              <>
+                <Button variant="danger" onClick={() => decide('reject')}>반려</Button>
+                <Button onClick={() => decide('hold')}>보류</Button>
+                <Button variant="primary" onClick={() => decide('approve')}>
+                  ✓ 운영 승인
+                </Button>
+              </>
+            ) : approved && !imp.shared ? (
+              <Button variant="primary" onClick={share}>
+                승인 후 공유 등록
+              </Button>
             ) : (
               <Link to="/approvals" className="text-[12px] font-bold text-info hover:underline">
                 결재함으로 →

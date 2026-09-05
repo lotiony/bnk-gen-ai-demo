@@ -15,6 +15,9 @@ import {
   findPromotion,
   currentDeployStage,
   findAgentDeploy,
+  IMPROVE_CATEGORY,
+  currentImprovementStage,
+  findImprovement,
 } from '@/data/mockApprovals';
 import { getDeployApprovals } from '@/lib/deployApprovalStore';
 import { projectsList } from '@/data/mockProjects';
@@ -89,7 +92,8 @@ export function getVisibleApprovals(persona: PersonaLike): ApprovalItem[] {
         a.draftedBy.startsWith(me) ||
         isMyPromotionStage(persona, a) ||
         // 과제 오너(개발자 그룹)에게 배정된 배포 결재 — 안 보이면 1단계에서 멈춘다.
-        isMyDeployStage(persona, a),
+        isMyDeployStage(persona, a) ||
+        isMyImproveStage(persona, a),
     );
   }
   const allow = approvalCategoryAllowlist(persona);
@@ -99,7 +103,12 @@ export function getVisibleApprovals(persona: PersonaLike): ApprovalItem[] {
   if (allow && persona) {
     list = list.filter(
       (a) =>
-        allow.includes(a.category) || isMyPromotionStage(persona, a) || isMyDeployStage(persona, a),
+        allow.includes(a.category) ||
+        isMyPromotionStage(persona, a) ||
+        isMyDeployStage(persona, a) ||
+        // 계열사 관리자는 allowlist 가 비어 있다 — 본인에게 배정된 개선안 결재는
+        // 카테고리와 무관하게 남긴다. 걸러지면 결재가 1단계에서 조용히 멈춘다.
+        isMyImproveStage(persona, a),
     );
   }
   // 사업·거버넌스 관리자는 완료·반려된 지난 이력은 홈에서 숨기고 진행 중 결재만 노출.
@@ -387,7 +396,20 @@ export function canDecideApproval(persona: PersonaLike, item: ApprovalItem): Dec
           hint: '그룹 거버넌스 관리자(박거버) 또는 플랫폼 관리자(김지주) 계정으로 전환해야 합니다',
         };
   }
-  // ③ 에이전트 배포 결재도 단계마다 승인 주체가 다르다(LSM-009 · ONM-003).
+  // ③ 응답 개선안 결재 — 승인 주체는 소유 계열사의 **관리자**다(LSM-012 · ONM-003).
+  //    현장 직원이 기안하고 관리자가 승인한다. 개발자가 승인하면 SoD 위반이다.
+  if (item.category === IMPROVE_CATEGORY) {
+    const imp = findImprovement(item.id);
+    const stage = imp && currentImprovementStage(imp);
+    if (!stage) return { ok: false, hint: '처리할 단계가 남아 있지 않습니다' };
+    return persona.group === '관리자' && persona.name === stage.approverName
+      ? ALLOW
+      : {
+          ok: false,
+          hint: `${stage.label} 담당 ${stage.approverName} (${stage.approverTenant}) 계정으로 전환해야 합니다`,
+        };
+  }
+  // ④ 에이전트 배포 결재도 단계마다 승인 주체가 다르다(LSM-009 · ONM-003).
   const dep = findAgentDeploy(item.id);
   if (dep) {
     const stage = currentDeployStage(dep);
@@ -399,7 +421,7 @@ export function canDecideApproval(persona: PersonaLike, item: ApprovalItem): Dec
           hint: `${stage.label} 담당 ${stage.approverName} (${stage.approverTenant}) 계정으로 전환해야 합니다`,
         };
   }
-  // ④ 그 밖의 결재는 승인권자(관리자 그룹) 몫이다 — 개발자는 기안자다.
+  // ⑤ 그 밖의 결재는 승인권자(관리자 그룹) 몫이다 — 개발자는 기안자다.
   return persona.group === '관리자'
     ? ALLOW
     : { ok: false, hint: '승인권자(관리자 그룹) 계정으로 전환해야 합니다' };
@@ -419,6 +441,24 @@ function isMyPromotionStage(persona: Persona, a: ApprovalItem): boolean {
   const promo = findPromotion(a.id);
   const stage = promo && currentPromotionStage(promo);
   return !!stage && stage.approverName === persona.name;
+}
+
+/**
+ * 이 페르소나가 처리 주체인 개선안 결재인지.
+ *
+ * ⚠️ 승격·배포 결재와 달리 **`pending` 을 조건에 넣지 않는다.**
+ *
+ * 개선안은 승인으로 끝나지 않는다 — 승인 뒤에 「승인 후 공유 등록」이 남는다
+ * (1.3.2). pending 만 통과시키면 승인하는 순간 그 건이 목록에서 빠지고,
+ * 방금 승인한 화면이 곧바로 「열람 권한 없음」으로 바뀌어 후속 조치를 할 수
+ * 없다. 실제로 그렇게 났던 버그다.
+ *
+ * 대신 **결재선에 배정된 사람**으로 한정하므로 남의 계열사 건은 보이지 않는다(SEC-001).
+ */
+function isMyImproveStage(persona: Persona, a: ApprovalItem): boolean {
+  if (a.category !== IMPROVE_CATEGORY) return false;
+  const imp = findImprovement(a.id);
+  return !!imp && imp.stages.some((st) => st.approverName === persona.name);
 }
 
 /** 승인 자격이 없을 때 화면에 띄울 안내 — 어느 계정으로 바꿔야 하는지까지 적는다. */

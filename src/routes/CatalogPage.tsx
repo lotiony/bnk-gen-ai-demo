@@ -28,7 +28,12 @@ import { useFavorites, toggleFavorite } from '@/lib/personalization';
 import { useTenant } from '@/lib/tenantStore';
 import { useCurrentPersona } from '@/lib/persona';
 import { canAccessArea } from '@/lib/personaView';
-import { createScopePromotion, findPromotionByAsset, useApprovalRevision } from '@/data/mockApprovals';
+import {
+  approvedImprovementOf,
+  createScopePromotion,
+  findPromotionByAsset,
+  useApprovalRevision,
+} from '@/data/mockApprovals';
 import PromotionRequestModal, { type PromotionForm } from '@/components/catalog/PromotionRequestModal';
 import {
   getCatalogItems,
@@ -721,6 +726,8 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
  */
 function GroupAgentSection() {
   const [openId, setOpenId] = useState<string | null>(null);
+  // 개선안이 승인·공유되면 카드에 「개선 버전」이 붙는다 — 결재 결과를 따라가야 한다.
+  useApprovalRevision();
   const live = GROUP_AGENTS.filter((a) => a.status === '운영 중').length;
 
   return (
@@ -769,6 +776,8 @@ function GroupAgentCard({
   open: boolean;
   onToggle: () => void;
 }) {
+  const imp = approvedImprovementOf(agent.id);
+  const improved = !!imp?.shared;
   return (
     <button
       type="button"
@@ -790,11 +799,26 @@ function GroupAgentCard({
           ? `주 ${agent.callsWeekly.toLocaleString('ko-KR')}회`
           : '배포 전'}
       </div>
+      {/* 승인·공유된 개선안이 있으면 카드에서 바로 보인다(1.3.2 · LSM-012) */}
+      {improved && (
+        <div className="mt-1 pill bg-ok-bg text-ok border border-ok-border">개선 버전</div>
+      )}
     </button>
   );
 }
 
 function GroupAgentDetail({ agent }: { agent: GroupAgent }) {
+  const persona = useCurrentPersona();
+  const imp = approvedImprovementOf(agent.id);
+  /*
+   * 「당행 적용 준비」는 **다른 계열사의 관리자**에게만 열린다.
+   *
+   * 소유 계열사는 이미 쓰고 있으므로 적용할 것이 없고, 개발자·일반 사용자는
+   * 계열사 단위 적용을 결정하는 자리가 아니다(RFP 관리자 포털 — 공개·공유 범위
+   * 설정은 관리자 기능). 조건을 넓히면 화면이 권한 구조와 다른 말을 한다.
+   */
+  const canAdopt =
+    !!imp?.shared && persona?.group === '관리자' && persona.tenant !== agent.ownerTenant;
   return (
     <div className="mt-3 border border-brand-dark rounded px-4 py-3 bg-brand-bg/40">
       <div className="flex items-baseline gap-2 mb-2">
@@ -848,6 +872,45 @@ function GroupAgentDetail({ agent }: { agent: GroupAgent }) {
           </Link>
         </div>
       </div>
+
+      {/*
+        승인·공유된 개선 버전 — 외환 시나리오 화면 08 「그룹 활용」.
+        한 계열사의 개선이 그룹 자산이 되어 다른 계열사가 발견하는 지점이다.
+      */}
+      {imp?.shared && (
+        <div className="mt-3 pt-3 border-t border-brand-dark/25">
+          <div className="flex items-baseline gap-2 flex-wrap mb-1.5">
+            <span className="pill bg-ok-bg text-ok border border-ok-border">개선 버전</span>
+            <span className="text-[12.5px] font-extrabold text-ink">{imp.version}</span>
+            <span className="text-[11px] text-ink-mid font-semibold">
+              {imp.ownerTenant}에서 개선하고 검증한 업무 방식 · 승인 {imp.draftedAt}
+            </span>
+          </div>
+          <div className="grid grid-cols-[1fr_260px] gap-4 items-end">
+            <div>
+              <p className="text-[12px] font-extrabold text-ok leading-snug">
+                {imp.elements.map((e) => e.k).join(' · ')} 를 한 번에
+              </p>
+              <p className="text-[10.5px] text-ink-mid font-semibold mt-1 leading-snug">
+                공유 대상: 업무 흐름과 결과 형식 · 고객 자료는 각 계열사 Namespace 에 남습니다
+                (SEC-001)
+              </p>
+            </div>
+            {canAdopt ? (
+              <Link
+                to={`/adopt/${agent.id}`}
+                className="inline-flex items-center justify-center gap-1 w-full h-8 rounded bg-ok border border-ok text-white text-[12px] font-extrabold hover:opacity-90"
+              >
+                당행 적용 준비 →
+              </Link>
+            ) : (
+              <span className="text-[10.5px] text-ink-light font-semibold leading-snug">
+                당행 적용은 계열사 AI서비스 관리자가 자기 자료·사용자를 설정한 뒤 승인합니다.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

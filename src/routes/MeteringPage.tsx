@@ -19,6 +19,8 @@ import {
   getDeptRows,
   getUserRows,
   getMeteringTotals,
+  getUsageSummary,
+  ADOPTION_RATE,
   BILLING_MONTH,
   BILLING_RULES,
   OUTPUT_WEIGHT,
@@ -26,6 +28,7 @@ import {
   getAgentRows,
 } from '@/data/mockMetering';
 import { useTenant } from '@/lib/tenantStore';
+import { DEMO_TODAY } from '@/data/demoClock';
 import { Link } from 'react-router-dom';
 import { useCurrentPersona } from '@/lib/persona';
 import {
@@ -118,6 +121,22 @@ export default function MeteringPage() {
     [affiliate, myTenant],
   );
   const trend = TENANT_CALL_TREND[myTenant];
+  /*
+   * 「이번 달 활용 현황」 — 관리자의 첫 질문(얼마나 쓰고 얼마 나오나)에 먼저 답하는 층.
+   * 계열사 관리자는 자기 계열사, 지주·통합 운영은 그룹 전체를 본다(SEC-001).
+   */
+  const usage = useMemo(
+    () => getUsageSummary(affiliate ? myTenant : undefined),
+    [affiliate, myTenant],
+  );
+  /*
+   * 「지금 정산표 생성」으로 산출이 끝난 리포트 — 메모리뿐이다(CLAUDE.md 절대 규칙).
+   *
+   * 버튼이 토스트만 띄우면 ONM-005 의 "월별 사내 과금 및 비용 정산 리포트" 가
+   * 예약 상태로만 남는다. 눌렀을 때 상태가 실제로 바뀌고 내려받기가 열려야
+   * 산출 기능이 화면에서 증명된다.
+   */
+  const [issuedNow, setIssuedNow] = useState<string | null>(null);
 
   return (
     <div>
@@ -150,6 +169,115 @@ export default function MeteringPage() {
           ))}
         </div>
       </div>
+
+      {/*
+        ── 이번 달 활용 현황 ──
+        아래 토큰 KPI·정산표가 **정산 근거**라면, 이 밴드는 그 근거를 읽는 층이다.
+        "몇 명이 몇 번 써서 얼마" 를 먼저 답하고, 왜 그 금액인지는 아래에서 답한다.
+        숫자는 전부 아래 표와 같은 배분 규칙에서 나온다(getUsageSummary).
+      */}
+      <section className="card px-5 py-4 mb-3.5">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="min-w-0">
+            <h2 className="text-[17px] font-extrabold text-ink tracking-[-0.3px]">
+              {affiliate
+                ? '당행은 어떻게 쓰고 있을까요?'
+                : '그룹은 함께 보고, 비용은 계열사별로 나눕니다'}
+            </h2>
+            <p className="text-[11.5px] text-ink-mid font-semibold mt-0.5">
+              {affiliate
+                ? `${myTenant} 관리자는 활용 현황과 배분 비용을 직접 확인합니다`
+                : '그룹 사용량과 월간 배분 비용을 통합 관리하고, 비용은 계열사별로 나눕니다'}
+            </p>
+          </div>
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0 pt-0.5">
+            <span className="pill bg-surface text-ink-mid border border-line">시연용 가상 수치</span>
+            <button
+              type="button"
+              /*
+                `behavior: 'smooth'` 를 쓰지 않는다. 부드러운 스크롤은 환경에 따라
+                (감속 모션 설정·백그라운드 탭 등) 그냥 아무 일도 일어나지 않는다.
+                시연 중 버튼을 눌렀는데 화면이 가만히 있는 것이 가장 나쁘므로
+                즉시 이동시킨다.
+              */
+              onClick={() =>
+                document.getElementById('billing-rules')?.scrollIntoView({ block: 'center' })
+              }
+              className="h-8 px-3 rounded border border-line bg-white text-[11.5px] font-extrabold text-ink-dark hover:border-brand-dark hover:text-brand"
+            >
+              산정 기준 보기
+            </button>
+          </div>
+        </div>
+
+        <div className="text-[11px] font-extrabold text-ink-light uppercase tracking-[0.4px] mb-1.5">
+          {affiliate ? '이번 달 활용 현황' : '이번 달 그룹 현황'}
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          <KpiCard
+            label={affiliate ? '이용 직원' : '그룹 이용 직원'}
+            value={usage.users.toLocaleString('ko-KR')}
+            unit="명"
+            sub={`임직원 ${usage.headcount.toLocaleString('ko-KR')}명 중 · 이번 달 1회 이상 사용 ${Math.round(ADOPTION_RATE * 100)}%`}
+            tone="ok"
+          />
+          <KpiCard
+            label={affiliate ? '이용 횟수' : '그룹 이용 횟수'}
+            value={usage.calls.toLocaleString('ko-KR')}
+            unit="회"
+            sub={`직원 1인당 월 ${Math.round(usage.calls / Math.max(1, usage.users))}회`}
+            tone="ok"
+          />
+          <KpiCard
+            label={affiliate ? '배분 비용' : '월간 배분 비용'}
+            value={`₩${fmtKRW(usage.cost)}`}
+            sub={`정산 대상 월 ${BILLING_MONTH} · 아래 정산표 합계와 같은 값`}
+            tone="ok"
+          />
+        </div>
+
+        {/* 업무별 분해 — 어느 업무에 비용이 드는지 */}
+        <div className="mt-3">
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-[11.5px] font-extrabold text-ink">업무별</span>
+            <span className="text-[10.5px] text-ink-mid font-semibold">
+              부서 이용 권한과 같은 업무 분류를 쓴다 · 비용 내림차순
+            </span>
+          </div>
+          <div className="border border-line-soft rounded overflow-hidden">
+            {usage.tasks.map((t, i) => (
+              <div
+                key={t.task}
+                className={cn(
+                  'grid grid-cols-[132px_1fr_92px_104px_46px] gap-3 items-center px-3.5 py-2',
+                  i > 0 && 'border-t border-line-soft',
+                )}
+              >
+                <span className="text-[12px] font-extrabold text-ink">{t.task}</span>
+                <span className="h-1.5 rounded-full bg-line-soft overflow-hidden">
+                  <span
+                    className="block h-full bg-brand"
+                    style={{ width: `${Math.max(2, t.pct)}%` }}
+                  />
+                </span>
+                <span className="text-[11.5px] font-bold text-ink-dark tabular-nums text-right">
+                  {t.calls.toLocaleString('ko-KR')}회
+                </span>
+                <span className="text-[12px] font-extrabold text-ink tabular-nums text-right">
+                  ₩{fmtKRW(t.cost)}
+                </span>
+                <span className="text-[10.5px] font-bold text-ink-mid tabular-nums text-right">
+                  {t.pct.toFixed(1)}%
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[10.5px] text-ink-mid font-semibold">
+            얼마나 쓰는지, 어디에 비용이 드는지 한눈에 확인합니다 · 아래에서 토큰·부서·자산 축으로
+            나눠 봅니다.
+          </p>
+        </div>
+      </section>
 
       {/* ── KPI ── */}
       <div className="grid grid-cols-4 gap-2.5 mb-3.5">
@@ -198,8 +326,15 @@ export default function MeteringPage() {
         <section className="card px-5 py-4 mb-3.5">
           <div className="flex items-baseline gap-2 mb-1">
             <h2 className="text-[14px] font-extrabold text-ink">30일 호출 추이</h2>
+            {/*
+              기간을 못박는다. 위 「이번 달 활용 현황」은 **정산 마감월(2026-05)** 이고
+              이 그래프는 **오늘 기준 최근 30일**이라 6월 급증 구간까지 포함한다.
+              둘의 합계가 다른 이유가 화면에 없으면, 발표 중 두 숫자를 더해 본 사람에게
+              어긋나 보인다.
+            */}
             <span className="text-[11px] text-ink-mid font-semibold">
-              {myTenant} 일별 호출 수 · 급증 구간은 붉게 표시된다
+              {myTenant} 일별 호출 수 · {DEMO_TODAY} 기준 최근 30일 (정산 마감월과 기간이 다르다) ·
+              급증 구간은 붉게 표시된다
             </span>
             <span className="ml-auto text-[11px] font-bold text-ink-mid tabular-nums">
               최근 {trend[trend.length - 1].toLocaleString('ko-KR')}회 · 30일 평균{' '}
@@ -231,7 +366,8 @@ export default function MeteringPage() {
                 <th className="text-left text-[10.5px] font-extrabold text-ink-mid uppercase tracking-[0.3px] px-2.5 py-1.5 border-b border-line-soft">
                   계열사
                 </th>
-                {['입력 토큰', '출력 토큰', '합계', '입력분', '출력분', '정산액', '비중', '전월비', '자체 에이전트'].map(
+                {/* 「호출」은 문서가 요구한 계열사별 이용 횟수다 — 토큰과 같은 규칙으로 배분한다. */}
+                {['호출', '입력 토큰', '출력 토큰', '합계', '입력분', '출력분', '정산액', '비중', '전월비', '자체 에이전트'].map(
                   (h) => (
                     <th
                       key={h}
@@ -269,6 +405,7 @@ export default function MeteringPage() {
                         </span>
                       </div>
                     </td>
+                    <Num v={r.calls.toLocaleString('ko-KR')} />
                     <Num v={fmtTok(r.inputTokens)} />
                     <Num v={fmtTok(r.outputTokens)} />
                     <Num v={fmtTok(r.totalTokens)} bold />
@@ -306,6 +443,7 @@ export default function MeteringPage() {
               {!affiliate && (
               <tr className="bg-surface-soft font-extrabold">
                 <td className="px-2.5 py-2 text-[11.5px] text-ink">합계</td>
+                <Num v={rows.reduce((a, r) => a + r.calls, 0).toLocaleString('ko-KR')} bold />
                 <Num v={fmtTok(totals.input)} bold />
                 <Num v={fmtTok(totals.output)} bold />
                 <Num v={fmtTok(totals.total)} bold />
@@ -579,33 +717,57 @@ export default function MeteringPage() {
         <div className="grid grid-cols-3 gap-2.5">
           {SETTLEMENT_REPORTS.map((r) => {
             const cost = affiliate || r.state === 'scheduled' ? totals.cost : r.totalCost;
+            const issued = r.state === 'issued' || issuedNow === r.id;
             return (
               <div key={r.id} className="border border-line-soft rounded px-3 py-2.5 bg-white">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[12.5px] font-extrabold text-ink tabular-nums">
                     {r.month}
                   </span>
-                  <StatusPill tone={r.state === 'issued' ? 'ok' : 'warn'}>
-                    {r.state === 'issued' ? '산출 완료' : '산출 예정'}
+                  <StatusPill tone={issued ? 'ok' : 'warn'}>
+                    {issued ? '산출 완료' : '산출 예정'}
                   </StatusPill>
                 </div>
-                <div className="text-[11px] text-ink-mid font-semibold">{r.runAt}</div>
+                <div className="text-[11px] text-ink-mid font-semibold">
+                  {issuedNow === r.id ? `${DEMO_TODAY} 수동 산출` : r.runAt}
+                </div>
                 <div className="text-[11px] text-ink-dark font-semibold mt-1">
                   {affiliate ? myTenant : `계열사 ${r.tenants}개`} · 합계{' '}
                   <b className="text-ink tabular-nums">₩{fmtKRW(cost)}</b>
                 </div>
-                <div className="flex items-center gap-1.5 mt-2">
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                   {r.formats.map((f) => (
                     <button
                       key={f}
                       type="button"
-                      disabled={r.state === 'scheduled'}
+                      disabled={!issued}
                       onClick={() => toast(`${r.month} 정산 리포트 · ${f} 내려받기`)}
                       className="text-[10.5px] font-extrabold text-ink-dark border border-line rounded px-2 py-[3px] hover:border-brand-dark hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       ↓ {f}
                     </button>
                   ))}
+                  {/*
+                    정산 마감을 기다리지 않고 지금 산출한다 — 그룹 정산은 공동존을
+                    운영하는 지주·통합 운영 계정의 일이다. 계열사 관리자에게는
+                    자기 몫만 보이므로 전 계열사 정산표를 만들 자리가 아니다.
+                  */}
+                  {!issued && !affiliate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIssuedNow(r.id);
+                        toast(
+                          `${r.month} 월간 정산표 생성 완료`,
+                          `계열사 ${r.tenants}개 · 합계 ₩${fmtKRW(cost)} · XLSX·PDF 내려받기가 열렸습니다`,
+                          'ok',
+                        );
+                      }}
+                      className="ml-auto text-[10.5px] font-extrabold text-white bg-brand border border-brand-dark rounded px-2.5 py-[3px] hover:bg-brand-dark"
+                    >
+                      월간 정산표 생성
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -613,8 +775,8 @@ export default function MeteringPage() {
         </div>
       </section>
 
-      {/* ── 정산 규칙 ── */}
-      <section className="card px-5 py-4">
+      {/* ── 정산 규칙 ── 위 「산정 기준 보기」의 도착지 */}
+      <section id="billing-rules" className="card px-5 py-4">
         <h2 className="text-[14px] font-extrabold text-ink mb-2.5">정산 규칙</h2>
         <div className="grid grid-cols-4 gap-3">
           {BILLING_RULES.map((r) => (

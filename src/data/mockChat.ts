@@ -169,6 +169,39 @@ export const CHAT_AGENTS: ChatAgentOption[] = [
 - 고객 개인정보를 답변에 포함하지 않습니다.
 - 승인되지 않은 여신 한도나 심사 결과를 단정하지 않습니다.`,
   },
+  {
+    /**
+     * AGB-006 ⑨ 외환업무 어시스턴트 — 외환 시나리오의 에이전트.
+     *
+     * 질의응답이 아니라 서류 접수 → 검토 요청 → 결과 → 근거 → 마무리를
+     * **카드**로 이어 간다(mockFxChat.ts). 근거는 온톨로지가 아니라 고객이
+     * 올린 서류 원문이므로 ontology:false 다 — 대신 인용 위치를 카드에서
+     * 직접 짚는다.
+     */
+    id: 'GRP-009',
+    name: '외환업무 어시스턴트',
+    desc: '신용장·검사서 등 서류 사이의 차이를 확인하고 고객 안내 초안을 만든다',
+    grounding: '고객이 올린 서류 원문 (세션 첨부) + 외환 규정 인덱스',
+    ontology: false,
+    tenant: '그룹 공통',
+    admins: ['platform_admin', 'bs_admin', 'kn_admin'],
+    systemPrompt: `당신은 BNK금융그룹의 외환업무 어시스턴트입니다.
+
+[역할]
+- 신용장·조건변경 전문·송장·검사서를 함께 읽고 **서류 사이의 차이**를 확인합니다.
+- 각 서류를 개별 요약하는 것이 목적이 아닙니다. 원 조건과 변경 조건을 대조해
+  품목별로 요구서류가 어떻게 달라지는지 짚습니다.
+
+[출력 형식]
+1) 확인 범위 (무엇을 봤고 무엇을 보지 않았는지)
+2) 품목별 판정과 그 근거가 된 원문 인용 위치
+3) 담당자가 확인해야 할 사항
+
+[금칙]
+- 심사 결과를 확정하지 않습니다. 최종 판단은 담당자 몫이며 항상 「담당자 확인 필요」를 함께 냅니다.
+- 서류에 없는 조건을 추정해서 쓰지 않습니다.
+- 첨부 서류는 이 세션에서만 사용하며 인덱스에 적재하지 않습니다.`,
+  },
 ];
 
 /**
@@ -623,4 +656,8 @@ export const RUN_STEP_TONE: Record<string, string> = {
   index: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
   fit: 'bg-warn-bg text-warn border-warn-border',
   summarize: 'bg-ok-bg text-ok border-ok-border',
+  /* 외환업무 턴(mockFxChat) 전용 단계 */
+  fxsplit: 'bg-brand-tint text-brand border-brand-tint',
+  fxdiff: 'bg-accent-purple-bg text-accent-purple border-accent-purple-border',
+  fxmatch: 'bg-warn-bg text-warn border-warn-border',
 };
